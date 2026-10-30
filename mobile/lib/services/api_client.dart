@@ -24,7 +24,7 @@ class ApiException implements Exception {
 
 class ApiClient {
   ApiClient({required TokenStore tokens, Dio? dio})
-      : _dio = dio ?? Dio(BaseOptions(baseUrl: apiBaseUrl)) {
+    : _dio = dio ?? Dio(BaseOptions(baseUrl: apiBaseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {

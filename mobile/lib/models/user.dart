@@ -16,10 +16,10 @@ class User {
   final int coinBalance;
 
   factory User.fromJson(Map<String, dynamic> json) => User(
-        id: json['id'] as int,
-        username: json['username'] as String,
-        displayName: json['display_name'] as String?,
-        role: UserRole.values.byName(json['role'] as String),
-        coinBalance: json['coin_balance'] as int,
-      );
+    id: json['id'] as int,
+    username: json['username'] as String,
+    displayName: json['display_name'] as String?,
+    role: UserRole.values.byName(json['role'] as String),
+    coinBalance: json['coin_balance'] as int,
+  );
 }

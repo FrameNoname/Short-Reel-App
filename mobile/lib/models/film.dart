@@ -24,15 +24,15 @@ class Film {
   final String status;
 
   factory Film.fromJson(Map<String, dynamic> json) => Film(
-        id: json['id'] as int,
-        creatorId: json['creator_id'] as int,
-        title: json['title'] as String,
-        synopsis: json['synopsis'] as String?,
-        posterUrl: json['poster_url'] as String?,
-        genreId: json['genre_id'] as int,
-        aiToolId: json['ai_tool_id'] as int,
-        promptCredit: json['prompt_credit'] as String?,
-        isAiGenerated: json['is_ai_generated'] == 1,
-        status: json['status'] as String,
-      );
+    id: json['id'] as int,
+    creatorId: json['creator_id'] as int,
+    title: json['title'] as String,
+    synopsis: json['synopsis'] as String?,
+    posterUrl: json['poster_url'] as String?,
+    genreId: json['genre_id'] as int,
+    aiToolId: json['ai_tool_id'] as int,
+    promptCredit: json['prompt_credit'] as String?,
+    isAiGenerated: json['is_ai_generated'] == 1,
+    status: json['status'] as String,
+  );
 }

@@ -14,10 +14,10 @@ class Transaction {
   final DateTime createdAt;
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
-        id: json['id'] as int,
-        type: json['type'] as String,
-        amount: json['amount'] as int,
-        balanceAfter: json['balance_after'] as int,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+    id: json['id'] as int,
+    type: json['type'] as String,
+    amount: json['amount'] as int,
+    balanceAfter: json['balance_after'] as int,
+    createdAt: DateTime.parse(json['created_at'] as String),
+  );
 }

@@ -87,8 +87,11 @@ void main() {
   });
 
   test('handles non-JSON error bodies', () async {
-    final adapter =
-        FakeAdapter(502, '<html>Bad gateway</html>', contentType: 'text/html');
+    final adapter = FakeAdapter(
+      502,
+      '<html>Bad gateway</html>',
+      contentType: 'text/html',
+    );
     await expectLater(
       clientWith(adapter).get('/films'),
       throwsA(
@@ -116,8 +119,9 @@ void main() {
   });
 
   test('returns decoded JSON on success', () async {
-    final result =
-        await clientWith(FakeAdapter(200, '{"status":"ok"}')).get('/health');
+    final result = await clientWith(
+      FakeAdapter(200, '{"status":"ok"}'),
+    ).get('/health');
     expect(result, {'status': 'ok'});
   });
 }
