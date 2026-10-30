@@ -1,3 +1,4 @@
+const cors = require('cors');
 const express = require('express');
 const ApiError = require('./utils/ApiError');
 const errorHandler = require('./middleware/errorHandler');
@@ -10,11 +11,15 @@ const creatorRoutes = require('./routes/creator');
 const adminRoutes = require('./routes/admin');
 const socialRoutes = require('./routes/social');
 
+// The Flutter web dev server runs on localhost; the mobile app does not need CORS.
+const LOCAL_WEB_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 function createApp({ pool, jwtSecret }) {
   const app = express();
   app.locals.pool = pool;
   app.locals.jwtSecret = jwtSecret;
 
+  app.use(cors({ origin: LOCAL_WEB_ORIGIN }));
   app.use(express.json());
 
   app.get('/api/health', async (req, res, next) => {
