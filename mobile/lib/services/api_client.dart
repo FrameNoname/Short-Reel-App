@@ -1,10 +1,16 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import 'token_store.dart';
 
-const apiBaseUrl = String.fromEnvironment(
-  'API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:3000/api',
+String resolveApiBaseUrl({required bool isWeb, String override = ''}) {
+  if (override.isNotEmpty) return override;
+  return isWeb ? 'http://localhost:3000/api' : 'http://10.0.2.2:3000/api';
+}
+
+final apiBaseUrl = resolveApiBaseUrl(
+  isWeb: kIsWeb,
+  override: const String.fromEnvironment('API_BASE_URL'),
 );
 
 class ApiException implements Exception {

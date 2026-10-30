@@ -49,7 +49,13 @@ flutter pub get
 flutter run
 ```
 
-ค่าเริ่มต้นของ API คือ `http://10.0.2.2:3000/api` สำหรับ Android emulator ถ้ารันบนอุปกรณ์อื่นให้กำหนดเอง
+ลองบน Edge ได้โดยไม่ต้องมี emulator
+
+```bash
+flutter run -d edge --web-port 8080
+```
+
+ค่าเริ่มต้นของ API คือ `http://localhost:3000/api` บนเว็บ และ `http://10.0.2.2:3000/api` บน Android emulator ถ้ารันบนอุปกรณ์อื่นให้กำหนดเอง
 
 ```bash
 flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000/api
