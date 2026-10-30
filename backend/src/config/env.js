@@ -1,6 +1,8 @@
+const PLACEHOLDER_SECRET = 'change-me';
+
 function loadEnv(source = process.env) {
-  if (!source.JWT_SECRET) {
-    throw new Error('JWT_SECRET is required. Copy .env.example to .env and set it.');
+  if (!source.JWT_SECRET || source.JWT_SECRET === PLACEHOLDER_SECRET) {
+    throw new Error('JWT_SECRET is required. Copy .env.example to .env and set a random value.');
   }
   return {
     port: Number(source.PORT ?? 3000),

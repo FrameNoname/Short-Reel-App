@@ -102,6 +102,27 @@ void main() {
     );
   });
 
+  test('rejects an HTML page sent with status 200', () async {
+    final adapter = FakeAdapter(
+      200,
+      '<html>Portal</html>',
+      contentType: 'text/html',
+    );
+    await expectLater(
+      clientWith(adapter).get('/films'),
+      throwsA(
+        isA<ApiException>()
+            .having((e) => e.code, 'code', 'UNKNOWN_ERROR')
+            .having((e) => e.statusCode, 'statusCode', 200),
+      ),
+    );
+  });
+
+  test('accepts an empty success body', () async {
+    final result = await clientWith(FakeAdapter(204, '')).post('/auth/logout');
+    expect(result, anyOf(isNull, isEmpty));
+  });
+
   test('handles a connection failure', () async {
     final adapter = FakeAdapter(200, '{}')
       ..failure = DioException.connectionError(

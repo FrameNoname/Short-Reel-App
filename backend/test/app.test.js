@@ -30,6 +30,29 @@ test('malformed JSON is a 400, not a 500', async () => {
   assert.equal(res.body.error.code, 'VALIDATION_ERROR');
 });
 
+test('an oversized JSON body is a 413, not a 500', async () => {
+  const res = await request(makeApp())
+    .post('/api/auth/login')
+    .send({ padding: 'x'.repeat(200 * 1024) });
+  assert.equal(res.status, 413);
+  assert.equal(res.body.error.code, 'FILE_TOO_LARGE');
+});
+
+test('an unsupported JSON charset is a 400, not a 500', async () => {
+  const res = await request(makeApp())
+    .post('/api/auth/login')
+    .set('Content-Type', 'application/json; charset=foo')
+    .send('{}');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error.code, 'VALIDATION_ERROR');
+});
+
+test('a broken URL escape is a 400, not a 500', async () => {
+  const res = await request(makeApp()).get('/api/films/%E0%A4%A');
+  assert.equal(res.status, 400);
+  assert.equal(res.body.error.code, 'VALIDATION_ERROR');
+});
+
 test('unexpected errors hide their details', async () => {
   const secret = 'db password leaked';
   const outer = require('express')();

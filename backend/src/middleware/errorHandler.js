@@ -11,6 +11,12 @@ function toApiError(err) {
       ? new ApiError(413, 'FILE_TOO_LARGE', 'File is too large')
       : new ApiError(400, 'VALIDATION_ERROR', err.message);
   }
+  if (err.type === 'entity.too.large') {
+    return new ApiError(413, 'FILE_TOO_LARGE', 'Request body is too large');
+  }
+  if (err.status >= 400 && err.status < 500) {
+    return new ApiError(400, 'VALIDATION_ERROR', 'Request is not valid');
+  }
   return new ApiError(500, 'INTERNAL_ERROR', 'Something went wrong');
 }
 
