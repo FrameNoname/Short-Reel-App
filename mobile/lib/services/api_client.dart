@@ -60,7 +60,17 @@ class ApiClient {
 
   Future<dynamic> _send(Future<Response<dynamic>> Function() request) async {
     try {
-      return (await request()).data;
+      final response = await request();
+      final data = response.data;
+      // Every endpoint speaks JSON, so text here came from something else.
+      if (data is String && data.isNotEmpty) {
+        throw ApiException(
+          code: 'UNKNOWN_ERROR',
+          message: 'The server sent an unexpected response',
+          statusCode: response.statusCode,
+        );
+      }
+      return data;
     } on DioException catch (e) {
       throw _toApiException(e);
     }
