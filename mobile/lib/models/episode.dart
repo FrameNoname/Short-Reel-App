@@ -18,12 +18,12 @@ class Episode {
   final int priceCoins;
 
   factory Episode.fromJson(Map<String, dynamic> json) => Episode(
-        id: json['id'] as int,
-        filmId: json['film_id'] as int,
-        episodeNo: json['episode_no'] as int,
-        title: json['title'] as String?,
-        durationSec: json['duration_sec'] as int,
-        isFree: json['is_free'] == 1,
-        priceCoins: json['price_coins'] as int,
-      );
+    id: json['id'] as int,
+    filmId: json['film_id'] as int,
+    episodeNo: json['episode_no'] as int,
+    title: json['title'] as String?,
+    durationSec: json['duration_sec'] as int,
+    isFree: json['is_free'] == 1,
+    priceCoins: json['price_coins'] as int,
+  );
 }
