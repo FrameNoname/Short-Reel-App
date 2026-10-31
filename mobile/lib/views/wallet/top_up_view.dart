@@ -16,6 +16,7 @@ class TopUpView extends StatefulWidget {
 
 class _TopUpViewState extends State<TopUpView> {
   CoinPack? _selected;
+  bool _busy = false;
 
   String _describe(CoinPack pack) {
     final episodes =
@@ -34,11 +35,17 @@ class _TopUpViewState extends State<TopUpView> {
   };
 
   Future<void> _buy(CoinPack pack) async {
-    await context.read<WalletController>().buy(
-      coins: pack.coins,
-      priceUsd: pack.priceUsd,
-    );
-    if (mounted) Navigator.of(context).pop();
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await context.read<WalletController>().buy(
+        coins: pack.coins,
+        priceUsd: pack.priceUsd,
+      );
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -75,6 +82,7 @@ class _TopUpViewState extends State<TopUpView> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => setState(() => _selected = pack),
                 child: AppCard(
                   color: pack == selected
@@ -85,7 +93,19 @@ class _TopUpViewState extends State<TopUpView> {
                       : AppColors.border,
                   child: Row(
                     children: [
-                      const Icon(Icons.toll, color: AppColors.gold, size: 30),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0x26FFC53D),
+                        ),
+                        child: const Icon(
+                          Icons.toll_rounded,
+                          color: AppColors.gold,
+                          size: 26,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -136,7 +156,20 @@ class _TopUpViewState extends State<TopUpView> {
                       const SizedBox(width: 8),
                       Text(
                         '\$${pack.priceUsd}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Icon(
+                        pack == selected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        size: 20,
+                        color: pack == selected
+                            ? AppColors.primary
+                            : AppColors.muted,
                       ),
                     ],
                   ),
@@ -149,10 +182,19 @@ class _TopUpViewState extends State<TopUpView> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
           child: FilledButton(
-            onPressed: () => _buy(selected),
-            child: Text(
-              'Buy ${selected.coins} coins for \$${selected.priceUsd}',
-            ),
+            onPressed: _busy ? null : () => _buy(selected),
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(
+                    'Buy ${selected.coins} coins for \$${selected.priceUsd}',
+                  ),
           ),
         ),
       ),

@@ -61,7 +61,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.bySemanticsLabel(RegExp('^Like')), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('^Comments')), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp('^Report')), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^Share')), findsOneWidget);
     semantics.dispose();
   });
 

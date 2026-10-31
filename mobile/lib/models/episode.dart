@@ -17,6 +17,17 @@ class Episode {
   final bool isFree;
   final int priceCoins;
 
+  /// The same episode at a new price; 0 coins makes it free.
+  Episode withPrice(int coins) => Episode(
+    id: id,
+    filmId: filmId,
+    episodeNo: episodeNo,
+    title: title,
+    durationSec: durationSec,
+    isFree: coins == 0,
+    priceCoins: coins,
+  );
+
   factory Episode.fromJson(Map<String, dynamic> json) => Episode(
     id: json['id'] as int,
     filmId: json['film_id'] as int,

@@ -13,7 +13,7 @@ class UploadController extends ChangeNotifier {
     required String genre,
     required String aiTool,
     required String promptCredit,
-    required List<bool> episodeFree,
+    required List<int> episodePrices,
   }) async {
     await repository.upload(
       creatorId: creatorId,
@@ -21,7 +21,7 @@ class UploadController extends ChangeNotifier {
       genre: genre,
       aiTool: aiTool,
       promptCredit: promptCredit,
-      episodeFree: episodeFree,
+      episodePrices: episodePrices,
     );
     notifyListeners();
   }
@@ -32,7 +32,9 @@ class UploadController extends ChangeNotifier {
     required String genre,
     required String aiTool,
     required String promptCredit,
+    Map<int, int> episodePrices = const {},
   }) {
+    repository.setEpisodePrices(episodePrices);
     repository.updateFilm(
       filmId,
       title: title,

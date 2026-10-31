@@ -24,6 +24,8 @@ class _RegisterViewState extends State<RegisterView> {
   String? _usernameError;
   bool _passwordInvalid = false;
   bool _confirmInvalid = false;
+  bool _hidePassword = true;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -51,12 +53,16 @@ class _RegisterViewState extends State<RegisterView> {
     });
     if (passwordInvalid || confirmInvalid || usernameError != null) return;
 
+    if (_busy) return;
     final auth = context.read<AuthController>();
+    setState(() => _busy = true);
     try {
       await auth.register(_username.text, _password.text, _role);
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } on ApiException catch (e) {
-      setState(() => _usernameError = e.message);
+      if (mounted) setState(() => _usernameError = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -110,6 +116,7 @@ class _RegisterViewState extends State<RegisterView> {
             TextField(
               key: const Key('register-username'),
               controller: _username,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'Choose a username',
                 enabledBorder: _usernameError == null ? null : _invalidBorder,
@@ -121,10 +128,22 @@ class _RegisterViewState extends State<RegisterView> {
             TextField(
               key: const Key('register-password'),
               controller: _password,
-              obscureText: true,
+              obscureText: _hidePassword,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
                 hintText: 'Create a password',
                 enabledBorder: _passwordInvalid ? _invalidBorder : null,
+                suffixIcon: IconButton(
+                  tooltip: _hidePassword ? 'Show password' : 'Hide password',
+                  icon: Icon(
+                    _hidePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: AppColors.muted,
+                  ),
+                  onPressed: () =>
+                      setState(() => _hidePassword = !_hidePassword),
+                ),
               ),
             ),
             if (_passwordInvalid)
@@ -142,7 +161,8 @@ class _RegisterViewState extends State<RegisterView> {
             TextField(
               key: const Key('register-confirm'),
               controller: _confirm,
-              obscureText: true,
+              obscureText: _hidePassword,
+              onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 hintText: 'Type it again',
                 enabledBorder: _confirmInvalid ? _invalidBorder : null,
@@ -151,8 +171,17 @@ class _RegisterViewState extends State<RegisterView> {
             if (_confirmInvalid) const FieldError("Passwords don't match."),
             const SizedBox(height: 20),
             FilledButton(
-              onPressed: _submit,
-              child: const Text('Create account'),
+              onPressed: _busy ? null : _submit,
+              child: _busy
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Create account'),
             ),
             const SizedBox(height: 14),
             Wrap(
@@ -201,22 +230,26 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AppCard(
-        color: selected ? AppColors.primarySoft : AppColors.surface,
-        borderColor: selected ? AppColors.primary : AppColors.border,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            Text(
-              subtitle,
-              style: const TextStyle(color: AppColors.muted, fontSize: 12),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AppCard(
+          color: selected ? AppColors.primarySoft : AppColors.surface,
+          borderColor: selected ? AppColors.primary : AppColors.border,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(height: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(
+                subtitle,
+                style: const TextStyle(color: AppColors.muted, fontSize: 12),
+              ),
+            ],
+          ),
         ),
       ),
     );

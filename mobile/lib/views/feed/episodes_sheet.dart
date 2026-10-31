@@ -168,7 +168,13 @@ class _EpisodeTile extends StatelessWidget {
               AppColors.gold,
             ),
           };
+    final icon = isCurrent
+        ? Icons.equalizer_rounded
+        : access == EpisodeAccess.locked
+        ? Icons.lock_rounded
+        : null;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
@@ -181,6 +187,10 @@ class _EpisodeTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            SizedBox(
+              height: 14,
+              child: icon == null ? null : Icon(icon, size: 14, color: color),
+            ),
             Text(
               '${episode.episodeNo}',
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),

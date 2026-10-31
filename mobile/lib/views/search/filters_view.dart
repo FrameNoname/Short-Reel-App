@@ -78,8 +78,15 @@ class _FiltersViewState extends State<FiltersView> {
         title: const Text('Filters', style: TextStyle(fontSize: 17)),
         actions: [
           TextButton(
-            onPressed: () => _update(FilmFilter(query: _filter.query)),
-            child: const Text('Reset', style: TextStyle(color: AppColors.link)),
+            onPressed: _filter.hasFilters
+                ? () => _update(FilmFilter(query: _filter.query))
+                : null,
+            child: Text(
+              'Reset',
+              style: TextStyle(
+                color: _filter.hasFilters ? AppColors.link : AppColors.muted,
+              ),
+            ),
           ),
         ],
       ),
@@ -122,6 +129,7 @@ class _FiltersViewState extends State<FiltersView> {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => _update(_filter.copyWith(length: value)),
                 child: _Choice(
                   selected: _filter.length == value,
@@ -158,6 +166,7 @@ class _FiltersViewState extends State<FiltersView> {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
                 onTap: () => _update(
                   _filter.copyWith(aiTools: _toggled(_filter.aiTools, name)),
                 ),
@@ -188,8 +197,15 @@ class _FiltersViewState extends State<FiltersView> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
           child: FilledButton(
-            onPressed: () => Navigator.of(context).pop(_filter),
-            child: Text('Show ${_count ?? ''} films'),
+            onPressed: _count == 0
+                ? null
+                : () => Navigator.of(context).pop(_filter),
+            child: Text(switch (_count) {
+              null => 'Show films',
+              0 => 'No films match',
+              1 => 'Show 1 film',
+              final n => 'Show $n films',
+            }),
           ),
         ),
       ),
@@ -233,38 +249,50 @@ class _GenreTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: name,
+      excludeSemantics: true,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: tint,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? AppColors.primary : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: color, size: 22),
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-              ],
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: tint,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected ? AppColors.primary : Colors.transparent,
+              width: 2,
             ),
-            if (selected)
-              const Align(
-                alignment: Alignment.topRight,
-                child: Icon(
-                  Icons.check_circle,
-                  size: 18,
-                  color: AppColors.primary,
-                ),
+          ),
+          child: Stack(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(icon, color: color, size: 22),
+                  Text(
+                    name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
               ),
-          ],
+              if (selected)
+                const Align(
+                  alignment: Alignment.topRight,
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/verified_badge.dart';
 
 enum _Section { queue, reports, live }
 
@@ -48,26 +49,39 @@ class _AdminViewState extends State<AdminView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                const ChannelName(
                   'Admin',
+                  verified: true,
+                  badgeSize: 24,
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
+                    horizontal: 10,
+                    vertical: 4,
                   ),
                   decoration: BoxDecoration(
                     color: const Color(0x33FF6B6B),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text(
-                    'Admin',
-                    style: TextStyle(
-                      color: AppColors.danger,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.shield_rounded,
+                        size: 14,
+                        color: AppColors.danger,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'Moderator',
+                        style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -218,10 +232,11 @@ class _SectionTab extends StatelessWidget {
 }
 
 class _FilmSummary extends StatelessWidget {
-  const _FilmSummary({required this.film, required this.detail});
+  const _FilmSummary({required this.film, this.detail, this.footer});
 
   final Film film;
-  final String detail;
+  final String? detail;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -254,10 +269,12 @@ class _FilmSummary extends StatelessWidget {
                 '@${film.creatorName} · ${film.genreName} · ${film.aiToolName}',
                 style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
-              Text(
-                detail,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
+              if (detail != null)
+                Text(
+                  detail!,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                ),
+              if (footer != null) ...[const SizedBox(height: 8), footer!],
             ],
           ),
         ),
@@ -294,15 +311,24 @@ class _ReviewCard extends StatelessWidget {
           children: [
             _FilmSummary(
               film: film,
-              detail:
-                  'AI label ${film.isAiGenerated ? '✓' : '✗'} · '
-                  'prompt credit ${hasCredit ? '✓' : '✗'}',
+              footer: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _CheckChip(label: 'AI label', ok: film.isAiGenerated),
+                  _CheckChip(label: 'Prompt credit', ok: hasCredit),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.green,
+                      foregroundColor: Colors.black,
+                    ),
                     onPressed: () => admin.review(film.id, 'approved'),
                     child: const Text('Approve'),
                   ),
@@ -352,9 +378,25 @@ class _ReportCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 3),
-            Text(
-              report.reason,
-              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                const Icon(
+                  Icons.flag_rounded,
+                  size: 15,
+                  color: AppColors.danger,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    report.reason,
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
@@ -413,6 +455,44 @@ class _LiveFilmCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CheckChip extends StatelessWidget {
+  const _CheckChip({required this.label, required this.ok});
+
+  final String label;
+  final bool ok;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ok ? AppColors.green : AppColors.danger;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            ok ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            size: 14,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

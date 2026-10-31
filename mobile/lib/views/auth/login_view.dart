@@ -19,6 +19,7 @@ class _LoginViewState extends State<LoginView> {
   final _password = TextEditingController();
   bool _hidePassword = true;
   String? _error;
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -30,12 +31,19 @@ class _LoginViewState extends State<LoginView> {
   void _leaveToApp() => Navigator.of(context).popUntil((r) => r.isFirst);
 
   Future<void> _submit() async {
+    if (_busy) return;
     final auth = context.read<AuthController>();
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       await auth.login(_username.text, _password.text);
       if (mounted) _leaveToApp();
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -61,11 +69,12 @@ class _LoginViewState extends State<LoginView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 4),
                   const Text(
                     'AI short films, one episode at a time.',
                     style: TextStyle(color: AppColors.muted, fontSize: 15),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 28),
                   const FieldLabel('Username'),
                   TextField(
                     key: const Key('login-username'),
@@ -91,9 +100,13 @@ class _LoginViewState extends State<LoginView> {
                     decoration: InputDecoration(
                       enabledBorder: hasError ? _errorBorder : null,
                       suffixIcon: IconButton(
-                        tooltip: 'Show password',
-                        icon: const Icon(
-                          Icons.visibility_outlined,
+                        tooltip: _hidePassword
+                            ? 'Show password'
+                            : 'Hide password',
+                        icon: Icon(
+                          _hidePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                           color: AppColors.muted,
                         ),
                         onPressed: () =>
@@ -121,7 +134,19 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ],
                   const SizedBox(height: 20),
-                  FilledButton(onPressed: _submit, child: const Text('Log in')),
+                  FilledButton(
+                    onPressed: _busy ? null : _submit,
+                    child: _busy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Log in'),
+                  ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () => Navigator.of(context).push(

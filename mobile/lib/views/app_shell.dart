@@ -118,12 +118,28 @@ class _AppShellState extends State<AppShell> {
     final tabs = tabsFor(context.watch<AuthController>().role);
     // A tab can disappear when a creator or admin logs out.
     final index = max(tabs.indexOf(_selected), 0);
+    // The feed runs full screen; its bar floats over the video on a scrim.
+    final overVideo = tabs[index] == AppTab.feed;
     return Scaffold(
+      extendBody: overVideo,
       body: IndexedStack(index: index, children: tabs.map(_viewFor).toList()),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: (i) => _onSelected(tabs[i]),
-        destinations: tabs.map(_destinationFor).toList(),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: overVideo
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x00000000), Color(0xE6000000)],
+                )
+              : null,
+        ),
+        child: NavigationBar(
+          backgroundColor: overVideo ? Colors.transparent : null,
+          elevation: 0,
+          selectedIndex: index,
+          onDestinationSelected: (i) => _onSelected(tabs[i]),
+          destinations: tabs.map(_destinationFor).toList(),
+        ),
       ),
     );
   }

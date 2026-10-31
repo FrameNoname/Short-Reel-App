@@ -49,9 +49,19 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addComment(int userId, int filmId, String body) async {
-    repository.addComment(userId, filmId, body);
+  Future<void> addComment(
+    int userId,
+    int filmId,
+    String body, {
+    int? parentId,
+  }) async {
+    repository.addComment(userId, filmId, body, parentId: parentId);
     films = await _fetch(userId);
+    notifyListeners();
+  }
+
+  void toggleCommentLike(int userId, int commentId) {
+    repository.toggleCommentLike(userId, commentId);
     notifyListeners();
   }
 

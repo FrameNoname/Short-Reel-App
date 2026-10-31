@@ -62,18 +62,28 @@ class UnlockSuccessView extends StatelessWidget {
                           Positioned(
                             right: -18,
                             bottom: -18,
-                            child: Container(
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: AppColors.background,
-                                  width: 4,
+                            child: TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0, end: 1),
+                              duration: const Duration(milliseconds: 650),
+                              curve: Curves.elasticOut,
+                              builder: (_, t, child) =>
+                                  Transform.scale(scale: t, child: child),
+                              child: Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: AppColors.background,
+                                    width: 4,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.check_rounded,
+                                  size: 30,
                                 ),
                               ),
-                              child: const Icon(Icons.check),
                             ),
                           ),
                         ],
@@ -107,7 +117,7 @@ class UnlockSuccessView extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
-                            Icons.toll,
+                            Icons.toll_rounded,
                             size: 16,
                             color: AppColors.gold,
                           ),
@@ -161,7 +171,7 @@ class UnlockSuccessView extends StatelessWidget {
                           ),
                           const SizedBox(width: 10),
                           const Icon(
-                            Icons.lock_outline,
+                            Icons.lock_rounded,
                             size: 14,
                             color: AppColors.gold,
                           ),
@@ -176,7 +186,7 @@ class UnlockSuccessView extends StatelessWidget {
                   ],
                   FilledButton.icon(
                     onPressed: close,
-                    icon: const Icon(Icons.play_arrow),
+                    icon: const Icon(Icons.play_arrow_rounded),
                     label: Text('Play episode ${episode.episodeNo}'),
                   ),
                 ],
