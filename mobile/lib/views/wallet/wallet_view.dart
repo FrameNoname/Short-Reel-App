@@ -23,6 +23,7 @@ class WalletView extends StatefulWidget {
 
 class _WalletViewState extends State<WalletView> {
   bool _historyOpen = true;
+  _HistoryFilter _filter = _HistoryFilter.all;
 
   void _open(Widget view) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => view));
@@ -53,6 +54,7 @@ class _WalletViewState extends State<WalletView> {
     }
     final wallet = context.watch<WalletController>();
     final history = wallet.transactions;
+    final shown = history.where(_filter.matches).toList();
     final subscription = wallet.subscription;
     return Scaffold(
       body: SafeArea(
@@ -92,7 +94,16 @@ class _WalletViewState extends State<WalletView> {
                   width: 124,
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                    onPressed: wallet.demoTopUp,
+                    onPressed: () {
+                      wallet.demoTopUp();
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          const SnackBar(
+                            content: Text('Added 100 free coins.'),
+                          ),
+                        );
+                    },
                     child: const Text('+100 free'),
                   ),
                 ),
@@ -132,18 +143,43 @@ class _WalletViewState extends State<WalletView> {
                 ),
               ],
             ),
-            if (_historyOpen)
+            if (_historyOpen) ...[
+              const SizedBox(height: 4),
+              _FilterChips(
+                selected: _filter,
+                onSelected: (value) => setState(() => _filter = value),
+              ),
+              const SizedBox(height: 10),
               if (history.isEmpty)
                 const EmptyView(message: 'No coin activity yet.')
-              else
-                AppCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Column(
-                    children: [
-                      for (final item in history) _HistoryRow(item: item),
-                    ],
+              else if (shown.isEmpty)
+                EmptyView(message: _filter.emptyMessage)
+              else ...[
+                _HistorySummary(items: shown),
+                const SizedBox(height: 10),
+                for (final group in _groupByDay(shown)) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 6, 0, 6),
+                    child: Text(
+                      group.label,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
+                  AppCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Column(
+                      children: [
+                        for (final item in group.items) _HistoryRow(item: item),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ],
           ],
         ),
       ),
@@ -196,7 +232,7 @@ class BalanceCard extends StatelessWidget {
             ],
           ),
           Text(
-            'Enough for ${balance ~/ episodePrice} episodes',
+            _enoughFor(balance ~/ episodePrice),
             style: const TextStyle(color: AppColors.muted, fontSize: 13),
           ),
         ],
@@ -204,6 +240,9 @@ class BalanceCard extends StatelessWidget {
     );
   }
 }
+
+String _enoughFor(int episodes) =>
+    'Enough for $episodes ${episodes == 1 ? 'episode' : 'episodes'}';
 
 class _PlusCard extends StatelessWidget {
   const _PlusCard({
@@ -273,7 +312,9 @@ class _PlusCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
-                  value: 1 - daysLeft / total,
+                  value: total <= 0
+                      ? 1
+                      : (1 - daysLeft / total).clamp(0.0, 1.0),
                   minHeight: 6,
                   backgroundColor: AppColors.border,
                   color: AppColors.primary,
@@ -378,9 +419,7 @@ class _HistoryRow extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 Text(
-                  isTopUp
-                      ? shortDate(item.createdAt)
-                      : 'Unlocked ${shortDate(item.createdAt)}',
+                  isTopUp ? 'Top-up' : 'Episode unlock',
                   style: const TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
               ],
@@ -397,4 +436,161 @@ class _HistoryRow extends StatelessWidget {
       ),
     );
   }
+}
+
+enum _HistoryFilter {
+  all('All', 'No coin activity yet.'),
+  added('Added', 'No top-ups yet.'),
+  spent('Spent', 'No unlocks yet.');
+
+  const _HistoryFilter(this.label, this.emptyMessage);
+
+  final String label;
+  final String emptyMessage;
+
+  bool matches(Transaction item) => switch (this) {
+    all => true,
+    added => item.amount > 0,
+    spent => item.amount < 0,
+  };
+}
+
+class _FilterChips extends StatelessWidget {
+  const _FilterChips({required this.selected, required this.onSelected});
+
+  final _HistoryFilter selected;
+  final ValueChanged<_HistoryFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final filter in _HistoryFilter.values)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Semantics(
+              button: true,
+              selected: filter == selected,
+              label: 'Show ${filter.label.toLowerCase()}',
+              excludeSemantics: true,
+              onTap: () => onSelected(filter),
+              child: GestureDetector(
+                key: Key('history-${filter.name}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelected(filter),
+                child: Container(
+                  height: 44,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  decoration: BoxDecoration(
+                    color: filter == selected
+                        ? AppColors.primary
+                        : AppColors.surface,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: filter == selected
+                          ? AppColors.primary
+                          : AppColors.border,
+                    ),
+                  ),
+                  child: Text(
+                    filter.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: filter == selected ? Colors.white : AppColors.text,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Totals for whatever the current filter is showing.
+class _HistorySummary extends StatelessWidget {
+  const _HistorySummary({required this.items});
+
+  final List<Transaction> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final added = items
+        .where((i) => i.amount > 0)
+        .fold(0, (a, i) => a + i.amount);
+    final spent = items
+        .where((i) => i.amount < 0)
+        .fold(0, (a, i) => a - i.amount);
+    return Row(
+      children: [
+        if (added > 0)
+          _Total(label: 'Added', value: '+$added', color: AppColors.gold),
+        if (added > 0 && spent > 0) const SizedBox(width: 16),
+        if (spent > 0)
+          _Total(label: 'Spent', value: '−$spent', color: AppColors.text),
+      ],
+    );
+  }
+}
+
+class _Total extends StatelessWidget {
+  const _Total({required this.label, required this.value, required this.color});
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(color: AppColors.muted, fontSize: 13),
+        children: [
+          TextSpan(text: '$label '),
+          TextSpan(
+            text: value,
+            style: TextStyle(color: color, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayGroup {
+  const _DayGroup(this.label, this.items);
+
+  final String label;
+  final List<Transaction> items;
+}
+
+/// Newest first, as the repository already orders them.
+List<_DayGroup> _groupByDay(List<Transaction> items, {DateTime? now}) {
+  final today = now ?? DateTime.now();
+  String labelFor(DateTime date) {
+    final days = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).difference(DateTime(date.year, date.month, date.day)).inDays;
+    return switch (days) {
+      0 => 'Today',
+      1 => 'Yesterday',
+      _ => shortDate(date),
+    };
+  }
+
+  final groups = <_DayGroup>[];
+  for (final item in items) {
+    final label = labelFor(item.createdAt);
+    if (groups.isNotEmpty && groups.last.label == label) {
+      groups.last.items.add(item);
+    } else {
+      groups.add(_DayGroup(label, [item]));
+    }
+  }
+  return groups;
 }

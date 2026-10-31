@@ -14,7 +14,7 @@ class MockRepository implements AppRepository {
   MockRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     for (final film in _films.values) {
       for (var n = 1; n <= film.episodeCount; n++) {
-        _addEpisode(film.id, n, isFree: n <= 2);
+        _addEpisode(film.id, n, price: n <= 2 ? 0 : _episodePrice);
       }
     }
     _seedUnlocks();
@@ -60,13 +60,16 @@ class MockRepository implements AppRepository {
     ),
   ];
   final Map<int, int> _commentFilm = {1: 1, 2: 2};
+
+  /// (userId, commentId) pairs for every like on a comment.
+  final Set<(int, int)> _commentLikes = {(6, 2), (3, 2), (2, 1)};
   int _nextCommentId = 3;
 
   int _adminSharePercent = 30;
   double _salesUsd = 8.97;
   int _nextEpisodeId = 1;
 
-  void _addEpisode(int filmId, int number, {required bool isFree}) {
+  void _addEpisode(int filmId, int number, {required int price}) {
     final id = _nextEpisodeId++;
     _episodes[id] = Episode(
       id: id,
@@ -74,8 +77,8 @@ class MockRepository implements AppRepository {
       episodeNo: number,
       title: 'Episode $number',
       durationSec: 60 + number * 15,
-      isFree: isFree,
-      priceCoins: isFree ? 0 : _episodePrice,
+      isFree: price == 0,
+      priceCoins: price,
     );
   }
 
@@ -177,6 +180,38 @@ class MockRepository implements AppRepository {
       ApiException(code: code, message: message, statusCode: status);
 
   User _user(int id) => _users[id]!;
+
+  @override
+  User? userById(int id) => _users[id];
+
+  @override
+  List<User> searchCreators(String query) {
+    final needle = query.trim().toLowerCase();
+    if (needle.isEmpty) return const [];
+    return _users.values
+        .where((u) => u.role == UserRole.creator || u.role == UserRole.admin)
+        .where(
+          (u) =>
+              u.username.toLowerCase().contains(needle) ||
+              (u.displayName ?? '').toLowerCase().contains(needle),
+        )
+        .toList();
+  }
+
+  @override
+  Future<User> updateProfile(
+    int userId, {
+    required String displayName,
+    required String bio,
+  }) async {
+    final name = displayName.trim();
+    if (name.isEmpty) {
+      throw _error('VALIDATION', 'Enter a name for your channel.', 400);
+    }
+    final updated = _user(userId).copyWith(displayName: name, bio: bio.trim());
+    _users[userId] = updated;
+    return updated;
+  }
 
   @override
   Future<User> login(String username, String password) async {
@@ -288,10 +323,13 @@ class MockRepository implements AppRepository {
       _comments.where((c) => _commentFilm[c.id] == filmId).toList();
 
   @override
-  void addComment(int userId, int filmId, String body) {
+  void addComment(int userId, int filmId, String body, {int? parentId}) {
     final text = body.trim();
     if (text.isEmpty) {
       throw _error('VALIDATION_ERROR', 'Write a comment first.', 400);
+    }
+    if (parentId != null && _commentFilm[parentId] != filmId) {
+      throw _error('NOT_FOUND', 'That comment is no longer there.', 404);
     }
     final id = _nextCommentId++;
     _comments.insert(
@@ -301,6 +339,7 @@ class MockRepository implements AppRepository {
         userId: userId,
         username: _user(userId).username,
         body: text,
+        parentId: parentId,
       ),
     );
     _commentFilm[id] = filmId;
@@ -310,11 +349,33 @@ class MockRepository implements AppRepository {
 
   @override
   void removeComment(int commentId) {
-    final filmId = _commentFilm.remove(commentId);
-    _comments.removeWhere((c) => c.id == commentId);
-    if (filmId == null) return;
-    final film = _films[filmId]!;
-    _films[filmId] = film.copyWith(commentCount: film.commentCount - 1);
+    final removed = {
+      commentId,
+      for (final c in _comments)
+        if (c.parentId == commentId) c.id,
+    };
+    for (final id in removed) {
+      final filmId = _commentFilm.remove(id);
+      _comments.removeWhere((c) => c.id == id);
+      _commentLikes.removeWhere((like) => like.$2 == id);
+      if (filmId == null) continue;
+      final film = _films[filmId]!;
+      _films[filmId] = film.copyWith(commentCount: film.commentCount - 1);
+    }
+  }
+
+  @override
+  bool isCommentLiked(int userId, int commentId) =>
+      _commentLikes.contains((userId, commentId));
+
+  @override
+  int commentLikeCount(int commentId) =>
+      _commentLikes.where((like) => like.$2 == commentId).length;
+
+  @override
+  void toggleCommentLike(int userId, int commentId) {
+    final like = (userId, commentId);
+    if (!_commentLikes.remove(like)) _commentLikes.add(like);
   }
 
   @override
@@ -501,7 +562,7 @@ class MockRepository implements AppRepository {
     required String genre,
     required String aiTool,
     required String promptCredit,
-    required List<bool> episodeFree,
+    required List<int> episodePrices,
   }) async {
     final id = _films.keys.reduce((a, b) => a > b ? a : b) + 1;
     final film = Film(
@@ -518,11 +579,11 @@ class MockRepository implements AppRepository {
       creatorName: _user(creatorId).username,
       genreName: genre,
       aiToolName: aiTool,
-      episodeCount: episodeFree.length,
+      episodeCount: episodePrices.length,
     );
     _films[id] = film;
-    for (var i = 0; i < episodeFree.length; i++) {
-      _addEpisode(id, i + 1, isFree: episodeFree[i]);
+    for (var i = 0; i < episodePrices.length; i++) {
+      _addEpisode(id, i + 1, price: episodePrices[i]);
     }
     return film;
   }
@@ -568,13 +629,30 @@ class MockRepository implements AppRepository {
   }
 
   @override
+  void setEpisodePrices(Map<int, int> pricesByEpisodeId) {
+    pricesByEpisodeId.forEach((episodeId, coins) {
+      final episode = _episodes[episodeId];
+      if (episode == null) return;
+      if (coins < 0 || coins > 999) {
+        throw _error('VALIDATION', 'A price must be 0 to 999 coins.', 400);
+      }
+      _episodes[episodeId] = episode.withPrice(coins);
+    });
+  }
+
+  @override
   EpisodePricing pricingOf(int filmId) {
     final episodes = _episodes.values.where((e) => e.filmId == filmId);
     final paid = episodes.where((e) => !e.isFree);
     return EpisodePricing(
       freeCount: episodes.length - paid.length,
       paidCount: paid.length,
-      priceCoins: paid.isEmpty ? 0 : paid.first.priceCoins,
+      priceCoins: paid.isEmpty
+          ? 0
+          : paid.map((e) => e.priceCoins).reduce((a, b) => a < b ? a : b),
+      maxPriceCoins: paid.isEmpty
+          ? 0
+          : paid.map((e) => e.priceCoins).reduce((a, b) => a > b ? a : b),
     );
   }
 

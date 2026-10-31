@@ -191,7 +191,7 @@ void main() {
         genre: 'Drama',
         aiTool: 'Mixed',
         promptCredit: 'Prompt: night bus',
-        episodeFree: const [true, false],
+        episodePrices: const [0, 20],
       );
       expect(film.status, 'pending');
       expect(

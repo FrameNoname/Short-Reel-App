@@ -66,7 +66,11 @@ class UnlockSheet extends StatelessWidget {
                 const SizedBox(height: 8),
                 _CoinRow(label: 'Your balance', coins: balance),
                 const Divider(height: 22, color: AppColors.border),
-                _CoinRow(label: 'After unlock', coins: balance - price),
+                _CoinRow(
+                  label: 'After unlock',
+                  coins: balance - price,
+                  bold: true,
+                ),
               ],
             ),
           ),
@@ -89,23 +93,33 @@ class UnlockSheet extends StatelessWidget {
 }
 
 class _CoinRow extends StatelessWidget {
-  const _CoinRow({required this.label, required this.coins});
+  const _CoinRow({required this.label, required this.coins, this.bold = false});
 
   final String label;
   final int coins;
+  final bool bold;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.muted)),
         Text(
-          '$coins coins',
-          style: const TextStyle(
-            color: AppColors.gold,
-            fontWeight: FontWeight.w700,
-          ),
+          label,
+          style: TextStyle(color: bold ? AppColors.text : AppColors.muted),
+        ),
+        Row(
+          children: [
+            const Icon(Icons.toll_rounded, size: 16, color: AppColors.gold),
+            const SizedBox(width: 6),
+            Text(
+              '$coins coins',
+              style: TextStyle(
+                color: AppColors.gold,
+                fontWeight: bold ? FontWeight.w800 : FontWeight.w700,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -178,6 +192,7 @@ class _NotEnoughCoinsSheetState extends State<NotEnoughCoinsSheet> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () => setState(() => _selected = pack),
                       child: AppCard(
                         color: pack == selected

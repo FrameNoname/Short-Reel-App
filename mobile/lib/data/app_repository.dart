@@ -51,12 +51,18 @@ class FilmComment {
     required this.userId,
     required this.username,
     required this.body,
+    this.parentId,
   });
 
   final int id;
   final int userId;
   final String username;
   final String body;
+
+  /// The comment this one replies to; null for a top-level comment.
+  final int? parentId;
+
+  bool get isReply => parentId != null;
 }
 
 class EpisodePricing {
@@ -64,16 +70,36 @@ class EpisodePricing {
     required this.freeCount,
     required this.paidCount,
     required this.priceCoins,
-  });
+    int? maxPriceCoins,
+  }) : maxPriceCoins = maxPriceCoins ?? priceCoins;
 
   final int freeCount;
   final int paidCount;
+
+  /// The lowest price among the paid episodes, or 0 when none are paid.
   final int priceCoins;
+
+  /// The highest price among the paid episodes.
+  final int maxPriceCoins;
+
+  bool get hasMixedPrices => maxPriceCoins != priceCoins;
 }
 
 /// Everything the screens need. [MockRepository] answers from demo data; an
 /// API-backed version can replace it once the backend endpoints are ready.
 abstract class AppRepository {
+  /// The public profile behind a channel, or null when the id is unknown.
+  User? userById(int id);
+
+  /// Channels (creators and admins) whose name matches [query].
+  List<User> searchCreators(String query);
+
+  /// Saves the person's channel name and bio.
+  Future<User> updateProfile(
+    int userId, {
+    required String displayName,
+    required String bio,
+  });
   Future<User> login(String username, String password);
   Future<User> register(String username, String password, UserRole role);
 
@@ -82,8 +108,13 @@ abstract class AppRepository {
   Future<List<Episode>> episodes(int filmId);
   EpisodeAccess accessOf(int? userId, Episode episode);
   List<FilmComment> commentsOf(int filmId);
-  void addComment(int userId, int filmId, String body);
+  void addComment(int userId, int filmId, String body, {int? parentId});
+
+  /// Removes a comment together with the replies under it.
   void removeComment(int commentId);
+  bool isCommentLiked(int userId, int commentId);
+  int commentLikeCount(int commentId);
+  void toggleCommentLike(int userId, int commentId);
   void reportFilm(int userId, int filmId, String reason);
 
   Future<User> unlock(int userId, int episodeId);
@@ -114,7 +145,7 @@ abstract class AppRepository {
     required String genre,
     required String aiTool,
     required String promptCredit,
-    required List<bool> episodeFree,
+    required List<int> episodePrices,
   });
   void updateFilm(
     int filmId, {
@@ -124,6 +155,9 @@ abstract class AppRepository {
     required String promptCredit,
   });
   void deleteFilm(int filmId);
+
+  /// Sets new prices by episode id; 0 coins makes an episode free.
+  void setEpisodePrices(Map<int, int> pricesByEpisodeId);
   EpisodePricing pricingOf(int filmId);
   List<Film> filmsOf(int creatorId);
   Earnings earningsOf(int creatorId);

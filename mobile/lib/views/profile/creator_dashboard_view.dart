@@ -12,6 +12,7 @@ import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
 import '../upload/upload_view.dart';
+import 'creator_profile_view.dart';
 
 class CreatorDashboardView extends StatelessWidget {
   const CreatorDashboardView({super.key});
@@ -25,7 +26,16 @@ class CreatorDashboardView extends StatelessWidget {
     final earnings = repository.earningsOf(userId);
     final films = repository.filmsOf(userId);
     return Scaffold(
-      appBar: AppBar(title: const Text('Creator studio')),
+      appBar: AppBar(
+        title: const Text('Creator studio'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => openCreatorProfile(context, userId),
+            icon: const Icon(Icons.person_outline_rounded, size: 18),
+            label: const Text('My channel'),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(14),
         children: [
@@ -42,6 +52,12 @@ class CreatorDashboardView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
+                    const Icon(
+                      Icons.toll_rounded,
+                      color: AppColors.gold,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       '${earnings.coins}',
                       style: const TextStyle(
@@ -144,7 +160,8 @@ class _CreatorFilmCard extends StatelessWidget {
     return switch (film.status) {
       'approved' =>
         '${film.episodeCount} eps · ${pricing.freeCount} free · '
-            '${pricing.paidCount} × ${pricing.priceCoins} coins',
+            '${pricing.paidCount} × '
+            '${pricing.hasMixedPrices ? '${pricing.priceCoins}–${pricing.maxPriceCoins}' : pricing.priceCoins} coins',
       'pending' => 'Waiting for admin review',
       'taken_down' => 'Taken down by admin',
       _ => '"${film.reviewNote ?? 'Not approved'}" — edit and resubmit',

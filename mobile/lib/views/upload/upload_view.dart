@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -23,23 +24,71 @@ class _UploadViewState extends State<UploadView> {
   late final _prompt = TextEditingController(text: widget.film?.promptCredit);
   late String _genre = widget.film?.genreName ?? mockGenres.first;
   late String _tool = widget.film?.aiToolName ?? mockAiTools.first;
-  final List<bool> _episodeFree = [true, false];
+  late List<bool> _episodeFree = _isEditing ? [] : [true, false];
+  late List<TextEditingController> _priceFields = [
+    for (final _ in _episodeFree) TextEditingController(text: '20'),
+  ];
+
+  /// Ids of the episodes being edited, in the same order as the price cards.
+  List<int> _episodeIds = const [];
   bool _aiLabel = false;
   bool _videosChosen = false;
+  bool _busy = false;
 
   bool get _isEditing => widget.film != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) _loadEpisodes();
+  }
+
+  Future<void> _loadEpisodes() async {
+    final repository = context.read<UploadController>().repository;
+    final episodes = await repository.episodes(widget.film!.id);
+    if (!mounted) return;
+    for (final field in _priceFields) {
+      field.dispose();
+    }
+    setState(() {
+      _episodeIds = [for (final e in episodes) e.id];
+      _episodeFree = [for (final e in episodes) e.isFree];
+      _priceFields = [
+        for (final e in episodes)
+          TextEditingController(text: e.isFree ? '20' : '${e.priceCoins}'),
+      ];
+    });
+  }
 
   @override
   void dispose() {
     _title.dispose();
     _prompt.dispose();
+    for (final field in _priceFields) {
+      field.dispose();
+    }
     super.dispose();
   }
 
   bool get _hasDetails =>
       _title.text.trim().isNotEmpty && _prompt.text.trim().isNotEmpty;
 
-  bool get _ready => _hasDetails && (_isEditing || (_aiLabel && _videosChosen));
+  /// A paid episode needs a whole number of coins from 1 to [_maxPrice].
+  static const _maxPrice = 999;
+
+  int? _priceOf(int i) {
+    if (_episodeFree[i]) return 0;
+    final value = int.tryParse(_priceFields[i].text.trim());
+    return value != null && value >= 1 && value <= _maxPrice ? value : null;
+  }
+
+  bool get _pricesValid =>
+      List.generate(_episodeFree.length, _priceOf).every((p) => p != null);
+
+  bool get _ready =>
+      _hasDetails &&
+      _pricesValid &&
+      (_isEditing || (_aiLabel && _videosChosen));
 
   String get _submitLabel {
     if (_isEditing) {
@@ -48,30 +97,44 @@ class _UploadViewState extends State<UploadView> {
           : 'Save changes';
     }
     if (!_aiLabel) return 'Tick the AI label to submit';
+    if (!_pricesValid) return 'Set a price for every paid episode';
     return _ready ? 'Submit for review' : 'Fill in every field to submit';
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
+    setState(() => _busy = true);
     final controller = context.read<UploadController>();
     final messenger = ScaffoldMessenger.of(context);
     final film = widget.film;
-    if (film != null) {
-      controller.update(
-        film.id,
-        title: _title.text.trim(),
-        genre: _genre,
-        aiTool: _tool,
-        promptCredit: _prompt.text.trim(),
-      );
-    } else {
-      await controller.submit(
-        creatorId: context.read<AuthController>().user!.id,
-        title: _title.text.trim(),
-        genre: _genre,
-        aiTool: _tool,
-        promptCredit: _prompt.text.trim(),
-        episodeFree: _episodeFree,
-      );
+    try {
+      if (film != null) {
+        controller.update(
+          film.id,
+          title: _title.text.trim(),
+          genre: _genre,
+          aiTool: _tool,
+          promptCredit: _prompt.text.trim(),
+          episodePrices: {
+            for (var i = 0; i < _episodeIds.length; i++)
+              _episodeIds[i]: _priceOf(i)!,
+          },
+        );
+      } else {
+        await controller.submit(
+          creatorId: context.read<AuthController>().user!.id,
+          title: _title.text.trim(),
+          genre: _genre,
+          aiTool: _tool,
+          promptCredit: _prompt.text.trim(),
+          episodePrices: [
+            for (var i = 0; i < _episodeFree.length; i++) _priceOf(i)!,
+          ],
+        );
+      }
+    } catch (_) {
+      if (mounted) setState(() => _busy = false);
+      rethrow;
     }
     if (!mounted) return;
     messenger.showSnackBar(
@@ -95,18 +158,26 @@ class _UploadViewState extends State<UploadView> {
         children: [
           if (!_isEditing) ...[
             GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: () => setState(() => _videosChosen = true),
               child: AppCard(
-                color: AppColors.primarySoft,
-                borderColor: const Color(0x667C5CFF),
+                color: _videosChosen
+                    ? const Color(0x1F3DD68C)
+                    : AppColors.primarySoft,
+                borderColor: _videosChosen
+                    ? AppColors.green
+                    : const Color(0x667C5CFF),
+                padding: const EdgeInsets.symmetric(vertical: 22),
                 child: Column(
                   children: [
                     Icon(
                       _videosChosen
-                          ? Icons.check_circle
-                          : Icons.upload_outlined,
+                          ? Icons.check_circle_rounded
+                          : Icons.video_call_rounded,
+                      size: 38,
+                      color: _videosChosen ? AppColors.green : AppColors.link,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       _videosChosen
                           ? '${_episodeFree.length} demo videos selected'
@@ -162,39 +233,25 @@ class _UploadViewState extends State<UploadView> {
             maxLines: 2,
             onChanged: (_) => setState(() {}),
           ),
-          if (!_isEditing) ...[
+          if (_episodeFree.isNotEmpty) ...[
             const SizedBox(height: 14),
             const FieldLabel('Episode pricing'),
             for (var i = 0; i < _episodeFree.length; i++)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: AppCard(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Episode ${i + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      SegmentedButton<bool>(
-                        showSelectedIcon: false,
-                        segments: const [
-                          ButtonSegment(value: true, label: Text('Free')),
-                          ButtonSegment(value: false, label: Text('20 coins')),
-                        ],
-                        selected: {_episodeFree[i]},
-                        onSelectionChanged: (value) =>
-                            setState(() => _episodeFree[i] = value.first),
-                      ),
-                    ],
-                  ),
+                child: _EpisodePriceCard(
+                  number: i + 1,
+                  isFree: _episodeFree[i],
+                  controller: _priceFields[i],
+                  invalid: !_episodeFree[i] && _priceOf(i) == null,
+                  maxPrice: _maxPrice,
+                  onFreeChanged: (free) =>
+                      setState(() => _episodeFree[i] = free),
+                  onPriceChanged: () => setState(() {}),
                 ),
               ),
+          ],
+          if (!_isEditing) ...[
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
@@ -203,6 +260,16 @@ class _UploadViewState extends State<UploadView> {
               onChanged: (value) => setState(() => _aiLabel = value ?? false),
               title: const Text('This film is AI-generated'),
             ),
+            const SizedBox(height: 6),
+            _Checklist(
+              items: [
+                ('Episode videos chosen', _videosChosen),
+                ('Title added', _title.text.trim().isNotEmpty),
+                ('Prompt credit added', _prompt.text.trim().isNotEmpty),
+                ('Episode prices set', _pricesValid),
+                ('AI label confirmed', _aiLabel),
+              ],
+            ),
           ],
         ],
       ),
@@ -210,8 +277,17 @@ class _UploadViewState extends State<UploadView> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
           child: FilledButton(
-            onPressed: _ready ? _submit : null,
-            child: Text(_submitLabel),
+            onPressed: _ready && !_busy ? _submit : null,
+            child: _busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(_submitLabel),
           ),
         ),
       ),
@@ -233,11 +309,10 @@ class _ToolChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
           color: selected ? AppColors.primary : AppColors.surface,
           borderRadius: BorderRadius.circular(22),
@@ -249,6 +324,139 @@ class _ToolChip extends StatelessWidget {
           label,
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
+      ),
+    );
+  }
+}
+
+/// What is still missing before the film can be submitted.
+class _Checklist extends StatelessWidget {
+  const _Checklist({required this.items});
+
+  final List<(String, bool)> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (label, done) in items)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Icon(
+                    done
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked,
+                    size: 18,
+                    color: done ? AppColors.green : AppColors.muted,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: done ? AppColors.text : AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One episode's price: free, or any whole number of coins the creator picks.
+class _EpisodePriceCard extends StatelessWidget {
+  const _EpisodePriceCard({
+    required this.number,
+    required this.isFree,
+    required this.controller,
+    required this.invalid,
+    required this.maxPrice,
+    required this.onFreeChanged,
+    required this.onPriceChanged,
+  });
+
+  static const _quickPrices = [10, 20, 50, 100];
+
+  final int number;
+  final bool isFree;
+  final TextEditingController controller;
+  final bool invalid;
+  final int maxPrice;
+  final ValueChanged<bool> onFreeChanged;
+  final VoidCallback onPriceChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Episode $number',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              SegmentedButton<bool>(
+                key: Key('episode-$number-kind'),
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: true, label: Text('Free')),
+                  ButtonSegment(value: false, label: Text('Paid')),
+                ],
+                selected: {isFree},
+                onSelectionChanged: (value) => onFreeChanged(value.first),
+              ),
+            ],
+          ),
+          if (!isFree) ...[
+            const SizedBox(height: 8),
+            TextField(
+              key: Key('episode-$number-price'),
+              controller: controller,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              maxLength: 3,
+              onChanged: (_) => onPriceChanged(),
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: 'Coins',
+                prefixIcon: const Icon(
+                  Icons.toll_rounded,
+                  color: AppColors.gold,
+                  size: 20,
+                ),
+                suffixText: 'coins',
+                errorText: invalid ? 'Enter 1 to $maxPrice coins.' : null,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final price in _quickPrices)
+                  ActionChip(
+                    label: Text('$price'),
+                    onPressed: () {
+                      controller.text = '$price';
+                      onPriceChanged();
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

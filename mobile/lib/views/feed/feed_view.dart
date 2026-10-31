@@ -50,8 +50,12 @@ class _FeedViewState extends State<FeedView> {
           if (feed.isLoading)
             const LoadingView()
           else if (feed.films.isEmpty)
-            const EmptyView(
-              message: 'Follow a creator to see their films here.',
+            _EmptyFeed(
+              following: feed.tab == FeedTab.following,
+              onDiscover: () => feed.selectTab(
+                FeedTab.forYou,
+                context.read<AuthController>().user?.id,
+              ),
             )
           else
             PageView.builder(
@@ -114,26 +118,86 @@ class _FeedTabLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: selected ? AppColors.text : AppColors.muted,
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? AppColors.text : AppColors.muted,
+                  shadows: const [
+                    Shadow(blurRadius: 4, color: Color(0xAA000000)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 52,
+                height: 2,
+                color: selected ? AppColors.text : Colors.transparent,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyFeed extends StatelessWidget {
+  const _EmptyFeed({required this.following, required this.onDiscover});
+
+  final bool following;
+  final VoidCallback onDiscover;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!following) {
+      return const EmptyView(message: 'No films to show yet.');
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.people_alt_rounded,
+              size: 44,
+              color: AppColors.link,
             ),
-          ),
-          const SizedBox(height: 6),
-          Container(
-            width: 52,
-            height: 2,
-            color: selected ? AppColors.text : Colors.transparent,
-          ),
-        ],
+            const SizedBox(height: 14),
+            const Text(
+              'Follow a creator to see their films here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Tap the + on a creator in For you to follow them.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.muted),
+            ),
+            const SizedBox(height: 20),
+            FilledButton(
+              onPressed: onDiscover,
+              style: FilledButton.styleFrom(minimumSize: const Size(180, 48)),
+              child: const Text('Find films for you'),
+            ),
+          ],
+        ),
       ),
     );
   }

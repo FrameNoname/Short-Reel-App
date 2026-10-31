@@ -7,6 +7,7 @@ import 'controllers/auth_controller.dart';
 import 'controllers/feed_controller.dart';
 import 'controllers/film_search_controller.dart';
 import 'controllers/profile_controller.dart';
+import 'controllers/settings_controller.dart';
 import 'controllers/upload_controller.dart';
 import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
@@ -38,6 +39,7 @@ class ShortReelApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileController(repository)),
         ChangeNotifierProvider(create: (_) => UploadController(repository)),
         ChangeNotifierProvider(create: (_) => AdminController(repository)),
+        ChangeNotifierProvider(create: (_) => SettingsController()),
       ],
       child: MaterialApp(
         title: 'ShortReel',

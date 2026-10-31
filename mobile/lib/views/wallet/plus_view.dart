@@ -7,18 +7,31 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../auth/login_view.dart';
 
-class PlusView extends StatelessWidget {
+class PlusView extends StatefulWidget {
   const PlusView({super.key});
 
+  @override
+  State<PlusView> createState() => _PlusViewState();
+}
+
+class _PlusViewState extends State<PlusView> {
+  bool _busy = false;
+
   Future<void> _start(BuildContext context) async {
+    if (_busy) return;
     if (!context.read<AuthController>().isLoggedIn) {
       await Navigator.of(
         context,
       ).push(MaterialPageRoute<void>(builder: (_) => const LoginView()));
       return;
     }
-    await context.read<WalletController>().subscribe();
-    if (context.mounted) Navigator.of(context).pop();
+    setState(() => _busy = true);
+    try {
+      await context.read<WalletController>().subscribe();
+      if (context.mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -51,9 +64,16 @@ class PlusView extends StatelessWidget {
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x667554F5),
+                              blurRadius: 32,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.star, size: 32),
+                        child: const Icon(Icons.star_rounded, size: 36),
                       ),
                       const SizedBox(height: 16),
                       const Text(
@@ -72,17 +92,17 @@ class PlusView extends StatelessWidget {
                       ),
                       const SizedBox(height: 22),
                       const _Benefit(
-                        icon: Icons.play_arrow_outlined,
+                        icon: Icons.play_arrow_rounded,
                         title: 'Every episode unlocked',
                         subtitle: 'Locked episodes play right away',
                       ),
                       const _Benefit(
-                        icon: Icons.toll_outlined,
+                        icon: Icons.toll_rounded,
                         title: 'No coins needed',
                         subtitle: 'Keep your coins for later',
                       ),
                       const _Benefit(
-                        icon: Icons.favorite_border,
+                        icon: Icons.favorite_rounded,
                         title: 'Support creators',
                         subtitle: 'Your plan helps fund AI filmmakers',
                       ),
@@ -133,8 +153,17 @@ class PlusView extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     FilledButton(
-                      onPressed: () => _start(context),
-                      child: Text('Start Plus for $planPrice'),
+                      onPressed: _busy ? null : () => _start(context),
+                      child: _busy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text('Start Plus for $planPrice'),
                     ),
                     const SizedBox(height: 8),
                     const Text.rich(

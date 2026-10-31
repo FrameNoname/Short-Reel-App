@@ -36,7 +36,9 @@ Future<void> openTab(WidgetTester tester, String label) async {
 void main() {
   testWidgets('viewer reports a film', (tester) async {
     await logIn(tester, 'viewer01');
-    await tester.tap(find.text('Report').first);
+    await tester.tap(find.text('Share').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Report'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Misleading AI label'));
     await tester.pumpAndSettle();

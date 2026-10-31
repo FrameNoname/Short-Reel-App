@@ -15,6 +15,9 @@ class AppColors {
   static const gold = Color(0xFFFFC53D);
   static const green = Color(0xFF3DD68C);
   static const danger = Color(0xFFFF6B6B);
+
+  /// The check after a verified channel's name.
+  static const verified = Color(0xFF3B9DFF);
   static const text = Color(0xFFF4F3F7);
   static const muted = Color(0xFF9A98A6);
 }
@@ -75,24 +78,31 @@ class AppTheme {
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: AppColors.background,
       surfaceTintColor: Colors.transparent,
-      indicatorColor: Colors.transparent,
+      indicatorColor: AppColors.primarySoft,
+      indicatorShape: const StadiumBorder(),
       height: 68,
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: states.contains(WidgetState.selected)
-              ? AppColors.text
+              ? AppColors.link
               : AppColors.muted,
         ),
       ),
       iconTheme: WidgetStateProperty.resolveWith(
         (states) => IconThemeData(
           color: states.contains(WidgetState.selected)
-              ? AppColors.text
+              ? AppColors.link
               : AppColors.muted,
         ),
       ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: AppColors.surfaceHigh,
+      contentTextStyle: const TextStyle(color: AppColors.text, fontSize: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,

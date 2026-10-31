@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../data/app_repository.dart';
 import '../data/film_filter.dart';
 import '../models/film.dart';
+import '../models/user.dart';
 
 class FilmSearchController extends ChangeNotifier {
   FilmSearchController(this.repository);
@@ -11,10 +12,12 @@ class FilmSearchController extends ChangeNotifier {
 
   FilmFilter filter = const FilmFilter();
   List<Film> results = const [];
+  List<User> creators = const [];
 
   Future<void> apply(FilmFilter value) async {
     filter = value;
     results = await repository.films(value);
+    creators = repository.searchCreators(value.query);
     notifyListeners();
   }
 
