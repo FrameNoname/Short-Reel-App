@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class LoginPrompt extends StatelessWidget {
   const LoginPrompt({super.key, required this.onLogin});
 
@@ -13,8 +15,14 @@ class LoginPrompt extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Log in to continue', textAlign: TextAlign.center),
+            const Icon(Icons.lock_outline, color: AppColors.primary, size: 36),
             const SizedBox(height: 12),
+            const Text(
+              'Log in to continue',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
             FilledButton(onPressed: onLogin, child: const Text('Log in')),
           ],
         ),

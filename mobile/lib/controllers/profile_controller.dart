@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-import '../services/api_client.dart';
+import '../data/app_repository.dart';
 
 class ProfileController extends ChangeNotifier {
-  ProfileController(this.api);
+  ProfileController(this.repository);
 
-  final ApiClient api;
+  final AppRepository repository;
 }

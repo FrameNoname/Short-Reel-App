@@ -22,4 +22,12 @@ class User {
     role: UserRole.values.byName(json['role'] as String),
     coinBalance: json['coin_balance'] as int,
   );
+
+  User copyWith({int? coinBalance}) => User(
+    id: id,
+    username: username,
+    displayName: displayName,
+    role: role,
+    coinBalance: coinBalance ?? this.coinBalance,
+  );
 }
