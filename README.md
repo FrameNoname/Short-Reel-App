@@ -1,51 +1,38 @@
 # ShortReel
 
-แอปดูหนังสั้น AI แบบ vertical feed (Group 7, Project 2) ประกอบด้วย
+แอปดูหนังสั้น AI แบบ vertical feed (Group 7, Project 2)
 
 - `backend/`: REST API ด้วย Node.js, Express และ MySQL/MariaDB
 - `mobile/`: แอป Flutter แบบ MVC
-- `docs/api.md`: สัญญา API, รูปแบบ error และรายการ endpoint ทั้งหมด
+- `docs/api.md`: รายการ endpoint และรูปแบบ error
 
-**สถานะ:** backend ทำงานจริงเฉพาะ health check และ middleware ส่วน endpoint อื่นตอบ `501 NOT_IMPLEMENTED` แอป Flutter มี UI ครบตามดีไซน์ แต่ใช้ข้อมูลจำลองจาก `mobile/lib/data/mock_repository.dart` ซึ่งรีเซ็ตทุกครั้งที่เปิดแอปใหม่ และพื้นที่วิดีโอยังเป็น placeholder
+## วิธีใช้
 
-เมื่อ API ส่วนไหนพร้อม ให้เขียน class ที่ implement `AppRepository` ด้วย `ApiClient` แล้วส่งเข้า `ShortReelApp` ใน `mobile/lib/main.dart` โดยไม่ต้องแก้หน้าจอ
-
-บัญชีทดสอบในแอปคือ `viewer01` / `6666`, `mira.lens` / `4444`, `admin` / `1111` โดย `mira.lens` มี Plus อยู่แล้ว จึงต้องใช้ `viewer01` เพื่อลอง flow ปลดล็อกด้วยเหรียญ
-
-## สิ่งที่ต้องติดตั้ง
+### สิ่งที่ต้องติดตั้ง
 
 - Node.js 22
 - Flutter 3.44
 - XAMPP (MariaDB)
-- Android Studio พร้อม Android SDK และ emulator สำหรับรันแอป
+- Android Studio พร้อม emulator (หรือใช้ Edge แทนก็ได้)
 
-## ฐานข้อมูล
+### 1. ฐานข้อมูล
 
 เปิด MySQL ใน XAMPP แล้ว import `backend/db/shortreel.sql` ผ่าน phpMyAdmin
 
-> **คำเตือน:** ไฟล์นี้มี `DROP DATABASE IF EXISTS` การ import ซ้ำจะล้างข้อมูลเดิมทั้งหมด
+> ไฟล์นี้มี `DROP DATABASE IF EXISTS` การ import ซ้ำจะล้างข้อมูลเดิมทั้งหมด
 
-บัญชี demo อยู่ที่หัวไฟล์ SQL และใช้สำหรับการสาธิตเท่านั้น
-
-## Backend
+### 2. Backend
 
 ```bash
 cd backend
 npm install
 cp .env.example .env
-```
-
-แก้ `JWT_SECRET` ใน `.env` เป็นค่าสุ่มยาว ๆ แล้วรัน
-
-```bash
 npm run dev
 ```
 
-ตรวจว่าทำงานได้ที่ `http://localhost:3000/api/health` ต้องตอบ `{"status":"ok","db":"up"}`
+แก้ `JWT_SECRET` ใน `.env` ก่อนรัน แล้วเช็กที่ `http://localhost:3000/api/health` ต้องได้ `{"status":"ok","db":"up"}`
 
-ไฟล์วิดีโออยู่ใน `backend/uploads/` ซึ่งไม่เข้า git ห้ามเปิดโฟลเดอร์นี้เป็น static เพราะวิดีโอต้องผ่าน `GET /api/episodes/:id/stream` เพื่อตรวจสิทธิ์ก่อนเสมอ
-
-## Mobile
+### 3. Mobile
 
 ```bash
 cd mobile
@@ -53,25 +40,31 @@ flutter pub get
 flutter run
 ```
 
-ลองบน Edge ได้โดยไม่ต้องมี emulator
+ไม่มี emulator ให้รันบน Edge
 
 ```bash
 flutter run -d edge --web-port 8080
 ```
 
-ค่าเริ่มต้นของ API คือ `http://localhost:3000/api` บนเว็บ และ `http://10.0.2.2:3000/api` บน Android emulator ถ้ารันบนอุปกรณ์อื่นให้กำหนดเอง
+ถ้ารันบนอุปกรณ์จริง ให้ระบุที่อยู่ API เอง
 
 ```bash
 flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3000/api
 ```
 
-## การทดสอบ
+### บัญชีทดสอบในแอป
+
+| Username | Password | หมายเหตุ |
+|---|---|---|
+| `viewer01` | `6666` | ใช้ลอง flow ปลดล็อกด้วยเหรียญ |
+| `mira.lens` | `4444` | Creator ที่มี Plus อยู่แล้ว |
+| `admin` | `1111` | Admin |
+
+### รัน test
 
 ```bash
 npm test --prefix backend
 ```
-
-Test ของ backend ไม่ต้องมีฐานข้อมูล
 
 ```bash
 cd mobile
@@ -79,15 +72,20 @@ flutter analyze
 flutter test
 ```
 
-## เจ้าของงานตาม Sprint 2
+## ทำถึงขั้นไหนแล้ว
 
-| Student ID | ไฟล์ backend หลัก |
+**สรุป:** ฝั่งแอป (Flutter) ทำหน้าจอครบแล้วแต่ยังใช้ข้อมูลจำลอง ส่วน backend ยังเป็นโครง ยังไม่ได้เชื่อมกัน
+
+| ส่วน | สถานะ |
 |---|---|
-| 6731501100 | `films`, `episodes` (feed, detail, stream), การ review ใน `admin` |
-| 6731501102 | `auth`, `subscriptions`, middleware สิทธิ์ |
-| 6731501076 | `wallet`, unlock, sales และ revenue share ใน `admin` |
-| 6731501103 | `config/db.js`, seed, การสร้าง แก้ไข และลบ film/episode |
-| 6731501078 | `creator`, Profile, API collection |
-| 6731501125 | `social` (ถ้าทีมตัดสินใจรวมไว้) |
+| Backend: health check, middleware, โครง route/controller/model, upload (Multer), error format | เสร็จ |
+| Backend: ฐานข้อมูลและ seed (`shortreel.sql`) | เสร็จ |
+| Backend: endpoint จริงของ auth, films, episodes, wallet, subscriptions, creator, admin, social | **ยังไม่ทำ** ตอบ `501 NOT_IMPLEMENTED` |
+| Backend: argon2id และ JWT | **ยังไม่ทำ** |
+| Mobile: หน้าจอทั้งหมด (Login/Register, Feed/Player, Search/Filter, Wallet/เติมเหรียญ/Plus, Profile, Creator dashboard, Upload, Admin review, Notifications, Settings, Onboarding) | เสร็จ ใช้ข้อมูลจำลอง |
+| Mobile: ปลดล็อกตอนด้วยเหรียญ, Plus, like/บันทึก/คอมเมนต์/ติดตาม/รายงาน, ภาษาไทย | เสร็จ ใช้ข้อมูลจำลอง |
+| Mobile: เชื่อมกับ backend จริง | **ยังไม่ทำ** (มี `ApiClient` กับ `TokenStore` พร้อมแล้ว) |
+| Mobile: unit/widget test | มีแล้ว (ใน `mobile/test/`) |
+| วิดีโอจริง | **ยังไม่ทำ** พื้นที่เล่นวิดีโอยังเป็น placeholder |
 
-แต่ละฟีเจอร์มีไฟล์ใน `backend/src/routes`, `controllers` และ `models` ชื่อเดียวกัน ให้แทนที่ `notImplemented` ใน controller ทีละฟังก์ชัน และเขียน SQL ไว้ใน model เท่านั้น
+ข้อมูลจำลองอยู่ที่ `mobile/lib/data/mock_repository.dart` และรีเซ็ตทุกครั้งที่เปิดแอปใหม่ เมื่อ API ส่วนไหนพร้อม ให้เขียน class ที่ implement `AppRepository` ด้วย `ApiClient` แล้วส่งเข้า `ShortReelApp` ใน `mobile/lib/main.dart` โดยไม่ต้องแก้หน้าจอ
