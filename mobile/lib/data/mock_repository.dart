@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import '../models/app_notification.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
+import '../models/catalog.dart';
 import '../models/film.dart';
 import '../models/subscription.dart';
 import '../models/transaction.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
+import '../services/catalog_service.dart';
 import 'app_repository.dart';
 import 'film_filter.dart';
 import 'mock_data.dart';
@@ -79,18 +81,115 @@ class MockRepository implements AppRepository {
   double _salesUsd = 8.97;
   int _nextEpisodeId = 1;
 
-  void _addEpisode(int filmId, int number, {required int price}) {
+  void _addEpisode(
+    int filmId,
+    int number, {
+    required int price,
+    int? durationSec,
+  }) {
     final id = _nextEpisodeId++;
     _episodes[id] = Episode(
       id: id,
       filmId: filmId,
       episodeNo: number,
       title: 'Episode $number',
-      durationSec: 60 + number * 15,
+      durationSec: durationSec ?? 60 + number * 15,
       isFree: price == 0,
       priceCoins: price,
     );
   }
+
+  static const catalogFilmIdBase = 100000000;
+  static const _catalogAdminId = 1;
+  static const _catalogPlatforms = 3;
+  static const _catalogPerPlatform = 12;
+
+  Future<void>? _catalogLoading;
+
+  /// Puts series from the Series Jeen catalog at the top of the feed, owned by
+  /// the admin. The feed waits for them, and a failed call just leaves the
+  /// demo films.
+  void useCatalog(CatalogService service) {
+    _catalogLoading = _loadCatalog(service).catchError((Object _) {});
+  }
+
+  Future<void> _loadCatalog(CatalogService service) async {
+    final platforms = (await service.platforms())
+        .where((p) => p.hasAccess)
+        .take(_catalogPlatforms);
+    final lists = <List<CatalogDrama>>[];
+    for (final platform in platforms) {
+      final page = await service.dramas(platform.id);
+      // A series without artwork would be a blank tile in the feed and search.
+      final withPoster = page.items.where((d) => d.posterUrl != null);
+      lists.add(withPoster.take(_catalogPerPlatform).toList());
+    }
+    // One title from each platform in turn, so the feed mixes them.
+    final dramas = <CatalogDrama>[
+      for (var i = 0; i < _catalogPerPlatform; i++)
+        for (final list in lists)
+          if (i < list.length) list[i],
+    ];
+    // Catalog films go first in the feed, ahead of the demo films.
+    final listed = {
+      for (final drama in dramas)
+        catalogFilmIdBase + drama.id: catalogFilm(drama),
+    };
+    final rest = {
+      for (final e in _films.entries)
+        if (!listed.containsKey(e.key)) e.key: e.value,
+    };
+    _films
+      ..clear()
+      ..addAll(listed)
+      ..addAll(rest);
+  }
+
+  @override
+  Film catalogFilm(CatalogDrama drama) {
+    final id = catalogFilmIdBase + drama.id;
+    final existing = _films[id];
+    if (existing != null) return existing;
+    final film = _filmFromDrama(drama);
+    _films[id] = film;
+    for (var n = 1; n <= film.episodeCount; n++) {
+      _addEpisode(id, n, price: 0, durationSec: 0);
+    }
+    return film;
+  }
+
+  static const _maxCatalogGenres = 12;
+
+  @override
+  List<String> catalogGenres() {
+    final counts = <String, int>{};
+    for (final film in _films.values) {
+      for (final tag in film.genreTags) {
+        counts[tag] = (counts[tag] ?? 0) + 1;
+      }
+    }
+    final names = counts.keys.toList()
+      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    return names.take(_maxCatalogGenres).toList();
+  }
+
+  Film _filmFromDrama(CatalogDrama drama) => Film(
+    id: catalogFilmIdBase + drama.id,
+    creatorId: _catalogAdminId,
+    title: drama.title,
+    synopsis: drama.description,
+    posterUrl: drama.posterUrl,
+    genreId: 0,
+    aiToolId: 0,
+    promptCredit: null,
+    isAiGenerated: false,
+    status: 'approved',
+    creatorName: _users[_catalogAdminId]!.username,
+    genreName: drama.genres.isEmpty ? '' : drama.genres.first,
+    genreTags: drama.genres,
+    episodeCount: drama.episodeCount,
+    catalogDramaId: drama.id,
+  );
 
   void _seedNotifications() {
     void seed(
@@ -391,7 +490,9 @@ class MockRepository implements AppRepository {
   }
 
   bool _matches(Film film, FilmFilter filter) {
-    if (filter.genres.isNotEmpty && !filter.genres.contains(film.genreName)) {
+    if (filter.genres.isNotEmpty &&
+        !filter.genres.contains(film.genreName) &&
+        !film.genreTags.any(filter.genres.contains)) {
       return false;
     }
     if (filter.aiTools.isNotEmpty &&
@@ -400,6 +501,8 @@ class MockRepository implements AppRepository {
     }
     final minutes = _averageMinutes(film.id);
     final inLength = switch (filter.length) {
+      // The catalog gives no episode lengths, so it cannot be ruled out.
+      _ when film.catalogDramaId != null => true,
       LengthFilter.any => true,
       LengthFilter.under5 => minutes < 5,
       LengthFilter.from5to15 => minutes >= 5 && minutes < 15,
@@ -429,8 +532,10 @@ class MockRepository implements AppRepository {
       _films.values.where((f) => f.status == 'approved');
 
   @override
-  Future<List<Film>> films([FilmFilter filter = const FilmFilter()]) async =>
-      _approved.where((f) => _matches(f, filter)).toList();
+  Future<List<Film>> films([FilmFilter filter = const FilmFilter()]) async {
+    await _catalogLoading;
+    return _approved.where((f) => _matches(f, filter)).toList();
+  }
 
   @override
   Future<List<Film>> followingFilms(int userId) async =>

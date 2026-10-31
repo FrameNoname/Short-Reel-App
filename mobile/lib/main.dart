@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'controllers/admin_controller.dart';
 import 'controllers/auth_controller.dart';
+import 'controllers/catalog_controller.dart';
 import 'controllers/feed_controller.dart';
 import 'controllers/film_search_controller.dart';
 import 'controllers/notifications_controller.dart';
@@ -14,13 +15,27 @@ import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
 import 'data/mock_repository.dart';
 import 'l10n/app_language.dart';
+import 'services/api_client.dart';
+import 'services/catalog_service.dart';
+import 'services/token_store.dart';
 import 'theme/app_theme.dart';
 import 'views/app_shell.dart';
 import 'views/auth/login_view.dart';
 import 'views/onboarding/onboarding_view.dart';
 
 void main() {
-  runApp(ShortReelApp(repository: MockRepository(), showOnboarding: true));
+  final catalog = catalogEnabled
+      ? CatalogService(ApiClient(tokens: SecureTokenStore()))
+      : null;
+  final repository = MockRepository();
+  if (catalog != null) repository.useCatalog(catalog);
+  runApp(
+    ShortReelApp(
+      repository: repository,
+      catalog: catalog,
+      showOnboarding: true,
+    ),
+  );
 }
 
 class ShortReelApp extends StatelessWidget {
@@ -28,9 +43,13 @@ class ShortReelApp extends StatelessWidget {
     super.key,
     required this.repository,
     this.showOnboarding = false,
+    this.catalog,
   });
 
   final AppRepository repository;
+
+  /// Reads the Series Jeen catalog; null when the catalog is turned off.
+  final CatalogService? catalog;
 
   /// Shows the first-run slides before the login screen.
   final bool showOnboarding;
@@ -55,6 +74,8 @@ class ShortReelApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => NotificationsController(repository),
         ),
+        if (catalog != null)
+          ChangeNotifierProvider(create: (_) => CatalogController(catalog!)),
       ],
       child: MaterialApp(
         title: 'ShortReel',

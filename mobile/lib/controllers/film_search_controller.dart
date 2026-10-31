@@ -20,6 +20,9 @@ class FilmSearchController extends ChangeNotifier {
   /// The most watched films right now.
   List<Film> trending = const [];
 
+  /// Genres from the catalog, offered next to the built-in ones.
+  List<String> get catalogGenres => repository.catalogGenres();
+
   static const _maxRecent = 8;
 
   Future<void> apply(FilmFilter value) async {

@@ -112,7 +112,18 @@ class _FiltersViewState extends State<FiltersView> {
             physics: const NeverScrollableScrollPhysics(),
             childAspectRatio: 1.15,
             children: [
-              for (final (name, icon, color, tint) in _genres)
+              for (final (name, icon, color, tint) in [
+                ..._genres,
+                for (final name
+                    in context.read<FilmSearchController>().catalogGenres)
+                  if (!_genres.any((g) => g.$1 == name))
+                    (
+                      name,
+                      Icons.movie_outlined,
+                      AppColors.link,
+                      AppColors.primarySoft,
+                    ),
+              ])
                 _GenreTile(
                   name: name,
                   icon: icon,
