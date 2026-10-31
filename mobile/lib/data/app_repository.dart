@@ -1,4 +1,5 @@
 import '../models/app_notification.dart';
+import '../models/catalog.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
@@ -124,6 +125,13 @@ abstract class AppRepository {
 
   /// One film by id, or null when it does not exist.
   Film? filmById(int id);
+
+  /// The admin's film for a catalog series, added on first use so any series
+  /// in the catalog can be opened like a feed film.
+  Film catalogFilm(CatalogDrama drama);
+
+  /// Genres of the catalog films, the most common first, for the filters.
+  List<String> catalogGenres();
 
   /// The person's inbox, newest first.
   List<AppNotification> notificationsOf(int userId);

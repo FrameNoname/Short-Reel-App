@@ -6,15 +6,18 @@ import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
 import '../l10n/app_language.dart';
 import '../models/user.dart';
+import '../services/catalog_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/tab_active.dart';
 import 'admin/admin_view.dart';
+import 'catalog/catalog_view.dart';
 import 'feed/feed_view.dart';
 import 'profile/profile_view.dart';
 import 'search/search_view.dart';
 import 'upload/upload_view.dart';
 import 'wallet/wallet_view.dart';
 
-enum AppTab { feed, search, upload, wallet, profile, admin }
+enum AppTab { feed, search, catalog, upload, wallet, profile, admin }
 
 List<AppTab> tabsFor(UserRole role) {
   return switch (role) {
@@ -57,6 +60,7 @@ class _AppShellState extends State<AppShell> {
       onSearch: () => setState(() => _selected = AppTab.search),
     ),
     AppTab.search => const SearchView(),
+    AppTab.catalog => const CatalogView(),
     // Upload opens as its own screen, so the tab has no body.
     AppTab.upload => const SizedBox.shrink(),
     AppTab.wallet => const WalletView(),
@@ -73,6 +77,11 @@ class _AppShellState extends State<AppShell> {
     AppTab.search => NavigationDestination(
       icon: Icon(Icons.search),
       label: context.tr('Search'),
+    ),
+    AppTab.catalog => NavigationDestination(
+      icon: Icon(Icons.video_library_outlined),
+      selectedIcon: Icon(Icons.video_library),
+      label: context.tr('Catalog'),
     ),
     AppTab.upload => NavigationDestination(
       icon: Container(
@@ -116,14 +125,25 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = tabsFor(context.watch<AuthController>().role);
+    final base = tabsFor(context.watch<AuthController>().role);
+    // The catalog sits after search when it is turned on.
+    final tabs = List.of(base);
+    if (catalogEnabled) {
+      tabs.insert(tabs.indexOf(AppTab.search) + 1, AppTab.catalog);
+    }
     // A tab can disappear when a creator or admin logs out.
     final index = max(tabs.indexOf(_selected), 0);
     // The feed runs full screen; its bar floats over the video on a scrim.
     final overVideo = tabs[index] == AppTab.feed;
     return Scaffold(
       extendBody: overVideo,
-      body: IndexedStack(index: index, children: tabs.map(_viewFor).toList()),
+      body: IndexedStack(
+        index: index,
+        children: [
+          for (final tab in tabs)
+            TabActive(active: tab == tabs[index], child: _viewFor(tab)),
+        ],
+      ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           gradient: overVideo

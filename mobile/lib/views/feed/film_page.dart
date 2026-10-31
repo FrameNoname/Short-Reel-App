@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -13,6 +14,7 @@ import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
 import '../profile/creator_profile_view.dart';
+import 'catalog_video.dart';
 import 'comments_sheet.dart';
 import 'episode_flow.dart';
 import 'rail_icons.dart';
@@ -27,9 +29,13 @@ const _textShadow = [Shadow(blurRadius: 6, color: Color(0xAA000000))];
 /// Gestures follow the short-video convention: tap to pause or resume, double
 /// tap anywhere to like.
 class FilmPage extends StatefulWidget {
-  const FilmPage({super.key, required this.film});
+  const FilmPage({super.key, required this.film, this.episode});
 
   final Film film;
+
+  /// The episode this page shows, when the caller pages through episodes
+  /// itself. Otherwise the feed's current episode for the film is used.
+  final int? episode;
 
   @override
   State<FilmPage> createState() => _FilmPageState();
@@ -94,7 +100,7 @@ class _FilmPageState extends State<FilmPage> {
   Widget build(BuildContext context) {
     final feed = context.watch<FeedController>();
     final userId = context.watch<AuthController>().user?.id;
-    final episode = feed.currentEpisodeOf(film.id);
+    final episode = widget.episode ?? feed.currentEpisodeOf(film.id);
     final isLiked = userId != null && feed.repository.isLiked(userId, film.id);
     final isSaved = userId != null && feed.repository.isSaved(userId, film.id);
     final isFollowing =
@@ -115,44 +121,69 @@ class _FilmPageState extends State<FilmPage> {
         children: [
           Positioned.fill(
             child: LayoutBuilder(
-              builder: (context, box) => Semantics(
-                button: true,
-                label: _paused ? 'Resume video' : 'Pause video',
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _paused = !_paused),
-                  onDoubleTapDown: (d) => _lastTap = d.localPosition,
-                  onDoubleTap: _doubleTapLike,
-                  onLongPressStart: (d) {
-                    if (d.localPosition.dx < box.maxWidth * (1 - _boostZone)) {
-                      return;
-                    }
-                    if (context.read<SettingsController>().haptics) {
-                      HapticFeedback.mediumImpact();
-                    }
-                    setState(() => _boosting = true);
-                  },
-                  onHorizontalDragEnd: (d) {
-                    // A quick swipe to the left opens the channel.
-                    if ((d.primaryVelocity ?? 0) < -_swipeVelocity) {
-                      openCreatorProfile(context, film.creatorId);
-                    }
-                  },
-                  onLongPressEnd: (_) => setState(() => _boosting = false),
-                  onLongPressCancel: () => setState(() => _boosting = false),
-                  child: Center(
-                    child: Text(
-                      'VIDEO · ${film.title.toUpperCase()} · EP $episode',
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+              builder: (context, box) {
+                final gestures = Semantics(
+                  button: true,
+                  label: _paused ? 'Resume video' : 'Pause video',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => setState(() => _paused = !_paused),
+                    onDoubleTapDown: (d) => _lastTap = d.localPosition,
+                    onDoubleTap: _doubleTapLike,
+                    onLongPressStart: (d) {
+                      if (d.localPosition.dx <
+                          box.maxWidth * (1 - _boostZone)) {
+                        return;
+                      }
+                      if (context.read<SettingsController>().haptics) {
+                        HapticFeedback.mediumImpact();
+                      }
+                      setState(() => _boosting = true);
+                    },
+                    onHorizontalDragEnd: (d) {
+                      // A quick swipe to the left opens the channel.
+                      if ((d.primaryVelocity ?? 0) < -_swipeVelocity) {
+                        openCreatorProfile(context, film.creatorId);
+                      }
+                    },
+                    onLongPressEnd: (_) => setState(() => _boosting = false),
+                    onLongPressCancel: () => setState(() => _boosting = false),
+                    child: film.catalogDramaId != null
+                        ? const SizedBox.expand()
+                        : Center(
+                            child: Text(
+                              'VIDEO · ${film.title.toUpperCase()} · EP $episode',
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontSize: 12,
+                                letterSpacing: 2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                   ),
-                ),
-              ),
+                );
+                if (film.catalogDramaId == null) return gestures;
+                // On the web the video is an HTML element that takes every
+                // click, so the gestures sit above it behind an interceptor.
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CatalogVideo(
+                      film: film,
+                      episode: episode,
+                      paused: _paused,
+                      speed: _boosting ? _boostSpeed : _speed,
+                      onEnded: () {
+                        if (episode < film.episodeCount) {
+                          feed.resume(film.id, episode + 1);
+                        }
+                      },
+                    ),
+                    PointerInterceptor(child: gestures),
+                  ],
+                );
+              },
             ),
           ),
           Positioned(
@@ -315,21 +346,14 @@ class _FilmPageState extends State<FilmPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const AiLabelBadge(),
+                    if (film.isAiGenerated) ...[
+                      const SizedBox(width: 8),
+                      const AiLabelBadge(),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  film.synopsis ?? '',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.35,
-                    shadows: _textShadow,
-                  ),
-                ),
+                _Synopsis(film: film),
                 const SizedBox(height: 12),
               ],
             ),
@@ -360,6 +384,96 @@ class _FilmPageState extends State<FilmPage> {
       ),
     );
   }
+}
+
+const _synopsisStyle = TextStyle(
+  fontSize: 13,
+  height: 1.35,
+  shadows: _textShadow,
+);
+
+/// The film's blurb, cut to two lines with a More link when it is longer.
+class _Synopsis extends StatelessWidget {
+  const _Synopsis({required this.film});
+
+  static const _lines = 2;
+
+  final Film film;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = film.synopsis ?? '';
+    return LayoutBuilder(
+      builder: (context, box) {
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: _synopsisStyle),
+          maxLines: _lines,
+          textDirection: Directionality.of(context),
+        )..layout(maxWidth: box.maxWidth);
+        final cut = painter.didExceedMaxLines;
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: cut ? () => _showFullSynopsis(context, film) : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                text,
+                maxLines: _lines,
+                overflow: TextOverflow.ellipsis,
+                style: _synopsisStyle,
+              ),
+              if (cut)
+                const Text(
+                  'More',
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w800,
+                    shadows: _textShadow,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+void _showFullSynopsis(BuildContext context, Film film) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                film.title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                film.synopsis ?? '',
+                style: const TextStyle(fontSize: 14, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _Burst {

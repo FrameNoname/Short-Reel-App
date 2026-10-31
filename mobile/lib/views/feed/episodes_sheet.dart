@@ -27,116 +27,121 @@ class EpisodesSheet extends StatelessWidget {
     final wallet = context.watch<WalletController>();
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Flexible(
-                child: Text(
-                  film.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
+      // A long series has more tiles than the sheet has room for.
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    film.title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const AiLabelBadge(),
-              const Spacer(),
-              if (user != null) CoinAmount(user.coinBalance),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '${episodes.length} episodes · @${film.creatorName}',
-            style: const TextStyle(color: AppColors.muted, fontSize: 13),
-          ),
-          const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 4,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              for (final episode in episodes)
-                _EpisodeTile(
-                  key: Key('episode-${episode.episodeNo}'),
-                  episode: episode,
-                  isCurrent: episode.episodeNo == current,
-                  access: feed.repository.accessOf(user?.id, episode),
-                  onTap: () => Navigator.of(context).pop(episode),
+                if (film.isAiGenerated) ...[
+                  const SizedBox(width: 8),
+                  const AiLabelBadge(),
+                ],
+                const Spacer(),
+                if (user != null) CoinAmount(user.coinBalance),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${episodes.length} episodes · @${film.creatorName}',
+              style: const TextStyle(color: AppColors.muted, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            GridView.count(
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                for (final episode in episodes)
+                  _EpisodeTile(
+                    key: Key('episode-${episode.episodeNo}'),
+                    episode: episode,
+                    isCurrent: episode.episodeNo == current,
+                    access: feed.repository.accessOf(user?.id, episode),
+                    onTap: () => Navigator.of(context).pop(episode),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const _Legend(color: AppColors.green, label: 'Free'),
+                const SizedBox(width: 14),
+                const _Legend(color: AppColors.primary, label: 'Unlocked'),
+                const SizedBox(width: 14),
+                _Legend(
+                  color: AppColors.gold,
+                  label: '${wallet.episodePrice} coins',
                 ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const _Legend(color: AppColors.green, label: 'Free'),
-              const SizedBox(width: 14),
-              const _Legend(color: AppColors.primary, label: 'Unlocked'),
-              const SizedBox(width: 14),
-              _Legend(
-                color: AppColors.gold,
-                label: '${wallet.episodePrice} coins',
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).pop();
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute<void>(builder: (_) => const PlusView()));
-            },
-            child: AppCard(
-              color: AppColors.primarySoft,
-              borderColor: const Color(0x667C5CFF),
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Plus',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+              ],
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const PlusView()),
+                );
+              },
+              child: AppCard(
+                color: AppColors.primarySoft,
+                borderColor: const Color(0x667C5CFF),
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Plus',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Watch every episode',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          'Plus · ${wallet.planPrice} / month, no coins needed',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 12,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Watch every episode',
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
-                        ),
-                      ],
+                          Text(
+                            'Plus · ${wallet.planPrice} / month, no coins needed',
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(Icons.chevron_right, color: AppColors.muted),
-                ],
+                    const Icon(Icons.chevron_right, color: AppColors.muted),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

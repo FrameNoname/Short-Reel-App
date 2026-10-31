@@ -248,6 +248,11 @@ class FilmPoster extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final asset = film.posterAsset;
+    final url = film.posterUrl;
+    // Artwork that carries its own AI badge needs no title panel over it.
+    final titlePanel = showBadge
+        ? _TitlePanel(film: film)
+        : const SizedBox.shrink();
     return Semantics(
       image: true,
       label: 'Poster of ${film.title}',
@@ -257,27 +262,48 @@ class FilmPoster extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
+            ColoredBox(color: _tints[film.id % _tints.length]),
             if (asset != null)
               Image.asset(asset, fit: BoxFit.cover)
+            else if (url != null)
+              Image.network(
+                url,
+                fit: BoxFit.cover,
+                // A poster that will not load looks like one that has none.
+                errorBuilder: (_, _, _) => titlePanel,
+              )
             else
-              ColoredBox(color: _tints[film.id % _tints.length]),
-            // The poster artwork already carries its own AI badge.
-            if (showBadge && asset == null) ...[
-              const Positioned(left: 8, top: 8, child: AiLabelBadge()),
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    film.title,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
-            ],
+              titlePanel,
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TitlePanel extends StatelessWidget {
+  const _TitlePanel({required this.film});
+
+  final Film film;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (film.isAiGenerated)
+          const Positioned(left: 8, top: 8, child: AiLabelBadge()),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              film.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

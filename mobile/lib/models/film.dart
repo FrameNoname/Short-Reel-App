@@ -19,6 +19,8 @@ class Film {
     this.commentCount = 0,
     this.viewCount = 0,
     this.episodeCount = 0,
+    this.catalogDramaId,
+    this.genreTags = const [],
   });
 
   final int id;
@@ -40,6 +42,12 @@ class Film {
   final int commentCount;
   final int viewCount;
   final int episodeCount;
+
+  /// The Series Jeen id when this film comes from the catalog, else null.
+  final int? catalogDramaId;
+
+  /// Every genre a catalog series is listed under; [genreName] is the first.
+  final List<String> genreTags;
 
   factory Film.fromJson(Map<String, dynamic> json) => Film(
     id: json['id'] as int,
@@ -87,6 +95,8 @@ class Film {
       commentCount: commentCount ?? this.commentCount,
       viewCount: viewCount,
       episodeCount: episodeCount,
+      catalogDramaId: catalogDramaId,
+      genreTags: genreTags,
     );
   }
 }
