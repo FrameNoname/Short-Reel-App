@@ -1,6 +1,8 @@
 import '../models/app_notification.dart';
 import '../models/catalog.dart';
 import '../models/coin_pack.dart';
+import 'dart:typed_data';
+
 import '../models/episode.dart';
 import '../models/film.dart';
 import '../models/subscription.dart';
@@ -8,7 +10,7 @@ import '../models/transaction.dart';
 import '../models/user.dart';
 import 'film_filter.dart';
 
-enum EpisodeAccess { free, unlocked, plus, locked }
+export '../models/episode.dart' show EpisodeAccess;
 
 class Earnings {
   const Earnings({
@@ -16,12 +18,22 @@ class Earnings {
     required this.unlocks,
     required this.views,
     required this.likes,
+    this.coinsByFilm = const {},
+    this.adminSharePercent,
   });
 
   final int coins;
   final int unlocks;
+
+  /// Only the mock counts views; the API does not track them yet (0).
   final int views;
   final int likes;
+
+  /// Coins the channel earned from each of its films, by film id.
+  final Map<int, int> coinsByFilm;
+
+  /// The admin's current cut, so a creator can see how earnings are split.
+  final int? adminSharePercent;
 }
 
 /// One day of a channel's numbers.
@@ -39,11 +51,51 @@ class DailyStat {
   final int coins;
 }
 
+/// Coins and dollars are different units and are kept in separate fields.
 class AdminSales {
-  const AdminSales({required this.totalUsd, required this.adminCoins});
+  const AdminSales({
+    required this.totalUsd,
+    required this.adminCoins,
+    this.coinsSpent = 0,
+    this.creatorCoins = 0,
+    this.unlockCount = 0,
+  });
 
+  /// Simulated payments (coin packs and subscriptions) in dollars.
   final double totalUsd;
+
+  /// The admin's share of the coins viewers spent on unlocks.
   final int adminCoins;
+  final int coinsSpent;
+  final int creatorCoins;
+  final int unlockCount;
+}
+
+/// One episode of an upload: the picked video and the price chosen for it.
+class EpisodeDraft {
+  const EpisodeDraft({
+    required this.fileName,
+    required this.priceCoins,
+    this.bytes,
+    this.path,
+  });
+
+  final String fileName;
+  final int priceCoins;
+
+  /// The video itself: bytes on the web, a file path on a phone.
+  final Uint8List? bytes;
+  final String? path;
+}
+
+/// What a player needs to start an episode.
+class Playback {
+  const Playback({required this.episode, required this.streamUrl});
+
+  final Episode episode;
+
+  /// Null when the viewer may not watch it yet.
+  final String? streamUrl;
 }
 
 class FilmReport {
@@ -147,37 +199,67 @@ abstract class AppRepository {
   Future<User> login(String username, String password);
   Future<User> register(String username, String password, UserRole role);
 
+  /// Signs back in from the stored token on app start; null when there is none.
+  Future<User?> restoreSession();
+
+  /// Forgets the token. The server keeps nothing to revoke.
+  Future<void> logout();
+
+  /// Drops the token and everything held for the person without calling the
+  /// server, for when it has already refused the token.
+  Future<void> clearSession();
+
+  /// True when episodes play real video from the backend; the offline mock
+  /// only shows a placeholder.
+  bool get playsVideo;
+
+  /// Asks the backend whether [episodeId] may be watched and for its link.
+  Future<Playback> playback(int episodeId);
+
   Future<List<Film>> films([FilmFilter filter = const FilmFilter()]);
   Future<List<Film>> followingFilms(int userId);
   Future<List<Episode>> episodes(int filmId);
   EpisodeAccess accessOf(int? userId, Episode episode);
   List<FilmComment> commentsOf(int filmId);
-  void addComment(int userId, int filmId, String body, {int? parentId});
+  Future<void> addComment(int userId, int filmId, String body, {int? parentId});
+
+  /// Loads the comments of [filmId] so [commentsOf] can answer.
+  Future<void> loadComments(int filmId);
 
   /// Removes a comment together with the replies under it.
-  void removeComment(int commentId);
+  Future<void> removeComment(int commentId);
   bool isCommentLiked(int userId, int commentId);
   int commentLikeCount(int commentId);
   void toggleCommentLike(int userId, int commentId);
-  void reportFilm(int userId, int filmId, String reason);
+  Future<void> reportFilm(int userId, int filmId, String reason);
 
   Future<User> unlock(int userId, int episodeId);
-  Future<User> topUp(int userId, {required int coins, double priceUsd = 0});
+  /// Simulated purchase of [pack]; the server decides what it is worth.
+  Future<User> topUpPack(int userId, CoinPack pack);
+
+  /// The demo button: [demoTopUpCoins] coins for nothing.
+  Future<User> demoTopUp(int userId);
   Future<Subscription> subscribe(int userId);
-  Subscription? subscriptionOf(int userId);
-  void cancelSubscription(int userId);
+  Future<Subscription?> subscriptionOf(int userId);
+  Future<void> cancelSubscription(int userId);
+
+  /// Plan price, typical episode price and demo coins; the API versions are
+  /// refreshed by [coinPacks].
   double get subscriptionPriceUsd;
   int get episodePriceCoins;
-  List<Transaction> transactionsOf(int userId);
-  List<CoinPack> coinPacks();
+  Future<List<Transaction>> transactionsOf(int userId);
+  Future<List<CoinPack>> coinPacks();
   int get demoTopUpCoins;
 
   bool isLiked(int userId, int filmId);
   bool isSaved(int userId, int filmId);
   bool isFollowing(int userId, int creatorId);
-  void toggleLike(int userId, int filmId);
-  void toggleSave(int userId, int filmId);
-  void toggleFollow(int userId, int creatorId);
+  Future<void> toggleLike(int userId, int filmId);
+  Future<void> toggleSave(int userId, int filmId);
+  Future<void> toggleFollow(int userId, int creatorId);
+
+  /// Loads what [watchlistOf], [unlockedFilmsOf] and [followingOf] answer from.
+  Future<void> refreshLibrary(int userId);
   List<Film> watchlistOf(int userId);
   List<Film> unlockedFilmsOf(int userId);
   List<User> followingOf(int userId);
@@ -195,33 +277,33 @@ abstract class AppRepository {
     required String genre,
     required String aiTool,
     required String promptCredit,
-    required List<int> episodePrices,
+    required List<EpisodeDraft> episodes,
   });
-  void updateFilm(
+  Future<void> updateFilm(
     int filmId, {
     required String title,
     required String genre,
     required String aiTool,
     required String promptCredit,
   });
-  void deleteFilm(int filmId);
+  Future<void> deleteFilm(int filmId);
 
   /// Sets new prices by episode id; 0 coins makes an episode free.
-  void setEpisodePrices(Map<int, int> pricesByEpisodeId);
-  EpisodePricing pricingOf(int filmId);
-  List<Film> filmsOf(int creatorId);
-  Earnings earningsOf(int creatorId);
+  Future<void> setEpisodePrices(Map<int, int> pricesByEpisodeId);
+  Future<EpisodePricing> pricingOf(int filmId);
+  Future<List<Film>> filmsOf(int creatorId);
+  Future<Earnings> earningsOf(int creatorId);
 
   /// The channel's numbers for each of the last [days] days, oldest first.
+  /// Only the mock has these; the API returns an empty list.
   List<DailyStat> dailyStatsOf(int creatorId, {int days = 60});
-  int earningsOfFilm(int filmId);
 
-  List<Film> reviewQueue();
-  List<Film> liveFilms();
-  void review(int filmId, String status, {String? note});
-  List<FilmReport> openReports();
-  void resolveReport(int reportId);
-  AdminSales adminSales();
-  int get adminSharePercent;
-  void setAdminSharePercent(int percent);
+  Future<List<Film>> reviewQueue();
+  Future<List<Film>> liveFilms();
+  Future<void> review(int filmId, String status, {String? note});
+  Future<List<FilmReport>> openReports();
+  Future<void> resolveReport(int reportId);
+  Future<AdminSales> adminSales();
+  Future<int> adminSharePercent();
+  Future<void> setAdminSharePercent(int percent);
 }

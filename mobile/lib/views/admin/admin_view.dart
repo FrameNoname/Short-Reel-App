@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import '../../controllers/admin_controller.dart';
 import '../../data/app_repository.dart';
 import '../../models/film.dart';
+import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/tab_active.dart';
 import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 
@@ -21,7 +23,19 @@ Future<void> _takeDown(BuildContext context, int filmId) async {
     hint: 'Why is it being removed?',
     confirmLabel: 'Take down',
   );
-  if (reason != null) admin.review(filmId, 'taken_down', note: reason);
+  if (reason != null && context.mounted) {
+    await _guard(context, () => admin.review(filmId, 'taken_down', note: reason));
+  }
+}
+
+/// Runs an admin action and shows the server's message if it fails.
+Future<void> _guard(BuildContext context, Future<void> Function() action) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    await action();
+  } on Object catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+  }
 }
 
 class AdminView extends StatefulWidget {
@@ -33,6 +47,24 @@ class AdminView extends StatefulWidget {
 
 class _AdminViewState extends State<AdminView> {
   _Section _section = _Section.queue;
+
+  /// The share while the slider is being dragged; saved when the finger lifts.
+  double? _draggedCreatorShare;
+
+  bool _wasActive = false;
+
+  /// Reads the queue again each time this tab comes to the front.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = TabActive.of(context);
+    if (active && !_wasActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<AdminController>().load();
+      });
+    }
+    _wasActive = active;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,19 +120,33 @@ class _AdminViewState extends State<AdminView> {
               ],
             ),
             const SizedBox(height: 14),
+            if (admin.isLoading && admin.queue.isEmpty && admin.liveFilms.isEmpty)
+              const LinearProgressIndicator(),
+            if (admin.error != null)
+              AppCard(
+                child: Row(
+                  children: [
+                    Expanded(child: Text(admin.error!)),
+                    TextButton(
+                      onPressed: admin.load,
+                      child: const Text('Try again'),
+                    ),
+                  ],
+                ),
+              ),
             Row(
               children: [
                 Expanded(
                   child: StatTile(
                     value: '\$${sales.totalUsd.toStringAsFixed(2)}',
-                    label: 'Total sales (demo)',
+                    label: 'Simulated sales (USD)',
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: StatTile(
                     value: '${sales.adminCoins} coins',
-                    label: 'Admin share',
+                    label: 'Admin share of ${sales.coinsSpent} spent',
                     valueColor: AppColors.gold,
                   ),
                 ),
@@ -129,12 +175,20 @@ class _AdminViewState extends State<AdminView> {
                     ],
                   ),
                   Slider(
-                    value: (100 - adminShare).toDouble(),
+                    value: _draggedCreatorShare ?? (100 - adminShare).toDouble(),
                     max: 100,
                     divisions: 20,
-                    label: 'Creator ${100 - adminShare}%',
+                    label:
+                        'Creator ${(_draggedCreatorShare ?? (100 - adminShare)).round()}%',
                     onChanged: (value) =>
-                        admin.setAdminShare(100 - value.round()),
+                        setState(() => _draggedCreatorShare = value),
+                    onChangeEnd: (value) async {
+                      setState(() => _draggedCreatorShare = null);
+                      await _guard(
+                        context,
+                        () => admin.setAdminShare(100 - value.round()),
+                      );
+                    },
                   ),
                   const Text(
                     'Applies to new unlocks. Admin-owned films always pay 100% to admin.',
@@ -297,7 +351,9 @@ class _ReviewCard extends StatelessWidget {
       hint: 'Tell the creator what to fix',
       confirmLabel: 'Reject',
     );
-    if (reason != null) admin.review(film.id, 'rejected', note: reason);
+    if (reason != null && context.mounted) {
+      await _guard(context, () => admin.review(film.id, 'rejected', note: reason));
+    }
   }
 
   @override
@@ -330,7 +386,8 @@ class _ReviewCard extends StatelessWidget {
                       backgroundColor: AppColors.green,
                       foregroundColor: Colors.black,
                     ),
-                    onPressed: () => admin.review(film.id, 'approved'),
+                    onPressed: () =>
+                        _guard(context, () => admin.review(film.id, 'approved')),
                     child: const Text('Approve'),
                   ),
                 ),
@@ -404,9 +461,12 @@ class _ReportCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => context
-                        .read<AdminController>()
-                        .resolveReport(report.id),
+                    onPressed: () => _guard(
+                      context,
+                      () => context
+                          .read<AdminController>()
+                          .resolveReport(report.id),
+                    ),
                     child: const Text('Mark resolved'),
                   ),
                 ),

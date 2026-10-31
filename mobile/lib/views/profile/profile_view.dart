@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/profile_controller.dart';
+import '../../data/app_repository.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../models/user.dart';
@@ -10,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/login_prompt.dart';
+import '../../widgets/on_init.dart';
 import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
@@ -49,6 +51,19 @@ class ProfileView extends StatelessWidget {
     final repository = context.watch<ProfileController>().repository;
     final following = repository.followingOf(user.id);
     final isCreator = user.role != UserRole.viewer;
+    return OnInit(
+      run: () => context.read<ProfileController>().load(user.id),
+      child: _scaffold(context, user, repository, following, isCreator),
+    );
+  }
+
+  Widget _scaffold(
+    BuildContext context,
+    User user,
+    AppRepository repository,
+    List<User> following,
+    bool isCreator,
+  ) {
     return Scaffold(
       body: SafeArea(
         child: DefaultTabController(
@@ -277,7 +292,7 @@ class ProfileView extends StatelessWidget {
                     foregroundColor: AppColors.danger,
                     minimumSize: const Size.fromHeight(44),
                   ),
-                  onPressed: auth.logout,
+                  onPressed: context.read<AuthController>().logout,
                   icon: const Icon(Icons.logout_rounded, size: 18),
                   label: const Text('Log out'),
                 ),

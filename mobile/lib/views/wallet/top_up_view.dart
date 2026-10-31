@@ -3,8 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/wallet_controller.dart';
 import '../../models/coin_pack.dart';
+import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/error_view.dart';
+import '../../widgets/loading_view.dart';
 import '../../widgets/text.dart';
 import 'wallet_view.dart';
 
@@ -35,15 +38,23 @@ class _TopUpViewState extends State<TopUpView> {
     _ => null,
   };
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<WalletController>().load();
+    });
+  }
+
   Future<void> _buy(CoinPack pack) async {
     if (_busy) return;
     setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      await context.read<WalletController>().buy(
-        coins: pack.coins,
-        priceUsd: pack.priceUsd,
-      );
+      await context.read<WalletController>().buy(pack);
       if (mounted) Navigator.of(context).pop();
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -53,7 +64,15 @@ class _TopUpViewState extends State<TopUpView> {
   Widget build(BuildContext context) {
     final wallet = context.watch<WalletController>();
     final packs = wallet.coinPacks;
-    final selected = _selected ?? packs[1];
+    if (packs.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Top up')),
+        body: wallet.error != null
+            ? ErrorView(message: wallet.error!, onRetry: wallet.load)
+            : const LoadingView(),
+      );
+    }
+    final selected = _selected ?? packs[packs.length > 1 ? 1 : 0];
     return Scaffold(
       appBar: AppBar(
         title: const Text('Top up'),

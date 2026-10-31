@@ -11,14 +11,27 @@ const creatorRoutes = require('./routes/creator');
 const adminRoutes = require('./routes/admin');
 const socialRoutes = require('./routes/social');
 const catalogRoutes = require('./routes/catalog');
+const films = require('./controllers/films');
+const { UPLOAD_DIR } = require('./middleware/upload');
 
 // The Flutter web dev server runs on localhost; the mobile app does not need CORS.
 const LOCAL_WEB_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
-function createApp({ pool, jwtSecret, catalog, catalogAllowGuest = false }) {
+function createApp({
+  pool,
+  jwtSecret,
+  jwtExpiresIn = '7d',
+  uploadDir = UPLOAD_DIR,
+  maxUploadBytes,
+  catalog,
+  catalogAllowGuest = false,
+}) {
   const app = express();
   app.locals.pool = pool;
   app.locals.jwtSecret = jwtSecret;
+  app.locals.jwtExpiresIn = jwtExpiresIn;
+  app.locals.uploadDir = uploadDir;
+  app.locals.maxUploadBytes = maxUploadBytes;
   app.locals.catalog = catalog;
   app.locals.catalogAllowGuest = catalogAllowGuest;
 
@@ -34,6 +47,7 @@ function createApp({ pool, jwtSecret, catalog, catalogAllowGuest = false }) {
     }
   });
 
+  app.get('/api/lookups', films.lookups);
   app.use('/api/auth', authRoutes);
   app.use('/api/catalog', catalogRoutes);
   app.use('/api/films', filmRoutes);

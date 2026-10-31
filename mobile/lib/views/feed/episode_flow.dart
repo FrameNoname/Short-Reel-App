@@ -4,10 +4,10 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/wallet_controller.dart';
-import '../../data/app_repository.dart';
 import '../../models/coin_pack.dart';
 import '../../models/episode.dart';
 import '../../models/film.dart';
+import '../../services/errors.dart';
 import '../../widgets/dialogs.dart';
 import '../wallet/plus_view.dart';
 import '../wallet/top_up_view.dart';
@@ -18,7 +18,17 @@ import 'unlock_success_view.dart';
 
 Future<void> showEpisodes(BuildContext context, Film film) async {
   final feed = context.read<FeedController>();
-  final episodes = await feed.repository.episodes(film.id);
+  final wallet = context.read<WalletController>();
+  final messenger = ScaffoldMessenger.of(context);
+  final List<Episode> episodes;
+  try {
+    episodes = await feed.repository.episodes(film.id);
+    // Fresh balance, plan and coin packs before anything can be unlocked.
+    await wallet.load();
+  } on Object catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+    return;
+  }
   if (!context.mounted) return;
   final selected = await showModalBottomSheet<Episode>(
     context: context,
@@ -98,7 +108,7 @@ Future<void> _topUpThenUnlock(
     );
     if (!confirmed || !context.mounted) return;
     final wallet = context.read<WalletController>();
-    await wallet.buy(coins: selected.coins, priceUsd: selected.priceUsd);
+    await wallet.buy(selected);
     if (context.mounted) await _unlock(context, film, episode, episodes);
   } else if (selected == NotEnoughCoinsSheet.openWallet) {
     await Navigator.of(
@@ -115,7 +125,16 @@ Future<void> _unlock(
 ) async {
   final wallet = context.read<WalletController>();
   final before = wallet.balance;
-  await wallet.unlock(episode.id);
+  try {
+    await wallet.unlock(episode.id);
+  } on Object catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage(e))));
+    }
+    return;
+  }
   if (!context.mounted) return;
   context.read<FeedController>().play(
     episode,

@@ -2,6 +2,9 @@
 -- ShortReel APP database  (Group 7, Project 2)
 -- MariaDB 10.4 / XAMPP  ->  phpMyAdmin > Import > shortreel.sql > Go
 --
+-- WARNING: this file DROPs the 'shortreel' database. Never run it on data you
+-- want to keep; use db/migrations/*.sql for existing databases.
+--
 -- Passwords are argon2id hashes (varchar(97)), same as the Node.js
 -- 'argon2' package defaults (m=65536, t=3, p=4).
 -- Demo logins: admin/1111  kestrel_studio/2222  noor.frames/3333
@@ -26,6 +29,7 @@ CREATE TABLE `users` (
   `password`     varchar(97)  NOT NULL,            -- argon2id hash
   `display_name` varchar(50)  DEFAULT NULL,
   `avatar_url`   varchar(255) DEFAULT NULL,
+  `bio`          varchar(160) DEFAULT NULL,
   `role`         enum('viewer','creator','admin') NOT NULL DEFAULT 'viewer',
   `coin_balance` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `created_at`   datetime NOT NULL DEFAULT current_timestamp(),
@@ -111,6 +115,7 @@ CREATE TABLE `coin_transactions` (
   `type`          enum('topup','unlock') NOT NULL,
   `amount`        int(11) NOT NULL,                 -- +topup / -unlock
   `balance_after` int(10) UNSIGNED NOT NULL,
+  `price_usd`     decimal(6,2) DEFAULT NULL,         -- simulated charge, NULL for unlocks
   `coin_pack_id`  tinyint(3) UNSIGNED DEFAULT NULL, -- NULL = demo +100 button
   `episode_id`    smallint(5) UNSIGNED DEFAULT NULL,
   `created_at`    datetime NOT NULL DEFAULT current_timestamp(),
@@ -148,6 +153,8 @@ CREATE TABLE `subscriptions` (
   `price_usd`  decimal(6,2) NOT NULL DEFAULT 6.99,
   `start_date` date NOT NULL,
   `end_date`   date NOT NULL,
+  `cancelled_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `sub_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
@@ -268,15 +275,15 @@ INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `
 SELECT 4, 4, id, 20, 0, 20 FROM `episodes` WHERE film_id = 5 AND episode_no = 3;
 
 -- wallet history (adds up to the balances above)
-INSERT INTO `coin_transactions` (`user_id`, `type`, `amount`, `balance_after`, `coin_pack_id`, `episode_id`) VALUES
-(4, 'topup',  100, 100, NULL, NULL),
-(4, 'topup',   60, 160, 1,    NULL),
-(4, 'topup',   42, 202, NULL, NULL),
-(4, 'unlock', -20, 182, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 1)),
-(4, 'unlock', -20, 162, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 2)),
-(4, 'unlock', -20, 142, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 4)),
-(6, 'topup',  100, 100, NULL, NULL),
-(6, 'unlock', -20,  80, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 3));
+INSERT INTO `coin_transactions` (`user_id`, `type`, `amount`, `balance_after`, `price_usd`, `coin_pack_id`, `episode_id`) VALUES
+(4, 'topup',  100, 100, 0.00, NULL, NULL),
+(4, 'topup',   60, 160, 0.99, 1,    NULL),
+(4, 'topup',   42, 202, 0.00, NULL, NULL),
+(4, 'unlock', -20, 182, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 1)),
+(4, 'unlock', -20, 162, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 2)),
+(4, 'unlock', -20, 142, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 4)),
+(6, 'topup',  100, 100, 0.00, NULL, NULL),
+(6, 'unlock', -20,  80, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 3));
 
 INSERT INTO `subscriptions` (`user_id`, `price_usd`, `start_date`, `end_date`) VALUES
 (4, 6.99, CURDATE() - INTERVAL 10 DAY, CURDATE() + INTERVAL 20 DAY);

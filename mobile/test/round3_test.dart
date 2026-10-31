@@ -25,12 +25,12 @@ void main() {
         final paid = episodes.firstWhere((e) => !e.isFree);
         final free = episodes.firstWhere((e) => e.isFree);
 
-        repo.setEpisodePrices({paid.id: 45, free.id: 10});
+        await repo.setEpisodePrices({paid.id: 45, free.id: 10});
         final after = await repo.episodes(1);
         expect(after.firstWhere((e) => e.id == paid.id).priceCoins, 45);
         expect(after.firstWhere((e) => e.id == free.id).isFree, isFalse);
 
-        repo.setEpisodePrices({paid.id: 0});
+        await repo.setEpisodePrices({paid.id: 0});
         expect(
           (await repo.episodes(1)).firstWhere((e) => e.id == paid.id).isFree,
           isTrue,
@@ -41,7 +41,10 @@ void main() {
     test('a price above 999 coins is refused', () async {
       final repo = MockRepository();
       final episode = (await repo.episodes(1)).first;
-      expect(() => repo.setEpisodePrices({episode.id: 1000}), throwsException);
+      await expectLater(
+        repo.setEpisodePrices({episode.id: 1000}),
+        throwsException,
+      );
     });
 
     test('creator search matches names and ignores viewers', () {

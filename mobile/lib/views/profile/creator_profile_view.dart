@@ -3,8 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
+import '../../models/film.dart';
+import '../../models/user.dart';
+import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/error_view.dart';
+import '../../widgets/loading_view.dart';
 import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
@@ -20,10 +25,22 @@ void openCreatorProfile(BuildContext context, int creatorId) {
 
 /// A channel's public page: who they are, their numbers and the films they
 /// have published.
-class CreatorProfileView extends StatelessWidget {
+class CreatorProfileView extends StatefulWidget {
   const CreatorProfileView({super.key, required this.creatorId});
 
   final int creatorId;
+
+  @override
+  State<CreatorProfileView> createState() => _CreatorProfileViewState();
+}
+
+class _CreatorProfileViewState extends State<CreatorProfileView> {
+  int get creatorId => widget.creatorId;
+
+  late final Future<List<Film>> _films = context
+      .read<FeedController>()
+      .repository
+      .filmsOf(creatorId);
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +55,35 @@ class CreatorProfileView extends StatelessWidget {
       );
     }
     final name = creator.displayName ?? creator.username;
-    final films = repository
-        .filmsOf(creatorId)
-        .where((f) => f.status == 'approved')
-        .toList();
+    return FutureBuilder<List<Film>>(
+      future: _films,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: ErrorView(message: errorMessage(snapshot.error!)),
+          );
+        }
+        if (!snapshot.hasData) {
+          return Scaffold(appBar: AppBar(), body: const LoadingView());
+        }
+        final films = snapshot.data!
+            .where((f) => f.status == 'approved')
+            .toList();
+        return _page(context, feed, viewerId, creator, name, films);
+      },
+    );
+  }
+
+  Widget _page(
+    BuildContext context,
+    FeedController feed,
+    int? viewerId,
+    User creator,
+    String name,
+    List<Film> films,
+  ) {
+    final repository = feed.repository;
     final likes = films.fold<int>(0, (sum, f) => sum + f.likeCount);
     final isOwn = viewerId == creatorId;
     final isFollowing =

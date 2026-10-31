@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/upload_controller.dart';
+import '../../data/app_repository.dart';
 import '../../data/mock_data.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
+import '../../services/errors.dart';
+import '../../services/video_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/text.dart';
@@ -26,18 +29,20 @@ class _UploadViewState extends State<UploadView> {
   late final _prompt = TextEditingController(text: widget.film?.promptCredit);
   late String _genre = widget.film?.genreName ?? mockGenres.first;
   late String _tool = widget.film?.aiToolName ?? mockAiTools.first;
-  late List<bool> _episodeFree = _isEditing ? [] : [true, false];
-  late List<TextEditingController> _priceFields = [
-    for (final _ in _episodeFree) TextEditingController(text: '20'),
-  ];
+  late List<bool> _episodeFree = [];
+  late List<TextEditingController> _priceFields = [];
+
+  /// The videos picked from the device, one per new episode.
+  List<PickedVideo> _videos = const [];
 
   /// Ids of the episodes being edited, in the same order as the price cards.
   List<int> _episodeIds = const [];
   bool _aiLabel = false;
-  bool _videosChosen = false;
   bool _busy = false;
 
   bool get _isEditing => widget.film != null;
+
+  bool get _videosChosen => _videos.isNotEmpty;
 
   @override
   void initState() {
@@ -70,6 +75,35 @@ class _UploadViewState extends State<UploadView> {
       field.dispose();
     }
     super.dispose();
+  }
+
+  /// Opens the file picker; each video becomes one episode. The first is free
+  /// as a preview and the rest cost coins; the creator can change any of them.
+  Future<void> _chooseVideos() async {
+    final controller = context.read<UploadController>();
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final picked = await controller.pickVideos();
+      if (!mounted || picked.isEmpty) return;
+      if (picked.any((v) => v.bytes.length > maxVideoBytes)) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Each video must be 200 MB or less.')),
+        );
+        return;
+      }
+      for (final field in _priceFields) {
+        field.dispose();
+      }
+      setState(() {
+        _videos = picked;
+        _episodeFree = [for (var i = 0; i < picked.length; i++) i == 0];
+        _priceFields = [
+          for (final _ in picked) TextEditingController(text: '20'),
+        ];
+      });
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+    }
   }
 
   bool get _hasDetails =>
@@ -111,7 +145,7 @@ class _UploadViewState extends State<UploadView> {
     final film = widget.film;
     try {
       if (film != null) {
-        controller.update(
+        await controller.update(
           film.id,
           title: _title.text.trim(),
           genre: _genre,
@@ -129,14 +163,21 @@ class _UploadViewState extends State<UploadView> {
           genre: _genre,
           aiTool: _tool,
           promptCredit: _prompt.text.trim(),
-          episodePrices: [
-            for (var i = 0; i < _episodeFree.length; i++) _priceOf(i)!,
+          episodes: [
+            for (var i = 0; i < _videos.length; i++)
+              EpisodeDraft(
+                fileName: _videos[i].name,
+                bytes: _videos[i].bytes,
+                priceCoins: _priceOf(i)!,
+              ),
           ],
         );
       }
-    } catch (_) {
+    } on Object catch (e) {
+      // Nothing is reported as done unless the server accepted every file.
       if (mounted) setState(() => _busy = false);
-      rethrow;
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+      return;
     }
     if (!mounted) return;
     messenger.showSnackBar(
@@ -161,7 +202,7 @@ class _UploadViewState extends State<UploadView> {
           if (!_isEditing) ...[
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _videosChosen = true),
+              onTap: _busy ? null : _chooseVideos,
               child: AppCard(
                 color: _videosChosen
                     ? const Color(0x1F3DD68C)
@@ -182,13 +223,21 @@ class _UploadViewState extends State<UploadView> {
                     const SizedBox(height: 8),
                     Text(
                       _videosChosen
-                          ? '${_episodeFree.length} demo videos selected'
+                          ? '${_videos.length} video${_videos.length == 1 ? '' : 's'} selected'
                           : 'Choose episode videos',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    const Text(
-                      'MP4, vertical 9:16, up to 200 MB each',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                    Text(
+                      _videosChosen
+                          ? _videos.map((v) => v.name).join(', ')
+                          : 'MP4, vertical 9:16, up to 200 MB each',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

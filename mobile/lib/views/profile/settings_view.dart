@@ -32,7 +32,7 @@ class SettingsView extends StatelessWidget {
     );
     if (!confirmed) return;
     navigator.popUntil((route) => route.isFirst);
-    auth.logout();
+    await auth.logout();
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shortreel/data/app_repository.dart';
 import 'package:shortreel/data/mock_repository.dart';
 
 import 'app_shell_test.dart' show logIn;
@@ -38,14 +39,18 @@ void main() {
       genre: 'Drama',
       aiTool: 'Mixed',
       promptCredit: 'Prompt',
-      episodePrices: const [0, 35, 120],
+      episodes: const [
+        EpisodeDraft(fileName: 'a.mp4', priceCoins: 0),
+        EpisodeDraft(fileName: 'b.mp4', priceCoins: 35),
+        EpisodeDraft(fileName: 'c.mp4', priceCoins: 120),
+      ],
     );
     final prices = (await repo.episodes(
       film.id,
     )).map((e) => e.priceCoins).toList();
     expect(prices, [0, 35, 120]);
 
-    final pricing = repo.pricingOf(film.id);
+    final pricing = await repo.pricingOf(film.id);
     expect(pricing.freeCount, 1);
     expect(pricing.paidCount, 2);
     expect(pricing.priceCoins, 35);
@@ -103,6 +108,8 @@ void main() {
 
   testWidgets('a free episode hides the price field', (tester) async {
     await openUpload(tester);
+    await tester.tap(find.text('Choose episode videos'));
+    await tester.pumpAndSettle();
     await reveal(tester, find.byKey(const Key('episode-2-price')));
     expect(find.byKey(const Key('episode-1-price')), findsNothing);
     expect(find.byKey(const Key('episode-2-price')), findsOneWidget);

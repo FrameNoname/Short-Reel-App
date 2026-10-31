@@ -1,41 +1,55 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
+import '../services/video_picker.dart';
 
 class UploadController extends ChangeNotifier {
-  UploadController(this.repository);
+  UploadController(this.repository, {this.pickVideos = pickVideosFromDevice});
 
   final AppRepository repository;
 
+  /// Opens the device's video picker; tests pass a fake.
+  final VideoPicker pickVideos;
+
+  bool isBusy = false;
+
+  /// Creates the film and uploads every episode. Returns only after the server
+  /// has answered for each of them; a failure is thrown to the caller.
   Future<void> submit({
     required int creatorId,
     required String title,
     required String genre,
     required String aiTool,
     required String promptCredit,
-    required List<int> episodePrices,
+    required List<EpisodeDraft> episodes,
   }) async {
-    await repository.upload(
-      creatorId: creatorId,
-      title: title,
-      genre: genre,
-      aiTool: aiTool,
-      promptCredit: promptCredit,
-      episodePrices: episodePrices,
-    );
+    isBusy = true;
     notifyListeners();
+    try {
+      await repository.upload(
+        creatorId: creatorId,
+        title: title,
+        genre: genre,
+        aiTool: aiTool,
+        promptCredit: promptCredit,
+        episodes: episodes,
+      );
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
   }
 
-  void update(
+  Future<void> update(
     int filmId, {
     required String title,
     required String genre,
     required String aiTool,
     required String promptCredit,
     Map<int, int> episodePrices = const {},
-  }) {
-    repository.setEpisodePrices(episodePrices);
-    repository.updateFilm(
+  }) async {
+    await repository.setEpisodePrices(episodePrices);
+    await repository.updateFilm(
       filmId,
       title: title,
       genre: genre,
@@ -45,8 +59,8 @@ class UploadController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void remove(int filmId) {
-    repository.deleteFilm(filmId);
+  Future<void> remove(int filmId) async {
+    await repository.deleteFilm(filmId);
     notifyListeners();
   }
 }

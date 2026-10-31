@@ -12,6 +12,7 @@ import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/error_view.dart';
 import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../player/player_view.dart';
@@ -215,7 +216,15 @@ class _SearchViewState extends State<SearchView> {
                               ),
                             ),
                           ),
-                          if (films.isEmpty)
+                          if (search.error != null)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: ErrorView(
+                                message: search.error!,
+                                onRetry: () => search.apply(search.filter),
+                              ),
+                            )
+                          else if (films.isEmpty)
                             const SliverFillRemaining(
                               hasScrollBody: false,
                               child: EmptyView(

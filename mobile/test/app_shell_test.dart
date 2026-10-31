@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shortreel/services/video_picker.dart';
 import 'package:shortreel/data/mock_repository.dart';
 import 'package:shortreel/main.dart';
 import 'package:shortreel/models/user.dart';
@@ -21,7 +24,15 @@ Future<void> pumpApp(WidgetTester tester) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(ShortReelApp(repository: MockRepository()));
+  await tester.pumpWidget(
+    ShortReelApp(
+      repository: MockRepository(),
+      pickVideos: () async => [
+        PickedVideo(name: 'ep1.mp4', bytes: Uint8List(8)),
+        PickedVideo(name: 'ep2.mp4', bytes: Uint8List(8)),
+      ],
+    ),
+  );
   await tester.pumpAndSettle();
 }
 

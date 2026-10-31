@@ -22,9 +22,9 @@ String totalValue(WidgetTester tester) {
 
 void main() {
   group('daily numbers', () {
-    test('they add up to the channel totals', () {
+    test('they add up to the channel totals', () async {
       final repo = MockRepository();
-      final totals = repo.earningsOf(2);
+      final totals = await repo.earningsOf(2);
       final days = repo.dailyStatsOf(2);
       expect(days.length, 60);
       expect(days.fold(0, (s, d) => s + d.views), totals.views);

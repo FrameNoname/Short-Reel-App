@@ -19,5 +19,6 @@ class Subscription {
     priceUsd: double.parse(json['price_usd'].toString()),
     startDate: DateTime.parse(json['start_date'] as String),
     endDate: DateTime.parse(json['end_date'] as String),
+    isCancelled: json['is_cancelled'] == true,
   );
 }
