@@ -1,0 +1,664 @@
+import '../models/coin_pack.dart';
+import '../models/episode.dart';
+import '../models/film.dart';
+import '../models/subscription.dart';
+import '../models/transaction.dart';
+import '../models/user.dart';
+import '../services/api_client.dart';
+import 'app_repository.dart';
+import 'film_filter.dart';
+import 'mock_data.dart';
+
+/// In-memory backend for the UI demo. Data resets when the app restarts.
+class MockRepository implements AppRepository {
+  MockRepository({DateTime? now}) : _now = now ?? DateTime.now() {
+    for (final film in _films.values) {
+      for (var n = 1; n <= film.episodeCount; n++) {
+        _addEpisode(film.id, n, isFree: n <= 2);
+      }
+    }
+    _seedUnlocks();
+    _seedWallets();
+  }
+
+  static const _episodePrice = 20;
+  static const _subscriptionPrice = 6.99;
+
+  final DateTime _now;
+  final Map<int, User> _users = {for (final u in mockUsers) u.id: u};
+  final Map<String, String> _passwords = Map.of(mockPasswords);
+  final Map<int, Film> _films = {for (final f in mockFilms) f.id: f};
+  final Map<int, Episode> _episodes = {};
+  final Map<int, List<Transaction>> _transactions = {};
+  final Map<int, Subscription> _subscriptions = {};
+  final List<_Unlock> _unlocks = [];
+  final Set<(int, int)> _likes = {(4, 1), (6, 3)};
+  final Set<(int, int)> _saved = {(4, 2), (4, 3), (6, 1)};
+  final Set<(int, int)> _follows = {(4, 2), (4, 3), (6, 4)};
+  final List<FilmReport> _reports = [
+    const FilmReport(
+      id: 1,
+      filmId: 2,
+      filmTitle: 'Paper Moons',
+      reason: 'Audio out of sync in episode 4',
+      isOpen: true,
+    ),
+  ];
+
+  final List<FilmComment> _comments = [
+    const FilmComment(
+      id: 1,
+      userId: 6,
+      username: 'viewer01',
+      body: 'The ending of episode 2 was great!',
+    ),
+    const FilmComment(
+      id: 2,
+      userId: 4,
+      username: 'mira.lens',
+      body: 'Love the paper-cut style.',
+    ),
+  ];
+  final Map<int, int> _commentFilm = {1: 1, 2: 2};
+  int _nextCommentId = 3;
+
+  int _adminSharePercent = 30;
+  double _salesUsd = 8.97;
+  int _nextEpisodeId = 1;
+
+  void _addEpisode(int filmId, int number, {required bool isFree}) {
+    final id = _nextEpisodeId++;
+    _episodes[id] = Episode(
+      id: id,
+      filmId: filmId,
+      episodeNo: number,
+      title: 'Episode $number',
+      durationSec: 60 + number * 15,
+      isFree: isFree,
+      priceCoins: isFree ? 0 : _episodePrice,
+    );
+  }
+
+  void _seedUnlocks() {
+    void seed(int userId, int filmId, int number, int creator, int admin) {
+      final episode = _episodes.values.firstWhere(
+        (e) => e.filmId == filmId && e.episodeNo == number,
+      );
+      _unlocks.add(_Unlock(userId, episode.id, creator, admin));
+    }
+
+    seed(4, 1, 3, 14, 6);
+    seed(4, 1, 4, 14, 6);
+    seed(6, 3, 3, 14, 6);
+    seed(4, 5, 3, 0, 20);
+  }
+
+  void _seedWallets() {
+    DateTime daysAgo(int days) => _now.subtract(Duration(days: days));
+
+    // Newest first, adding up to the balances in mock_data.dart.
+    _transactions[4] = [
+      Transaction(
+        id: 6,
+        type: 'unlock',
+        amount: -20,
+        balanceAfter: 142,
+        createdAt: daysAgo(2),
+        label: 'ShortReel Intro, Episode 3',
+      ),
+      Transaction(
+        id: 5,
+        type: 'unlock',
+        amount: -20,
+        balanceAfter: 162,
+        createdAt: daysAgo(3),
+        label: 'Salt & Signal, Episode 4',
+      ),
+      Transaction(
+        id: 4,
+        type: 'unlock',
+        amount: -20,
+        balanceAfter: 182,
+        createdAt: daysAgo(3),
+        label: 'Salt & Signal, Episode 3',
+      ),
+      Transaction(
+        id: 3,
+        type: 'topup',
+        amount: 42,
+        balanceAfter: 202,
+        createdAt: daysAgo(4),
+        label: 'Demo top-up',
+      ),
+      Transaction(
+        id: 2,
+        type: 'topup',
+        amount: 60,
+        balanceAfter: 160,
+        createdAt: daysAgo(6),
+        label: 'Demo top-up',
+      ),
+      Transaction(
+        id: 1,
+        type: 'topup',
+        amount: 100,
+        balanceAfter: 100,
+        createdAt: daysAgo(7),
+        label: 'Demo top-up',
+      ),
+    ];
+    _transactions[6] = [
+      Transaction(
+        id: 8,
+        type: 'unlock',
+        amount: -20,
+        balanceAfter: 80,
+        createdAt: daysAgo(1),
+        label: 'Ember Protocol, Episode 3',
+      ),
+      Transaction(
+        id: 7,
+        type: 'topup',
+        amount: 100,
+        balanceAfter: 100,
+        createdAt: daysAgo(2),
+        label: 'Demo top-up',
+      ),
+    ];
+    _subscriptions[4] = Subscription(
+      id: 1,
+      priceUsd: _subscriptionPrice,
+      startDate: daysAgo(10),
+      endDate: _now.add(const Duration(days: 20)),
+    );
+  }
+
+  ApiException _error(String code, String message, int status) =>
+      ApiException(code: code, message: message, statusCode: status);
+
+  User _user(int id) => _users[id]!;
+
+  @override
+  Future<User> login(String username, String password) async {
+    final name = username.trim();
+    if (_passwords[name] != password) {
+      throw _error(
+        'UNAUTHENTICATED',
+        'Username or password is incorrect. Please try again.',
+        401,
+      );
+    }
+    return _users.values.firstWhere((u) => u.username == name);
+  }
+
+  @override
+  Future<User> register(String username, String password, UserRole role) async {
+    final name = username.trim();
+    if (_passwords.containsKey(name)) {
+      throw _error('CONFLICT', 'This username is already taken.', 409);
+    }
+    final id = _users.keys.reduce((a, b) => a > b ? a : b) + 1;
+    final user = User(
+      id: id,
+      username: name,
+      displayName: name,
+      role: role,
+      coinBalance: 0,
+    );
+    _users[id] = user;
+    _passwords[name] = password;
+    return user;
+  }
+
+  bool _matches(Film film, FilmFilter filter) {
+    if (filter.genres.isNotEmpty && !filter.genres.contains(film.genreName)) {
+      return false;
+    }
+    if (filter.aiTools.isNotEmpty &&
+        !filter.aiTools.contains(film.aiToolName)) {
+      return false;
+    }
+    final minutes = _averageMinutes(film.id);
+    final inLength = switch (filter.length) {
+      LengthFilter.any => true,
+      LengthFilter.under5 => minutes < 5,
+      LengthFilter.from5to15 => minutes >= 5 && minutes < 15,
+      LengthFilter.from15to30 => minutes >= 15 && minutes <= 30,
+    };
+    if (!inLength) return false;
+    final query = filter.query.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    return [
+      film.title,
+      film.creatorName,
+      film.promptCredit ?? '',
+      film.synopsis ?? '',
+    ].any((text) => text.toLowerCase().contains(query));
+  }
+
+  double _averageMinutes(int filmId) {
+    final seconds = _episodes.values
+        .where((e) => e.filmId == filmId)
+        .map((e) => e.durationSec)
+        .toList();
+    if (seconds.isEmpty) return 0;
+    return seconds.reduce((a, b) => a + b) / seconds.length / 60;
+  }
+
+  Iterable<Film> get _approved =>
+      _films.values.where((f) => f.status == 'approved');
+
+  @override
+  Future<List<Film>> films([FilmFilter filter = const FilmFilter()]) async =>
+      _approved.where((f) => _matches(f, filter)).toList();
+
+  @override
+  Future<List<Film>> followingFilms(int userId) async =>
+      _approved.where((f) => _follows.contains((userId, f.creatorId))).toList();
+
+  @override
+  Future<List<Episode>> episodes(int filmId) async {
+    final list = _episodes.values.where((e) => e.filmId == filmId).toList();
+    list.sort((a, b) => a.episodeNo.compareTo(b.episodeNo));
+    return list;
+  }
+
+  bool _isSubscribed(int userId) {
+    final subscription = _subscriptions[userId];
+    return subscription != null && subscription.endDate.isAfter(_now);
+  }
+
+  bool _hasUnlocked(int userId, int episodeId) =>
+      _unlocks.any((u) => u.userId == userId && u.episodeId == episodeId);
+
+  @override
+  EpisodeAccess accessOf(int? userId, Episode episode) {
+    if (episode.isFree) return EpisodeAccess.free;
+    if (userId == null) return EpisodeAccess.locked;
+    if (_films[episode.filmId]!.creatorId == userId) {
+      return EpisodeAccess.unlocked;
+    }
+    if (_hasUnlocked(userId, episode.id)) return EpisodeAccess.unlocked;
+    if (_isSubscribed(userId)) return EpisodeAccess.plus;
+    return EpisodeAccess.locked;
+  }
+
+  @override
+  List<FilmComment> commentsOf(int filmId) =>
+      _comments.where((c) => _commentFilm[c.id] == filmId).toList();
+
+  @override
+  void addComment(int userId, int filmId, String body) {
+    final text = body.trim();
+    if (text.isEmpty) {
+      throw _error('VALIDATION_ERROR', 'Write a comment first.', 400);
+    }
+    final id = _nextCommentId++;
+    _comments.insert(
+      0,
+      FilmComment(
+        id: id,
+        userId: userId,
+        username: _user(userId).username,
+        body: text,
+      ),
+    );
+    _commentFilm[id] = filmId;
+    final film = _films[filmId]!;
+    _films[filmId] = film.copyWith(commentCount: film.commentCount + 1);
+  }
+
+  @override
+  void removeComment(int commentId) {
+    final filmId = _commentFilm.remove(commentId);
+    _comments.removeWhere((c) => c.id == commentId);
+    if (filmId == null) return;
+    final film = _films[filmId]!;
+    _films[filmId] = film.copyWith(commentCount: film.commentCount - 1);
+  }
+
+  @override
+  void reportFilm(int userId, int filmId, String reason) {
+    _reports.add(
+      FilmReport(
+        id: _reports.length + 1,
+        filmId: filmId,
+        filmTitle: _films[filmId]!.title,
+        reason: reason,
+        isOpen: true,
+      ),
+    );
+  }
+
+  void _record(
+    int userId,
+    String type,
+    int amount,
+    int balanceAfter,
+    String label,
+  ) {
+    final list = _transactions.putIfAbsent(userId, () => []);
+    list.insert(
+      0,
+      Transaction(
+        id: _transactions.values.fold(0, (sum, l) => sum + l.length) + 1,
+        type: type,
+        amount: amount,
+        balanceAfter: balanceAfter,
+        createdAt: _now,
+        label: label,
+      ),
+    );
+  }
+
+  @override
+  Future<User> unlock(int userId, int episodeId) async {
+    final user = _user(userId);
+    final episode = _episodes[episodeId]!;
+    // Same rule as UNIQUE(user_id, episode_id): a repeat never charges twice.
+    if (_hasUnlocked(userId, episodeId)) return user;
+    if (user.coinBalance < episode.priceCoins) {
+      throw _error('INSUFFICIENT_COINS', 'Not enough coins', 402);
+    }
+    final film = _films[episode.filmId]!;
+    final ownedByAdmin = _user(film.creatorId).role == UserRole.admin;
+    final adminShare = ownedByAdmin
+        ? episode.priceCoins
+        : episode.priceCoins * _adminSharePercent ~/ 100;
+    final updated = user.copyWith(
+      coinBalance: user.coinBalance - episode.priceCoins,
+    );
+    _users[userId] = updated;
+    _unlocks.add(
+      _Unlock(userId, episodeId, episode.priceCoins - adminShare, adminShare),
+    );
+    _record(
+      userId,
+      'unlock',
+      -episode.priceCoins,
+      updated.coinBalance,
+      '${film.title}, Episode ${episode.episodeNo}',
+    );
+    return updated;
+  }
+
+  @override
+  Future<User> topUp(
+    int userId, {
+    required int coins,
+    double priceUsd = 0,
+  }) async {
+    final updated = _user(
+      userId,
+    ).copyWith(coinBalance: _user(userId).coinBalance + coins);
+    _users[userId] = updated;
+    _salesUsd += priceUsd;
+    _record(userId, 'topup', coins, updated.coinBalance, 'Demo top-up');
+    return updated;
+  }
+
+  @override
+  Future<Subscription> subscribe(int userId) async {
+    final subscription = Subscription(
+      id: _subscriptions.length + 1,
+      priceUsd: _subscriptionPrice,
+      startDate: _now,
+      endDate: _now.add(const Duration(days: 30)),
+    );
+    _subscriptions[userId] = subscription;
+    _salesUsd += _subscriptionPrice;
+    return subscription;
+  }
+
+  @override
+  Subscription? subscriptionOf(int userId) =>
+      _isSubscribed(userId) ? _subscriptions[userId] : null;
+
+  @override
+  void cancelSubscription(int userId) {
+    final plan = _subscriptions[userId]!;
+    _subscriptions[userId] = Subscription(
+      id: plan.id,
+      priceUsd: plan.priceUsd,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      isCancelled: true,
+    );
+  }
+
+  @override
+  double get subscriptionPriceUsd => _subscriptionPrice;
+
+  @override
+  int get episodePriceCoins => _episodePrice;
+
+  @override
+  List<Transaction> transactionsOf(int userId) =>
+      List.unmodifiable(_transactions[userId] ?? const []);
+
+  @override
+  List<CoinPack> coinPacks() => mockCoinPacks;
+
+  @override
+  int get demoTopUpCoins => 100;
+
+  @override
+  bool isLiked(int userId, int filmId) => _likes.contains((userId, filmId));
+
+  @override
+  bool isSaved(int userId, int filmId) => _saved.contains((userId, filmId));
+
+  @override
+  bool isFollowing(int userId, int creatorId) =>
+      _follows.contains((userId, creatorId));
+
+  @override
+  void toggleLike(int userId, int filmId) {
+    final film = _films[filmId]!;
+    final added = _likes.add((userId, filmId));
+    if (!added) _likes.remove((userId, filmId));
+    _films[filmId] = film.copyWith(
+      likeCount: film.likeCount + (added ? 1 : -1),
+    );
+  }
+
+  @override
+  void toggleSave(int userId, int filmId) {
+    if (!_saved.add((userId, filmId))) _saved.remove((userId, filmId));
+  }
+
+  @override
+  void toggleFollow(int userId, int creatorId) {
+    if (!_follows.add((userId, creatorId))) {
+      _follows.remove((userId, creatorId));
+    }
+  }
+
+  @override
+  List<Film> watchlistOf(int userId) =>
+      _approved.where((f) => _saved.contains((userId, f.id))).toList();
+
+  @override
+  List<Film> unlockedFilmsOf(int userId) {
+    final filmIds = _unlocks
+        .where((u) => u.userId == userId)
+        .map((u) => _episodes[u.episodeId]!.filmId)
+        .toSet();
+    return filmIds.map((id) => _films[id]!).toList();
+  }
+
+  @override
+  List<User> followingOf(int userId) =>
+      _follows.where((f) => f.$1 == userId).map((f) => _user(f.$2)).toList();
+
+  @override
+  int followerCount(int userId) => _follows.where((f) => f.$2 == userId).length;
+
+  @override
+  Future<Film> upload({
+    required int creatorId,
+    required String title,
+    required String genre,
+    required String aiTool,
+    required String promptCredit,
+    required List<bool> episodeFree,
+  }) async {
+    final id = _films.keys.reduce((a, b) => a > b ? a : b) + 1;
+    final film = Film(
+      id: id,
+      creatorId: creatorId,
+      title: title,
+      synopsis: null,
+      posterUrl: null,
+      genreId: mockGenres.indexOf(genre) + 1,
+      aiToolId: mockAiTools.indexOf(aiTool) + 1,
+      promptCredit: promptCredit,
+      isAiGenerated: true,
+      status: 'pending',
+      creatorName: _user(creatorId).username,
+      genreName: genre,
+      aiToolName: aiTool,
+      episodeCount: episodeFree.length,
+    );
+    _films[id] = film;
+    for (var i = 0; i < episodeFree.length; i++) {
+      _addEpisode(id, i + 1, isFree: episodeFree[i]);
+    }
+    return film;
+  }
+
+  @override
+  void updateFilm(
+    int filmId, {
+    required String title,
+    required String genre,
+    required String aiTool,
+    required String promptCredit,
+  }) {
+    final film = _films[filmId]!;
+    final resubmitted = film.status == 'rejected';
+    _films[filmId] = film.copyWith(
+      title: title,
+      genreId: mockGenres.indexOf(genre) + 1,
+      genreName: genre,
+      aiToolId: mockAiTools.indexOf(aiTool) + 1,
+      aiToolName: aiTool,
+      promptCredit: promptCredit,
+      status: resubmitted ? 'pending' : null,
+      clearReviewNote: resubmitted,
+    );
+  }
+
+  @override
+  void deleteFilm(int filmId) {
+    // Viewers keep what they paid for, so sold films stay until taken down.
+    final episodeIds = _episodes.values
+        .where((e) => e.filmId == filmId)
+        .map((e) => e.id)
+        .toSet();
+    if (_unlocks.any((u) => episodeIds.contains(u.episodeId))) {
+      throw _error(
+        'CONFLICT',
+        'This film has paid unlocks, so it cannot be deleted.',
+        409,
+      );
+    }
+    _episodes.removeWhere((id, _) => episodeIds.contains(id));
+    _films.remove(filmId);
+  }
+
+  @override
+  EpisodePricing pricingOf(int filmId) {
+    final episodes = _episodes.values.where((e) => e.filmId == filmId);
+    final paid = episodes.where((e) => !e.isFree);
+    return EpisodePricing(
+      freeCount: episodes.length - paid.length,
+      paidCount: paid.length,
+      priceCoins: paid.isEmpty ? 0 : paid.first.priceCoins,
+    );
+  }
+
+  @override
+  List<Film> filmsOf(int creatorId) =>
+      _films.values.where((f) => f.creatorId == creatorId).toList();
+
+  @override
+  Earnings earningsOf(int creatorId) {
+    final films = filmsOf(creatorId);
+    final filmIds = films.map((f) => f.id).toSet();
+    final unlocks = _unlocks.where(
+      (u) => filmIds.contains(_episodes[u.episodeId]!.filmId),
+    );
+    return Earnings(
+      coins: unlocks.fold(0, (sum, u) => sum + u.creatorShare),
+      unlocks: unlocks.length,
+      views: films.fold(0, (sum, f) => sum + f.viewCount),
+      likes: films.fold(0, (sum, f) => sum + f.likeCount),
+    );
+  }
+
+  @override
+  int earningsOfFilm(int filmId) => _unlocks
+      .where((u) => _episodes[u.episodeId]!.filmId == filmId)
+      .fold(0, (sum, u) => sum + u.creatorShare);
+
+  @override
+  List<Film> reviewQueue() =>
+      _films.values.where((f) => f.status == 'pending').toList();
+
+  @override
+  List<Film> liveFilms() => _approved.toList();
+
+  @override
+  void review(int filmId, String status, {String? note}) {
+    _films[filmId] = _films[filmId]!.copyWith(status: status, reviewNote: note);
+    if (status == 'taken_down') {
+      final open = _reports.where((r) => r.isOpen && r.filmId == filmId);
+      for (final report in open.toList()) {
+        resolveReport(report.id);
+      }
+    }
+  }
+
+  @override
+  List<FilmReport> openReports() => _reports.where((r) => r.isOpen).toList();
+
+  @override
+  void resolveReport(int reportId) {
+    final index = _reports.indexWhere((r) => r.id == reportId);
+    final report = _reports[index];
+    _reports[index] = FilmReport(
+      id: report.id,
+      filmId: report.filmId,
+      filmTitle: report.filmTitle,
+      reason: report.reason,
+      isOpen: false,
+    );
+  }
+
+  @override
+  AdminSales adminSales() => AdminSales(
+    totalUsd: _salesUsd,
+    adminCoins: _unlocks.fold(0, (sum, u) => sum + u.adminShare),
+  );
+
+  @override
+  int get adminSharePercent => _adminSharePercent;
+
+  @override
+  void setAdminSharePercent(int percent) => _adminSharePercent = percent;
+}
+
+class _Unlock {
+  const _Unlock(
+    this.userId,
+    this.episodeId,
+    this.creatorShare,
+    this.adminShare,
+  );
+
+  final int userId;
+  final int episodeId;
+  final int creatorShare;
+  final int adminShare;
+}

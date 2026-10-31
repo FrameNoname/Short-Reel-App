@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
-import '../../widgets/empty_view.dart';
+import '../../models/film.dart';
+import '../feed/film_page.dart';
 
 class PlayerView extends StatelessWidget {
-  const PlayerView({super.key});
+  const PlayerView({super.key, required this.film});
+
+  final Film film;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Player')),
-      body: const EmptyView(message: 'Player screen'),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(backgroundColor: Colors.transparent),
+      body: FilmPage(film: film),
     );
   }
 }

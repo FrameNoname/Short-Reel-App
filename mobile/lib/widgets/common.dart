@@ -1,0 +1,305 @@
+import 'package:flutter/material.dart';
+
+import '../models/film.dart';
+import '../theme/app_theme.dart';
+import 'ai_label_badge.dart';
+
+/// Small rounded surface used across the cards in the design.
+class AppCard extends StatelessWidget {
+  const AppCard({
+    super.key,
+    required this.child,
+    this.color = AppColors.surface,
+    this.borderColor = AppColors.border,
+    this.padding = const EdgeInsets.all(14),
+  });
+
+  final Widget child;
+  final Color color;
+  final Color borderColor;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: child,
+    );
+  }
+}
+
+class FieldLabel extends StatelessWidget {
+  const FieldLabel(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class FieldError extends StatelessWidget {
+  const FieldError(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, size: 14, color: AppColors.danger),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12, color: AppColors.danger),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AppBrand extends StatelessWidget {
+  const AppBrand({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.play_arrow, size: 18, color: Colors.white),
+        ),
+        const SizedBox(width: 8),
+        const Text(
+          'Short Reel',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+}
+
+class CoinAmount extends StatelessWidget {
+  const CoinAmount(this.coins, {super.key});
+
+  final int coins;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0x33FFC53D),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.toll, size: 14, color: AppColors.gold),
+          const SizedBox(width: 6),
+          Text(
+            '$coins',
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class DemoBadge extends StatelessWidget {
+  const DemoBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: AppColors.gold),
+      ),
+      child: const Text(
+        'DEMO',
+        style: TextStyle(
+          color: AppColors.gold,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class StatusChip extends StatelessWidget {
+  const StatusChip(this.status, {super.key});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      'approved' => AppColors.green,
+      'pending' => AppColors.gold,
+      _ => AppColors.danger,
+    };
+    final label = switch (status) {
+      'taken_down' => 'Taken down',
+      _ => status[0].toUpperCase() + status.substring(1),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class StatTile extends StatelessWidget {
+  const StatTile({
+    super.key,
+    required this.value,
+    required this.label,
+    this.valueColor = AppColors.text,
+  });
+
+  final String value;
+  final String label;
+  final Color valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Film artwork, or a tinted panel for films without a poster.
+class FilmPoster extends StatelessWidget {
+  const FilmPoster({super.key, required this.film, this.showBadge = true});
+
+  static const _tints = [
+    Color(0xFF241E3E),
+    Color(0xFF3A2228),
+    Color(0xFF172B38),
+    Color(0xFF1E2F26),
+    Color(0xFF2B2A1B),
+  ];
+
+  final Film film;
+  final bool showBadge;
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = film.posterAsset;
+    return Semantics(
+      image: true,
+      label: 'Poster of ${film.title}',
+      excludeSemantics: true,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (asset != null)
+              Image.asset(asset, fit: BoxFit.cover)
+            else
+              ColoredBox(color: _tints[film.id % _tints.length]),
+            // The poster artwork already carries its own AI badge.
+            if (showBadge && asset == null) ...[
+              const Positioned(left: 8, top: 8, child: AiLabelBadge()),
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    film.title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String compactCount(int value) {
+  if (value < 1000) return '$value';
+  final thousands = value / 1000;
+  return '${thousands.toStringAsFixed(1)}K';
+}
+
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+String shortDate(DateTime date) => '${_months[date.month - 1]} ${date.day}';

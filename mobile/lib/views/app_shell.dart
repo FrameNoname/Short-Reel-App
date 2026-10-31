@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
 import '../models/user.dart';
+import '../theme/app_theme.dart';
 import 'admin/admin_view.dart';
 import 'feed/feed_view.dart';
 import 'profile/profile_view.dart';
@@ -12,14 +13,31 @@ import 'search/search_view.dart';
 import 'upload/upload_view.dart';
 import 'wallet/wallet_view.dart';
 
-enum AppTab { feed, search, wallet, profile, upload, admin }
+enum AppTab { feed, search, upload, wallet, profile, admin }
 
 List<AppTab> tabsFor(UserRole role) {
-  const base = [AppTab.feed, AppTab.search, AppTab.wallet, AppTab.profile];
   return switch (role) {
-    UserRole.guest || UserRole.viewer => base,
-    UserRole.creator => [...base, AppTab.upload],
-    UserRole.admin => [...base, AppTab.upload, AppTab.admin],
+    UserRole.guest || UserRole.viewer => const [
+      AppTab.feed,
+      AppTab.search,
+      AppTab.wallet,
+      AppTab.profile,
+    ],
+    UserRole.creator => const [
+      AppTab.feed,
+      AppTab.search,
+      AppTab.upload,
+      AppTab.wallet,
+      AppTab.profile,
+    ],
+    UserRole.admin => const [
+      AppTab.feed,
+      AppTab.search,
+      AppTab.upload,
+      AppTab.wallet,
+      AppTab.profile,
+      AppTab.admin,
+    ],
   };
 }
 
@@ -31,54 +49,80 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  int _selected = 0;
+  AppTab _selected = AppTab.feed;
 
-  static Widget _viewFor(AppTab tab) => switch (tab) {
-    AppTab.feed => const FeedView(),
+  Widget _viewFor(AppTab tab) => switch (tab) {
+    AppTab.feed => FeedView(
+      onSearch: () => setState(() => _selected = AppTab.search),
+    ),
     AppTab.search => const SearchView(),
+    // Upload opens as its own screen, so the tab has no body.
+    AppTab.upload => const SizedBox.shrink(),
     AppTab.wallet => const WalletView(),
     AppTab.profile => const ProfileView(),
-    AppTab.upload => const UploadView(),
     AppTab.admin => const AdminView(),
   };
 
-  static NavigationDestination _destinationFor(AppTab tab) => switch (tab) {
+  NavigationDestination _destinationFor(AppTab tab) => switch (tab) {
     AppTab.feed => const NavigationDestination(
-      icon: Icon(Icons.play_circle_outline),
-      label: 'Feed',
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: 'Home',
     ),
     AppTab.search => const NavigationDestination(
       icon: Icon(Icons.search),
       label: 'Search',
     ),
+    AppTab.upload => NavigationDestination(
+      icon: Container(
+        width: 46,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+      label: '',
+      tooltip: 'Upload',
+    ),
     AppTab.wallet => const NavigationDestination(
       icon: Icon(Icons.account_balance_wallet_outlined),
+      selectedIcon: Icon(Icons.account_balance_wallet),
       label: 'Wallet',
     ),
     AppTab.profile => const NavigationDestination(
       icon: Icon(Icons.person_outline),
+      selectedIcon: Icon(Icons.person),
       label: 'Profile',
     ),
-    AppTab.upload => const NavigationDestination(
-      icon: Icon(Icons.upload_outlined),
-      label: 'Upload',
-    ),
     AppTab.admin => const NavigationDestination(
-      icon: Icon(Icons.admin_panel_settings_outlined),
+      icon: Icon(Icons.shield_outlined),
+      selectedIcon: Icon(Icons.shield),
       label: 'Admin',
     ),
   };
 
+  void _onSelected(AppTab tab) {
+    if (tab == AppTab.upload) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const UploadView()));
+    } else {
+      setState(() => _selected = tab);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabs = tabsFor(context.watch<AuthController>().role);
-    // The list shrinks when an admin or creator logs out.
-    final index = min(_selected, tabs.length - 1);
+    // A tab can disappear when a creator or admin logs out.
+    final index = max(tabs.indexOf(_selected), 0);
     return Scaffold(
       body: IndexedStack(index: index, children: tabs.map(_viewFor).toList()),
       bottomNavigationBar: NavigationBar(
         selectedIndex: index,
-        onDestinationSelected: (i) => setState(() => _selected = i),
+        onDestinationSelected: (i) => _onSelected(tabs[i]),
         destinations: tabs.map(_destinationFor).toList(),
       ),
     );

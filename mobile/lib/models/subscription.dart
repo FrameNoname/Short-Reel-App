@@ -4,12 +4,14 @@ class Subscription {
     required this.priceUsd,
     required this.startDate,
     required this.endDate,
+    this.isCancelled = false,
   });
 
   final int id;
   final double priceUsd;
   final DateTime startDate;
   final DateTime endDate;
+  final bool isCancelled;
 
   factory Subscription.fromJson(Map<String, dynamic> json) => Subscription(
     id: json['id'] as int,

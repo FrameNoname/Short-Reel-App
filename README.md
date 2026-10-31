@@ -6,7 +6,11 @@
 - `mobile/`: แอป Flutter แบบ MVC
 - `docs/api.md`: สัญญา API, รูปแบบ error และรายการ endpoint ทั้งหมด
 
-**สถานะ:** โครงโปรเจกต์จาก Sprint 1 ทำงานจริงเฉพาะ health check, middleware และ navigation ส่วน endpoint อื่นตอบ `501 NOT_IMPLEMENTED` และหน้าจอเป็น placeholder
+**สถานะ:** backend ทำงานจริงเฉพาะ health check และ middleware ส่วน endpoint อื่นตอบ `501 NOT_IMPLEMENTED` แอป Flutter มี UI ครบตามดีไซน์ แต่ใช้ข้อมูลจำลองจาก `mobile/lib/data/mock_repository.dart` ซึ่งรีเซ็ตทุกครั้งที่เปิดแอปใหม่ และพื้นที่วิดีโอยังเป็น placeholder
+
+เมื่อ API ส่วนไหนพร้อม ให้เขียน class ที่ implement `AppRepository` ด้วย `ApiClient` แล้วส่งเข้า `ShortReelApp` ใน `mobile/lib/main.dart` โดยไม่ต้องแก้หน้าจอ
+
+บัญชีทดสอบในแอปคือ `viewer01` / `6666`, `mira.lens` / `4444`, `admin` / `1111` โดย `mira.lens` มี Plus อยู่แล้ว จึงต้องใช้ `viewer01` เพื่อลอง flow ปลดล็อกด้วยเหรียญ
 
 ## สิ่งที่ต้องติดตั้ง
 

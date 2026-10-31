@@ -27,6 +27,17 @@
 | `INTERNAL_ERROR` | 500 | ข้อผิดพลาดที่ไม่คาดคิด |
 | `DB_UNAVAILABLE` | 503 | ติดต่อฐานข้อมูลไม่ได้ |
 
+## ความต้องการจาก UI
+
+- `POST /api/auth/register` รับ `username`, `password` และ `role` (`viewer` หรือ `creator` เท่านั้น ห้ามรับ `admin` จาก client)
+- หน้าจอแสดงยอดวิว แต่ `shortreel.sql` ยังไม่มีคอลัมน์นี้
+- ลิงก์ Forgot password ยังไม่มี endpoint รองรับ
+- ยกเลิก Plus ต้องเพิ่ม `DELETE /api/subscription` โดยผู้ใช้ยังดูได้ถึงวันหมดอายุ และ `subscriptions` ต้องมี field บอกสถานะยกเลิก
+- แท็บ Live ของ Admin ต้องเพิ่ม `GET /api/admin/films?status=approved`
+- `POST /api/admin/films/:id/review` ต้องรับ `status` และ `note` โดยการ reject และ take down ต้องมี `note` และการ take down ต้องปิด report ของหนังเรื่องนั้นด้วย
+- `PUT /api/films/:id` ของหนังที่ถูกปฏิเสธต้องเปลี่ยนสถานะกลับเป็น `pending` และล้าง `review_note`
+- `DELETE /api/films/:id` ต้องตอบ `409 CONFLICT` ถ้าหนังมีคนจ่ายเหรียญปลดล็อกแล้ว เพื่อไม่ให้คนซื้อเสียสิทธิ์
+
 ## Endpoints
 
 ระดับการเข้าถึง: `public` ไม่ตรวจ token, `optional` รองรับ guest, `auth` ต้อง login, `creator` คือ creator หรือ admin, `admin` คือ admin เท่านั้น
