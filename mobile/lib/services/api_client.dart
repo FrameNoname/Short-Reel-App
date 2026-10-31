@@ -13,6 +13,9 @@ final apiBaseUrl = resolveApiBaseUrl(
   override: const String.fromEnvironment('API_BASE_URL'),
 );
 
+/// Scheme, host and port of the API, for links the server returns as paths.
+final apiOrigin = Uri.parse(apiBaseUrl).origin;
+
 class ApiException implements Exception {
   const ApiException({
     required this.code,
@@ -29,8 +32,9 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
-  ApiClient({required TokenStore tokens, Dio? dio})
-    : _dio = dio ?? Dio(BaseOptions(baseUrl: apiBaseUrl)) {
+  ApiClient({required TokenStore tokens, Dio? dio, this.onUnauthorized})
+    : _tokens = tokens,
+      _dio = dio ?? Dio(BaseOptions(baseUrl: apiBaseUrl)) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -45,6 +49,11 @@ class ApiClient {
   }
 
   final Dio _dio;
+  final TokenStore _tokens;
+
+  /// Called when the server rejects a token the app sent (expired, or the
+  /// account is gone), so the app can log the person out.
+  void Function()? onUnauthorized;
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) =>
       _send(() => _dio.get<dynamic>(path, queryParameters: query));
@@ -72,7 +81,17 @@ class ApiClient {
       }
       return data;
     } on DioException catch (e) {
-      throw _toApiException(e);
+      final error = _toApiException(e);
+      final sentToken =
+          e.requestOptions.headers.containsKey('Authorization');
+      final isLoginAttempt = e.requestOptions.path.contains('/auth/login');
+      if (error.statusCode == 401 && sentToken && !isLoginAttempt) {
+        // A token the server refuses must stop being sent, or guest browsing
+        // would fail too: the server rejects any bad token it is shown.
+        await _tokens.clear();
+        onUnauthorized?.call();
+      }
+      throw error;
     }
   }
 

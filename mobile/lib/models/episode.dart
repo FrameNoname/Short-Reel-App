@@ -1,3 +1,5 @@
+enum EpisodeAccess { free, unlocked, plus, locked }
+
 class Episode {
   const Episode({
     required this.id,
@@ -7,6 +9,7 @@ class Episode {
     required this.durationSec,
     required this.isFree,
     required this.priceCoins,
+    this.access,
   });
 
   final int id;
@@ -16,6 +19,10 @@ class Episode {
   final int durationSec;
   final bool isFree;
   final int priceCoins;
+
+  /// What the backend says this viewer may do; null for the offline mock,
+  /// which works it out from its own records.
+  final EpisodeAccess? access;
 
   /// The same episode at a new price; 0 coins makes it free.
   Episode withPrice(int coins) => Episode(
@@ -34,7 +41,17 @@ class Episode {
     episodeNo: json['episode_no'] as int,
     title: json['title'] as String?,
     durationSec: json['duration_sec'] as int,
-    isFree: json['is_free'] == 1,
+    // The API sends booleans; older fixtures send 0/1.
+    isFree: json['is_free'] == 1 || json['is_free'] == true,
     priceCoins: json['price_coins'] as int,
+    access: _accessFromApi(json['access'] as String?),
   );
+
+  static EpisodeAccess? _accessFromApi(String? value) => switch (value) {
+    'free' => EpisodeAccess.free,
+    'owner' || 'unlocked' => EpisodeAccess.unlocked,
+    'subscription' => EpisodeAccess.plus,
+    'locked' || 'login_required' => EpisodeAccess.locked,
+    _ => null,
+  };
 }

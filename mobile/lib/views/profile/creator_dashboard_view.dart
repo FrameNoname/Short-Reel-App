@@ -1,32 +1,91 @@
 import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
-import '../../controllers/admin_controller.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/upload_controller.dart';
 import '../../data/app_repository.dart';
 import '../../models/film.dart';
 import '../../services/api_client.dart';
+import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/error_view.dart';
+import '../../widgets/loading_view.dart';
 import '../../widgets/text.dart';
 import '../upload/upload_view.dart';
 import 'creator_profile_view.dart';
 import 'creator_stats.dart';
 
-class CreatorDashboardView extends StatelessWidget {
+/// Everything the studio shows, read from the backend in one go.
+class _Studio {
+  const _Studio(this.earnings, this.films, this.pricing);
+
+  final Earnings earnings;
+  final List<Film> films;
+  final Map<int, EpisodePricing> pricing;
+}
+
+class CreatorDashboardView extends StatefulWidget {
   const CreatorDashboardView({super.key});
 
   @override
+  State<CreatorDashboardView> createState() => _CreatorDashboardViewState();
+}
+
+class _CreatorDashboardViewState extends State<CreatorDashboardView> {
+  late Future<_Studio> _future = _load();
+
+  Future<_Studio> _load() async {
+    final repository = context.read<UploadController>().repository;
+    final userId = context.read<AuthController>().user!.id;
+    final earnings = await repository.earningsOf(userId);
+    final films = await repository.filmsOf(userId);
+    final pricing = {
+      for (final film in films) film.id: await repository.pricingOf(film.id),
+    };
+    return _Studio(earnings, films, pricing);
+  }
+
+  void _reload() {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final repository = context.watch<UploadController>().repository;
     final userId = context.watch<AuthController>().user!.id;
-    final adminShare = context.watch<AdminController>().adminSharePercent;
+    // Re-read after an upload, edit or delete.
+    context.watch<UploadController>();
+    return FutureBuilder<_Studio>(
+      future: _future,
+      builder: (context, snapshot) {
+        final data = snapshot.data;
+        if (data == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Creator studio')),
+            body: snapshot.hasError
+                ? ErrorView(
+                    message: errorMessage(snapshot.error!),
+                    onRetry: _reload,
+                  )
+                : const LoadingView(),
+          );
+        }
+        return _buildStudio(context, userId, data);
+      },
+    );
+  }
+
+  Widget _buildStudio(BuildContext context, int userId, _Studio data) {
+    final repository = context.read<UploadController>().repository;
+    final earnings = data.earnings;
+    final films = data.films;
+    final adminShare = earnings.adminSharePercent ?? 30;
     final creatorShare = 100 - adminShare;
-    final earnings = repository.earningsOf(userId);
-    final films = repository.filmsOf(userId);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Creator studio'),
@@ -100,10 +159,7 @@ class CreatorDashboardView extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: StatTile(
-                  value: compactCount(earnings.views),
-                  label: 'Views',
-                ),
+                child: StatTile(value: '${films.length}', label: 'Films'),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -119,11 +175,13 @@ class CreatorDashboardView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          PerformanceCard(stats: repository.dailyStatsOf(userId)),
-          const SizedBox(height: 10),
+          if (repository.dailyStatsOf(userId).isNotEmpty) ...[
+            PerformanceCard(stats: repository.dailyStatsOf(userId)),
+            const SizedBox(height: 10),
+          ],
           TopFilmsCard(
             films: films.where((f) => f.status == 'approved').toList(),
-            coinsOf: (film) => repository.earningsOfFilm(film.id),
+            coinsOf: (film) => earnings.coinsByFilm[film.id] ?? 0,
           ),
           const SizedBox(height: 16),
           Row(
@@ -150,7 +208,12 @@ class CreatorDashboardView extends StatelessWidget {
             for (final film in films)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: _CreatorFilmCard(film: film, repository: repository),
+                child: _CreatorFilmCard(
+                  film: film,
+                  pricing: data.pricing[film.id]!,
+                  earned: earnings.coinsByFilm[film.id] ?? 0,
+                  onChanged: _reload,
+                ),
               ),
         ],
       ),
@@ -159,13 +222,19 @@ class CreatorDashboardView extends StatelessWidget {
 }
 
 class _CreatorFilmCard extends StatelessWidget {
-  const _CreatorFilmCard({required this.film, required this.repository});
+  const _CreatorFilmCard({
+    required this.film,
+    required this.pricing,
+    required this.earned,
+    required this.onChanged,
+  });
 
   final Film film;
-  final AppRepository repository;
+  final EpisodePricing pricing;
+  final int earned;
+  final VoidCallback onChanged;
 
   String get _detail {
-    final pricing = repository.pricingOf(film.id);
     return switch (film.status) {
       'approved' =>
         '${film.episodeCount} eps · ${pricing.freeCount} free · '
@@ -188,7 +257,8 @@ class _CreatorFilmCard extends StatelessWidget {
     );
     if (!confirmed) return;
     try {
-      controller.remove(film.id);
+      await controller.remove(film.id);
+      onChanged();
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }
@@ -196,7 +266,6 @@ class _CreatorFilmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final earned = repository.earningsOfFilm(film.id);
     return AppCard(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
       child: Column(
@@ -252,11 +321,14 @@ class _CreatorFilmCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => UploadView(film: film),
-                  ),
-                ),
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => UploadView(film: film),
+                    ),
+                  );
+                  onChanged();
+                },
                 child: const Text(
                   'Edit film',
                   style: TextStyle(color: AppColors.link),

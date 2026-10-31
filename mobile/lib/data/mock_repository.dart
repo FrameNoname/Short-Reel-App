@@ -573,7 +573,12 @@ class MockRepository implements AppRepository {
       _comments.where((c) => _commentFilm[c.id] == filmId).toList();
 
   @override
-  void addComment(int userId, int filmId, String body, {int? parentId}) {
+  Future<void> addComment(
+    int userId,
+    int filmId,
+    String body, {
+    int? parentId,
+  }) async {
     final text = body.trim();
     if (text.isEmpty) {
       throw _error('VALIDATION_ERROR', 'Write a comment first.', 400);
@@ -614,7 +619,7 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  void removeComment(int commentId) {
+  Future<void> removeComment(int commentId) async {
     final removed = {
       commentId,
       for (final c in _comments)
@@ -645,7 +650,7 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  void reportFilm(int userId, int filmId, String reason) {
+  Future<void> reportFilm(int userId, int filmId, String reason) async {
     _reports.add(
       FilmReport(
         id: _reports.length + 1,
@@ -717,11 +722,13 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  Future<User> topUp(
-    int userId, {
-    required int coins,
-    double priceUsd = 0,
-  }) async {
+  Future<User> demoTopUp(int userId) => _topUp(userId, demoTopUpCoins);
+
+  @override
+  Future<User> topUpPack(int userId, CoinPack pack) =>
+      _topUp(userId, pack.coins, priceUsd: pack.priceUsd);
+
+  Future<User> _topUp(int userId, int coins, {double priceUsd = 0}) async {
     final updated = _user(
       userId,
     ).copyWith(coinBalance: _user(userId).coinBalance + coins);
@@ -745,11 +752,11 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  Subscription? subscriptionOf(int userId) =>
+  Future<Subscription?> subscriptionOf(int userId) async =>
       _isSubscribed(userId) ? _subscriptions[userId] : null;
 
   @override
-  void cancelSubscription(int userId) {
+  Future<void> cancelSubscription(int userId) async {
     final plan = _subscriptions[userId]!;
     _subscriptions[userId] = Subscription(
       id: plan.id,
@@ -767,11 +774,11 @@ class MockRepository implements AppRepository {
   int get episodePriceCoins => _episodePrice;
 
   @override
-  List<Transaction> transactionsOf(int userId) =>
+  Future<List<Transaction>> transactionsOf(int userId) async =>
       List.unmodifiable(_transactions[userId] ?? const []);
 
   @override
-  List<CoinPack> coinPacks() => mockCoinPacks;
+  Future<List<CoinPack>> coinPacks() async => mockCoinPacks;
 
   @override
   int get demoTopUpCoins => 100;
@@ -787,7 +794,7 @@ class MockRepository implements AppRepository {
       _follows.contains((userId, creatorId));
 
   @override
-  void toggleLike(int userId, int filmId) {
+  Future<void> toggleLike(int userId, int filmId) async {
     final film = _films[filmId]!;
     final added = _likes.add((userId, filmId));
     if (!added) _likes.remove((userId, filmId));
@@ -805,18 +812,40 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  void toggleSave(int userId, int filmId) {
+  Future<void> toggleSave(int userId, int filmId) async {
     if (!_saved.add((userId, filmId))) _saved.remove((userId, filmId));
   }
 
   @override
-  void toggleFollow(int userId, int creatorId) {
+  Future<void> toggleFollow(int userId, int creatorId) async {
     if (_follows.add((userId, creatorId))) {
       _notify(creatorId, NotificationKind.follow, actorId: userId);
     } else {
       _follows.remove((userId, creatorId));
     }
   }
+
+  @override
+  Future<void> refreshLibrary(int userId) async {}
+
+  @override
+  Future<void> loadComments(int filmId) async {}
+
+  @override
+  Future<User?> restoreSession() async => null;
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  Future<void> clearSession() async {}
+
+  @override
+  bool get playsVideo => false;
+
+  @override
+  Future<Playback> playback(int episodeId) async =>
+      Playback(episode: _episodes[episodeId]!, streamUrl: null);
 
   @override
   List<Film> watchlistOf(int userId) =>
@@ -878,8 +907,9 @@ class MockRepository implements AppRepository {
     required String genre,
     required String aiTool,
     required String promptCredit,
-    required List<int> episodePrices,
+    required List<EpisodeDraft> episodes,
   }) async {
+    final episodePrices = [for (final e in episodes) e.priceCoins];
     final id = _films.keys.reduce((a, b) => a > b ? a : b) + 1;
     final film = Film(
       id: id,
@@ -905,13 +935,13 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  void updateFilm(
+  Future<void> updateFilm(
     int filmId, {
     required String title,
     required String genre,
     required String aiTool,
     required String promptCredit,
-  }) {
+  }) async {
     final film = _films[filmId]!;
     final resubmitted = film.status == 'rejected';
     _films[filmId] = film.copyWith(
@@ -927,7 +957,7 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  void deleteFilm(int filmId) {
+  Future<void> deleteFilm(int filmId) async {
     // Viewers keep what they paid for, so sold films stay until taken down.
     final episodeIds = _episodes.values
         .where((e) => e.filmId == filmId)
@@ -945,7 +975,7 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  void setEpisodePrices(Map<int, int> pricesByEpisodeId) {
+  Future<void> setEpisodePrices(Map<int, int> pricesByEpisodeId) async {
     pricesByEpisodeId.forEach((episodeId, coins) {
       final episode = _episodes[episodeId];
       if (episode == null) return;
@@ -957,7 +987,7 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  EpisodePricing pricingOf(int filmId) {
+  Future<EpisodePricing> pricingOf(int filmId) async {
     final episodes = _episodes.values.where((e) => e.filmId == filmId);
     final paid = episodes.where((e) => !e.isFree);
     return EpisodePricing(
@@ -973,12 +1003,14 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  List<Film> filmsOf(int creatorId) =>
+  Future<List<Film>> filmsOf(int creatorId) async => _ownFilms(creatorId);
+
+  List<Film> _ownFilms(int creatorId) =>
       _films.values.where((f) => f.creatorId == creatorId).toList();
 
   @override
   List<DailyStat> dailyStatsOf(int creatorId, {int days = 60}) {
-    final totals = earningsOf(creatorId);
+    final totals = _earnings(creatorId);
     final views = _spread(totals.views, days, creatorId, 1);
     final likes = _spread(totals.likes, days, creatorId, 2);
     final coins = _spread(totals.coins, days, creatorId, 3);
@@ -1019,8 +1051,10 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  Earnings earningsOf(int creatorId) {
-    final films = filmsOf(creatorId);
+  Future<Earnings> earningsOf(int creatorId) async => _earnings(creatorId);
+
+  Earnings _earnings(int creatorId) {
+    final films = _ownFilms(creatorId);
     final filmIds = films.map((f) => f.id).toSet();
     final unlocks = _unlocks.where(
       (u) => filmIds.contains(_episodes[u.episodeId]!.filmId),
@@ -1030,23 +1064,25 @@ class MockRepository implements AppRepository {
       unlocks: unlocks.length,
       views: films.fold(0, (sum, f) => sum + f.viewCount),
       likes: films.fold(0, (sum, f) => sum + f.likeCount),
+      adminSharePercent: _adminSharePercent,
+      coinsByFilm: {
+        for (final film in films)
+          film.id: _unlocks
+              .where((u) => _episodes[u.episodeId]!.filmId == film.id)
+              .fold(0, (sum, u) => sum + u.creatorShare),
+      },
     );
   }
 
   @override
-  int earningsOfFilm(int filmId) => _unlocks
-      .where((u) => _episodes[u.episodeId]!.filmId == filmId)
-      .fold(0, (sum, u) => sum + u.creatorShare);
-
-  @override
-  List<Film> reviewQueue() =>
+  Future<List<Film>> reviewQueue() async =>
       _films.values.where((f) => f.status == 'pending').toList();
 
   @override
-  List<Film> liveFilms() => _approved.toList();
+  Future<List<Film>> liveFilms() async => _approved.toList();
 
   @override
-  void review(int filmId, String status, {String? note}) {
+  Future<void> review(int filmId, String status, {String? note}) async {
     final film = _films[filmId]!;
     _films[filmId] = film.copyWith(status: status, reviewNote: note);
     final kind = switch (status) {
@@ -1061,16 +1097,17 @@ class MockRepository implements AppRepository {
     if (status == 'taken_down') {
       final open = _reports.where((r) => r.isOpen && r.filmId == filmId);
       for (final report in open.toList()) {
-        resolveReport(report.id);
+        await resolveReport(report.id);
       }
     }
   }
 
   @override
-  List<FilmReport> openReports() => _reports.where((r) => r.isOpen).toList();
+  Future<List<FilmReport>> openReports() async =>
+      _reports.where((r) => r.isOpen).toList();
 
   @override
-  void resolveReport(int reportId) {
+  Future<void> resolveReport(int reportId) async {
     final index = _reports.indexWhere((r) => r.id == reportId);
     final report = _reports[index];
     _reports[index] = FilmReport(
@@ -1083,16 +1120,20 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  AdminSales adminSales() => AdminSales(
+  Future<AdminSales> adminSales() async => AdminSales(
     totalUsd: _salesUsd,
     adminCoins: _unlocks.fold(0, (sum, u) => sum + u.adminShare),
+    coinsSpent: _unlocks.fold(0, (sum, u) => sum + u.coinsSpent),
+    creatorCoins: _unlocks.fold(0, (sum, u) => sum + u.creatorShare),
+    unlockCount: _unlocks.length,
   );
 
   @override
-  int get adminSharePercent => _adminSharePercent;
+  Future<int> adminSharePercent() async => _adminSharePercent;
 
   @override
-  void setAdminSharePercent(int percent) => _adminSharePercent = percent;
+  Future<void> setAdminSharePercent(int percent) async =>
+      _adminSharePercent = percent;
 }
 
 class _Unlock {
@@ -1107,4 +1148,5 @@ class _Unlock {
   final int episodeId;
   final int creatorShare;
   final int adminShare;
+  int get coinsSpent => creatorShare + adminShare;
 }

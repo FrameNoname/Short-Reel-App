@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../data/app_repository.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
+import '../services/errors.dart';
 
 enum FeedTab { following, forYou }
 
@@ -18,10 +19,19 @@ class FeedController extends ChangeNotifier {
   final Map<int, int> _currentEpisode = {};
   Set<String> _preferred = const {};
 
+  /// Why the last load failed, or null.
+  String? error;
+
   Future<void> load(int? userId) async {
     isLoading = true;
+    error = null;
     notifyListeners();
-    films = await _fetch(userId);
+    try {
+      films = await _fetch(userId);
+    } on Object catch (e) {
+      films = const [];
+      error = errorMessage(e);
+    }
     isLoading = false;
     notifyListeners();
   }
@@ -64,8 +74,17 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Forgets everything that belonged to the last person.
+  void reset() {
+    films = const [];
+    error = null;
+    tab = FeedTab.forYou;
+    _currentEpisode.clear();
+    notifyListeners();
+  }
+
   Future<void> toggleLike(int userId, int filmId) async {
-    repository.toggleLike(userId, filmId);
+    await repository.toggleLike(userId, filmId);
     films = await _fetch(userId);
     notifyListeners();
   }
@@ -76,7 +95,7 @@ class FeedController extends ChangeNotifier {
     String body, {
     int? parentId,
   }) async {
-    repository.addComment(userId, filmId, body, parentId: parentId);
+    await repository.addComment(userId, filmId, body, parentId: parentId);
     films = await _fetch(userId);
     notifyListeners();
   }
@@ -87,22 +106,21 @@ class FeedController extends ChangeNotifier {
   }
 
   Future<void> removeComment(int userId, int commentId) async {
-    repository.removeComment(commentId);
+    await repository.removeComment(commentId);
     films = await _fetch(userId);
     notifyListeners();
   }
 
-  void reportFilm(int userId, int filmId, String reason) {
-    repository.reportFilm(userId, filmId, reason);
-  }
+  Future<void> reportFilm(int userId, int filmId, String reason) =>
+      repository.reportFilm(userId, filmId, reason);
 
-  void toggleSave(int userId, int filmId) {
-    repository.toggleSave(userId, filmId);
+  Future<void> toggleSave(int userId, int filmId) async {
+    await repository.toggleSave(userId, filmId);
     notifyListeners();
   }
 
-  void toggleFollow(int userId, int creatorId) {
-    repository.toggleFollow(userId, creatorId);
+  Future<void> toggleFollow(int userId, int creatorId) async {
+    await repository.toggleFollow(userId, creatorId);
     notifyListeners();
   }
 }

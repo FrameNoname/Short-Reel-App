@@ -111,7 +111,7 @@ void main() {
       final again = await repo.unlock(user.id, episode.id);
       expect(again.coinBalance, 60);
       expect(
-        repo.transactionsOf(user.id).where((t) => t.type == 'unlock'),
+        (await repo.transactionsOf(user.id)).where((t) => t.type == 'unlock'),
         hasLength(2),
       );
     });
@@ -133,33 +133,33 @@ void main() {
 
     test('splits a creator film 70/30', () async {
       final viewer = await loginAs('viewer01', '6666');
-      final before = repo.earningsOf(3).coins;
+      final before = (await repo.earningsOf(3)).coins;
       await repo.unlock(viewer.id, (await repo.episodes(2))[4].id);
-      expect(repo.earningsOf(3).coins, before + 14);
+      expect((await repo.earningsOf(3)).coins, before + 14);
     });
 
     test('gives an admin film entirely to the admin', () async {
       final viewer = await loginAs('viewer01', '6666');
-      final before = repo.adminSales().adminCoins;
+      final before = (await repo.adminSales()).adminCoins;
       await repo.unlock(viewer.id, (await repo.episodes(5))[4].id);
-      expect(repo.adminSales().adminCoins, before + 20);
+      expect((await repo.adminSales()).adminCoins, before + 20);
     });
 
     test('uses the admin revenue share setting', () async {
-      repo.setAdminSharePercent(40);
+      await repo.setAdminSharePercent(40);
       final viewer = await loginAs('viewer01', '6666');
-      final before = repo.earningsOf(3).coins;
+      final before = (await repo.earningsOf(3)).coins;
       await repo.unlock(viewer.id, (await repo.episodes(2))[4].id);
-      expect(repo.earningsOf(3).coins, before + 12);
+      expect((await repo.earningsOf(3)).coins, before + 12);
     });
   });
 
   group('wallet and Plus', () {
     test('demo top-up adds coins and history', () async {
       final user = await loginAs('viewer01', '6666');
-      final updated = await repo.topUp(user.id, coins: 100);
+      final updated = await repo.demoTopUp(user.id);
       expect(updated.coinBalance, 180);
-      expect(repo.transactionsOf(user.id).first.amount, 100);
+      expect((await repo.transactionsOf(user.id)).first.amount, 100);
     });
 
     test('Plus plays every episode without coins', () async {
@@ -168,7 +168,7 @@ void main() {
       expect(repo.accessOf(user.id, episode), EpisodeAccess.locked);
       await repo.subscribe(user.id);
       expect(repo.accessOf(user.id, episode), EpisodeAccess.plus);
-      expect(repo.subscriptionOf(user.id), isNotNull);
+      expect(await repo.subscriptionOf(user.id), isNotNull);
     });
 
     test('free episodes are open to guests', () async {
@@ -191,25 +191,34 @@ void main() {
         genre: 'Drama',
         aiTool: 'Mixed',
         promptCredit: 'Prompt: night bus',
-        episodePrices: const [0, 20],
+        episodes: const [
+          EpisodeDraft(fileName: 'a.mp4', priceCoins: 0),
+          EpisodeDraft(fileName: 'b.mp4', priceCoins: 20),
+        ],
       );
       expect(film.status, 'pending');
       expect(
         (await repo.films()).map((f) => f.title),
         isNot(contains('Night Bus')),
       );
-      expect(repo.reviewQueue().map((f) => f.title), contains('Night Bus'));
+      expect(
+        (await repo.reviewQueue()).map((f) => f.title),
+        contains('Night Bus'),
+      );
     });
 
     test('approving makes a film visible', () async {
-      final queued = repo.reviewQueue().first;
-      repo.review(queued.id, 'approved');
+      final queued = (await repo.reviewQueue()).first;
+      await repo.review(queued.id, 'approved');
       expect((await repo.films()).map((f) => f.id), contains(queued.id));
-      expect(repo.reviewQueue().map((f) => f.id), isNot(contains(queued.id)));
+      expect(
+        (await repo.reviewQueue()).map((f) => f.id),
+        isNot(contains(queued.id)),
+      );
     });
 
     test('taking a film down hides it', () async {
-      repo.review(1, 'taken_down');
+      await repo.review(1, 'taken_down');
       expect((await repo.films()).map((f) => f.id), isNot(contains(1)));
     });
   });

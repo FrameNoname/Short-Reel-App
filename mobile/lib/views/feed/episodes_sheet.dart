@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/wallet_controller.dart';
-import '../../data/app_repository.dart';
 import '../../models/episode.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';

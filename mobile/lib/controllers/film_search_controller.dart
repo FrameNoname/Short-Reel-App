@@ -4,6 +4,7 @@ import '../data/app_repository.dart';
 import '../data/film_filter.dart';
 import '../models/film.dart';
 import '../models/user.dart';
+import '../services/errors.dart';
 
 class FilmSearchController extends ChangeNotifier {
   FilmSearchController(this.repository);
@@ -25,17 +26,30 @@ class FilmSearchController extends ChangeNotifier {
 
   static const _maxRecent = 8;
 
+  /// Why the last search failed, or null.
+  String? error;
+
   Future<void> apply(FilmFilter value) async {
     filter = value;
-    results = await repository.films(value);
-    creators = repository.searchCreators(value.query);
+    error = null;
+    try {
+      results = await repository.films(value);
+      creators = repository.searchCreators(value.query);
+    } on Object catch (e) {
+      results = const [];
+      error = errorMessage(e);
+    }
     notifyListeners();
   }
 
   Future<void> loadTrending() async {
-    final films = [...await repository.films()]
-      ..sort((a, b) => b.viewCount.compareTo(a.viewCount));
-    trending = films.take(5).toList();
+    try {
+      final films = [...await repository.films()]
+        ..sort((a, b) => b.viewCount.compareTo(a.viewCount));
+      trending = films.take(5).toList();
+    } on Object {
+      // Trending is a nicety; search itself reports its own errors.
+    }
     notifyListeners();
   }
 

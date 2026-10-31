@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
+import '../../services/errors.dart';
 import '../../controllers/feed_controller.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
@@ -26,7 +27,12 @@ Future<void> showReportSheet(
     builder: (_) => _ReportSheet(film: film),
   );
   if (reason == null) return;
-  feed.reportFilm(userId, film.id, reason);
+  try {
+    await feed.reportFilm(userId, film.id, reason);
+  } on Object catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+    return;
+  }
   messenger.showSnackBar(
     const SnackBar(content: Text('Report sent. Thank you.')),
   );

@@ -16,6 +16,7 @@ import '../auth/login_view.dart';
 import '../profile/creator_profile_view.dart';
 import 'catalog_video.dart';
 import 'comments_sheet.dart';
+import 'episode_video.dart';
 import 'episode_flow.dart';
 import 'rail_icons.dart';
 import 'report_sheet.dart';
@@ -59,6 +60,8 @@ class _FilmPageState extends State<FilmPage> {
   int _burstId = 0;
 
   Film get film => widget.film;
+
+  bool get playsVideo => context.read<FeedController>().repository.playsVideo;
 
   void _whenLoggedIn(BuildContext context, void Function(int userId) action) {
     final userId = context.read<AuthController>().user?.id;
@@ -148,7 +151,7 @@ class _FilmPageState extends State<FilmPage> {
                     },
                     onLongPressEnd: (_) => setState(() => _boosting = false),
                     onLongPressCancel: () => setState(() => _boosting = false),
-                    child: film.catalogDramaId != null
+                    child: film.catalogDramaId != null || playsVideo
                         ? const SizedBox.expand()
                         : Center(
                             child: Text(
@@ -163,24 +166,44 @@ class _FilmPageState extends State<FilmPage> {
                           ),
                   ),
                 );
-                if (film.catalogDramaId == null) return gestures;
+                if (film.catalogDramaId == null && !playsVideo) return gestures;
+                void next() {
+                  if (episode < film.episodeCount) {
+                    feed.resume(film.id, episode + 1);
+                  }
+                }
+
                 // On the web the video is an HTML element that takes every
                 // click, so the gestures sit above it behind an interceptor.
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    CatalogVideo(
-                      film: film,
-                      episode: episode,
-                      paused: _paused,
-                      speed: _boosting ? _boostSpeed : _speed,
-                      onEnded: () {
-                        if (episode < film.episodeCount) {
-                          feed.resume(film.id, episode + 1);
-                        }
-                      },
-                    ),
-                    PointerInterceptor(child: gestures),
+                    if (film.catalogDramaId != null) ...[
+                      CatalogVideo(
+                        film: film,
+                        episode: episode,
+                        paused: _paused,
+                        speed: _boosting ? _boostSpeed : _speed,
+                        onEnded: next,
+                      ),
+                      PointerInterceptor(child: gestures),
+                    ] else
+                      EpisodeVideo(
+                        overlay: gestures,
+                        // A new person or a new balance (after an unlock)
+                        // asks the backend again.
+                        key: ValueKey((
+                          film.id,
+                          userId,
+                          context.read<AuthController>().user?.coinBalance,
+                        )),
+                        film: film,
+                        episodeNo: episode,
+                        paused: _paused,
+                        speed: _boosting ? _boostSpeed : _speed,
+                        onEnded: next,
+                        onLocked: () => showEpisodes(context, film),
+                      ),
                   ],
                 );
               },

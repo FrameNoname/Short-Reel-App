@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../services/errors.dart';
 import '../../controllers/wallet_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -27,9 +28,12 @@ class _PlusViewState extends State<PlusView> {
       return;
     }
     setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       await context.read<WalletController>().subscribe();
       if (context.mounted) Navigator.of(context).pop();
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

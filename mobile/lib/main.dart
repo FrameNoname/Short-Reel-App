@@ -13,27 +13,32 @@ import 'controllers/settings_controller.dart';
 import 'controllers/upload_controller.dart';
 import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
-import 'data/mock_repository.dart';
+import 'data/api_repository.dart';
 import 'l10n/app_language.dart';
 import 'services/api_client.dart';
 import 'services/catalog_service.dart';
 import 'services/token_store.dart';
+import 'services/video_picker.dart';
 import 'theme/app_theme.dart';
 import 'views/app_shell.dart';
 import 'views/auth/login_view.dart';
+import 'widgets/loading_view.dart';
 import 'views/onboarding/onboarding_view.dart';
 
 void main() {
-  final catalog = catalogEnabled
-      ? CatalogService(ApiClient(tokens: SecureTokenStore()))
-      : null;
-  final repository = MockRepository();
+  final tokens = SecureTokenStore();
+  final api = ApiClient(tokens: tokens);
+  // Series Jeen is an optional extra: without it the app works as before.
+  final catalog = catalogEnabled ? CatalogService(api) : null;
+  final repository = ApiRepository(client: api, tokens: tokens);
   if (catalog != null) repository.useCatalog(catalog);
   runApp(
     ShortReelApp(
       repository: repository,
       catalog: catalog,
+      api: api,
       showOnboarding: true,
+      restoreSession: true,
     ),
   );
 }
@@ -44,6 +49,9 @@ class ShortReelApp extends StatelessWidget {
     required this.repository,
     this.showOnboarding = false,
     this.catalog,
+    this.api,
+    this.restoreSession = false,
+    this.pickVideos = pickVideosFromDevice,
   });
 
   final AppRepository repository;
@@ -54,20 +62,50 @@ class ShortReelApp extends StatelessWidget {
   /// Shows the first-run slides before the login screen.
   final bool showOnboarding;
 
+  /// Logs the person out when the server rejects their token.
+  final ApiClient? api;
+
+  /// Signs in again from the token kept on the device when the app starts.
+  final bool restoreSession;
+
+  /// Opens the video picker on the Upload screen; tests pass a fake.
+  final VideoPicker pickVideos;
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthController(repository)),
-        ChangeNotifierProvider(create: (_) => FeedController(repository)),
+        ChangeNotifierProvider(
+          create: (_) {
+            final auth = AuthController(repository);
+            api?.onUnauthorized = auth.sessionExpired;
+            if (restoreSession) auth.restoreSession();
+            return auth;
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            final feed = FeedController(repository);
+            context.read<AuthController>().addLogoutListener(feed.reset);
+            return feed;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => FilmSearchController(repository)),
         ChangeNotifierProvider(
           create: (context) =>
               WalletController(repository, context.read<AuthController>()),
         ),
         ChangeNotifierProvider(create: (_) => ProfileController(repository)),
-        ChangeNotifierProvider(create: (_) => UploadController(repository)),
-        ChangeNotifierProvider(create: (_) => AdminController(repository)),
+        ChangeNotifierProvider(
+          create: (_) => UploadController(repository, pickVideos: pickVideos),
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            final admin = AdminController(repository);
+            context.read<AuthController>().addLogoutListener(admin.reset);
+            return admin;
+          },
+        ),
         ChangeNotifierProvider(
           create: (_) => SettingsController(onboarded: !showOnboarding),
         ),
@@ -99,8 +137,11 @@ class _Root extends StatelessWidget {
     if (!context.watch<SettingsController>().onboarded) {
       return const OnboardingView();
     }
-    final hasEntered = context.watch<AuthController>().hasEntered;
-    return hasEntered ? const AppShell() : const LoginView();
+    final auth = context.watch<AuthController>();
+    if (auth.isRestoring) {
+      return const Scaffold(body: LoadingView());
+    }
+    return auth.hasEntered ? const AppShell() : const LoginView();
   }
 }
 

@@ -5,6 +5,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../data/app_repository.dart';
 import '../../l10n/app_language.dart';
+import '../../services/errors.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -37,6 +38,23 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   FilmComment? _replyTo;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    try {
+      await context.read<FeedController>().repository.loadComments(
+        widget.film.id,
+      );
+    } on Object {
+      // The sheet keeps showing what it has.
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
     _body.dispose();
     _focus.dispose();
@@ -66,12 +84,18 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
   Future<void> _send(int userId) async {
     if (_body.text.trim().isEmpty) return;
-    await context.read<FeedController>().addComment(
-      userId,
-      widget.film.id,
-      _body.text,
-      parentId: _replyTo?.id,
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.read<FeedController>().addComment(
+        userId,
+        widget.film.id,
+        _body.text,
+        parentId: _replyTo?.id,
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+      return;
+    }
     _body.clear();
     if (mounted) setState(() => _replyTo = null);
   }

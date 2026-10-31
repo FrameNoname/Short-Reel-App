@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requireToken: requireAuth, optionalToken: optionalAuth } = require('../middleware/auth');
 const catalog = require('../controllers/catalog');
 
 const router = Router();

@@ -79,12 +79,12 @@ void main() {
       expect(latest.message, startsWith('unlocked Episode ${paid.episodeNo}'));
     });
 
-    test('a review result reaches the creator, but not twice', () {
+    test('a review result reaches the creator, but not twice', () async {
       final repo = MockRepository();
-      final pending = repo.reviewQueue().first;
+      final pending = (await repo.reviewQueue()).first;
       final before = repo.notificationsOf(pending.creatorId).length;
-      repo.review(pending.id, 'approved');
-      repo.review(pending.id, 'approved');
+      await repo.review(pending.id, 'approved');
+      await repo.review(pending.id, 'approved');
       final items = repo.notificationsOf(pending.creatorId);
       expect(items.length, before + 1);
       expect(items.first.kind, NotificationKind.approved);

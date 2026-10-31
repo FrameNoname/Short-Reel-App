@@ -6,6 +6,7 @@ import '../../controllers/feed_controller.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/text.dart';
 import '../auth/login_view.dart';
@@ -52,6 +53,11 @@ class _FeedViewState extends State<FeedView> {
         children: [
           if (feed.isLoading)
             const LoadingView()
+          else if (feed.error != null)
+            ErrorView(
+              message: feed.error!,
+              onRetry: () => feed.load(context.read<AuthController>().user?.id),
+            )
           else if (feed.films.isEmpty)
             _EmptyFeed(
               following: feed.tab == FeedTab.following,

@@ -10,4 +10,11 @@ class CoinPack {
   final String name;
   final int coins;
   final double priceUsd;
+
+  factory CoinPack.fromJson(Map<String, dynamic> json) => CoinPack(
+    id: json['id'] as int,
+    name: json['name'] as String,
+    coins: json['coins'] as int,
+    priceUsd: double.parse(json['price_usd'].toString()),
+  );
 }

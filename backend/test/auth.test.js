@@ -10,6 +10,11 @@ const { TEST_SECRET, tokenFor } = require('./helpers');
 
 const app = express();
 app.locals.jwtSecret = TEST_SECRET;
+// The role comes from the database, not from the token.
+const ROLES = { 1: 'admin', 7: 'viewer' };
+app.locals.pool = {
+  query: async (sql, [id]) => [ROLES[id] ? [{ id, role: ROLES[id] }] : []],
+};
 const whoAmI = (req, res) => res.json(req.user ?? null);
 app.get('/auth', requireAuth, whoAmI);
 app.get('/optional', optionalAuth, whoAmI);
@@ -67,12 +72,29 @@ test('optionalAuth rejects an invalid token', async () => {
 });
 
 test('requireRole rejects another role', async () => {
-  const res = await get('/admin', bearer(tokenFor('viewer')));
+  const res = await get('/admin', bearer(tokenFor('viewer', { id: 7 })));
   assert.equal(res.status, 403);
   assert.equal(res.body.error.code, 'FORBIDDEN');
 });
 
 test('requireRole accepts a listed role', async () => {
-  const res = await get('/admin', bearer(tokenFor('admin')));
+  const res = await get('/admin', bearer(tokenFor('admin', { id: 1 })));
   assert.equal(res.status, 200);
+});
+
+test('a token that claims admin does not make a viewer an admin', async () => {
+  const res = await get('/admin', bearer(tokenFor('admin', { id: 7 })));
+  assert.equal(res.status, 403);
+});
+
+test('a token for a deleted account is rejected', async () => {
+  const res = await get('/auth', bearer(tokenFor('viewer', { id: 99 })));
+  assert.equal(res.status, 401);
+});
+
+test('a playback link is not accepted as a login token', async () => {
+  const link = jwt.sign({ typ: 'stream', eid: 1, uid: null }, TEST_SECRET, { expiresIn: '10m' });
+  assert.equal((await get('/auth', bearer(link))).status, 401);
+  const guestLink = jwt.sign({ typ: 'stream', eid: 1, uid: 7, sub: '7' }, TEST_SECRET);
+  assert.equal((await get('/auth', bearer(guestLink))).status, 401);
 });

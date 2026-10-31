@@ -5,11 +5,13 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/wallet_controller.dart';
 import '../../models/subscription.dart';
 import '../../models/transaction.dart';
+import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/login_prompt.dart';
+import '../../widgets/tab_active.dart';
 import '../../widgets/text.dart';
 import '../auth/login_view.dart';
 import 'plus_view.dart';
@@ -26,6 +28,34 @@ class _WalletViewState extends State<WalletView> {
   bool _historyOpen = true;
   _HistoryFilter _filter = _HistoryFilter.all;
 
+  bool _wasActive = false;
+
+  /// Tabs stay alive side by side, so the numbers are read again each time
+  /// this tab comes to the front.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active = TabActive.of(context);
+    if (active && !_wasActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.read<WalletController>().load();
+      });
+    }
+    _wasActive = active;
+  }
+
+  Future<void> _demoTopUp(WalletController wallet) async {
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    try {
+      await wallet.demoTopUp();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Added ${wallet.demoTopUpCoins} free coins.')),
+      );
+    } on Object catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(errorMessage(e))));
+    }
+  }
+
   void _open(Widget view) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => view));
   }
@@ -41,7 +71,16 @@ class _WalletViewState extends State<WalletView> {
       confirmLabel: 'Cancel plan',
       cancelLabel: 'Keep Plus',
     );
-    if (confirmed) wallet.cancelPlan();
+    if (!confirmed) return;
+    try {
+      await wallet.cancelPlan();
+    } on Object catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage(e))));
+      }
+    }
   }
 
   @override
@@ -77,6 +116,20 @@ class _WalletViewState extends State<WalletView> {
               ],
             ),
             const SizedBox(height: 14),
+            if (wallet.isLoading && wallet.transactions.isEmpty)
+              const LinearProgressIndicator(),
+            if (wallet.error != null)
+              AppCard(
+                child: Row(
+                  children: [
+                    Expanded(child: Text(wallet.error!)),
+                    TextButton(
+                      onPressed: wallet.load,
+                      child: const Text('Try again'),
+                    ),
+                  ],
+                ),
+              ),
             BalanceCard(
               balance: wallet.balance,
               episodePrice: wallet.episodePrice,
@@ -99,16 +152,7 @@ class _WalletViewState extends State<WalletView> {
                   width: 124,
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                    onPressed: () {
-                      wallet.demoTopUp();
-                      ScaffoldMessenger.of(context)
-                        ..hideCurrentSnackBar()
-                        ..showSnackBar(
-                          const SnackBar(
-                            content: Text('Added 100 free coins.'),
-                          ),
-                        );
-                    },
+                    onPressed: () => _demoTopUp(wallet),
                     child: const Text('+100 free'),
                   ),
                 ),

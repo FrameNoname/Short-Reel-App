@@ -132,7 +132,7 @@ void catalogFeedTests() {
       expect(film.isAiGenerated, isFalse);
       expect(film.episodeCount, 3);
       expect(films.length, greaterThan(1));
-      expect(repo.filmsOf(1).map((f) => f.id), contains(film.id));
+      expect((await repo.filmsOf(1)).map((f) => f.id), contains(film.id));
     });
 
     test('have free episodes and survive a like', () async {
@@ -141,7 +141,7 @@ void catalogFeedTests() {
       final episodes = await repo.episodes(film.id);
       expect(episodes.map((e) => e.isFree), everyElement(isTrue));
       expect(episodes, hasLength(3));
-      repo.toggleLike(6, film.id);
+      await repo.toggleLike(6, film.id);
       expect(repo.filmById(film.id)!.catalogDramaId, 7);
     });
 
