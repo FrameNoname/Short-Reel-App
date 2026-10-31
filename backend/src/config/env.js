@@ -15,6 +15,12 @@ function loadEnv(source = process.env) {
     },
     jwtSecret: source.JWT_SECRET,
     jwtExpiresIn: source.JWT_EXPIRES_IN ?? '7d',
+    // Optional: without a key the /api/catalog routes answer 503.
+    catalog: {
+      apiKey: source.SERIESJEEN_API_KEY || undefined,
+      baseUrl: source.SERIESJEEN_BASE_URL || undefined,
+      allowGuest: source.CATALOG_ALLOW_GUEST === 'true',
+    },
   };
 }
 
