@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/wallet_controller.dart';
@@ -7,6 +7,7 @@ import '../../models/episode.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 
 enum UnlockChoice { unlock, plus }
 

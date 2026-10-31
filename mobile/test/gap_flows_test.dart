@@ -120,6 +120,10 @@ void main() {
     await openTab(tester, 'Profile');
     await tester.tap(find.text('Creator studio'));
     await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).first, const Offset(0, -1500));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Edit film').last);
+    await tester.pumpAndSettle();
     expect(find.text('Rejected'), findsOneWidget);
     await tester.tap(find.text('Edit film').last);
     await tester.pumpAndSettle();
@@ -138,6 +142,10 @@ void main() {
     await logIn(tester, 'mira.lens');
     await openTab(tester, 'Profile');
     await tester.tap(find.text('Creator studio'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).first, const Offset(0, -1500));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Delete').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle();

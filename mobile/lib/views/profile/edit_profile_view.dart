@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../l10n/app_language.dart';
 import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 
 /// Lets a person change the channel name and bio others see.
 class EditProfileView extends StatefulWidget {
@@ -111,7 +113,7 @@ class _EditProfileViewState extends State<EditProfileView> {
             maxLines: 3,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'Tell people what you make',
+              hintText: context.tr('Tell people what you make'),
               counterText: '${_bio.text.length}/${EditProfileView.maxBio}',
               counterStyle: const TextStyle(color: AppColors.muted),
             ),

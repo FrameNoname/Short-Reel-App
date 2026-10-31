@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -9,9 +9,10 @@ import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ai_label_badge.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
-import '../profile/creator_profile_view.dart';
 import '../auth/login_view.dart';
+import '../profile/creator_profile_view.dart';
 import 'comments_sheet.dart';
 import 'episode_flow.dart';
 import 'rail_icons.dart';

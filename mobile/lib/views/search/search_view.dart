@@ -1,14 +1,18 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/film_search_controller.dart';
+import '../../data/app_repository.dart';
 import '../../data/film_filter.dart';
+import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../player/player_view.dart';
 import '../profile/creator_profile_view.dart';
@@ -23,19 +27,38 @@ class SearchView extends StatefulWidget {
 
 class _SearchViewState extends State<SearchView> {
   final _query = TextEditingController();
+  final _focus = FocusNode();
+
+  /// Whether the recent and trending searches are on screen. Kept apart from
+  /// focus because on the web a tap on a suggestion first takes focus away.
+  bool _suggesting = false;
 
   @override
   void dispose() {
     _query.dispose();
+    _focus.dispose();
     super.dispose();
+  }
+
+  void _useTerm(String term) {
+    final search = context.read<FilmSearchController>();
+    _query.value = TextEditingValue(
+      text: term,
+      selection: TextSelection.collapsed(offset: term.length),
+    );
+    search.apply(search.filter.copyWith(query: term));
+    search.remember(term);
+    _focus.unfocus();
   }
 
   @override
   void initState() {
     super.initState();
+    _focus.addListener(() => setState(() => _suggesting = _focus.hasFocus));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final search = context.read<FilmSearchController>();
       search.apply(search.filter);
+      search.loadTrending();
     });
   }
 
@@ -51,6 +74,12 @@ class _SearchViewState extends State<SearchView> {
   Widget build(BuildContext context) {
     final search = context.watch<FilmSearchController>();
     final films = search.results;
+    final userId = context.watch<AuthController>().user?.id;
+    final showSuggestions = _suggesting && _query.text.isEmpty;
+    final browsing = _query.text.isEmpty && !search.filter.hasFilters;
+    final unfinished = userId != null && browsing
+        ? search.repository.continueWatching(userId)
+        : const <WatchProgress>[];
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -68,11 +97,17 @@ class _SearchViewState extends State<SearchView> {
                   Expanded(
                     child: TextField(
                       controller: _query,
+                      focusNode: _focus,
+                      onTapOutside: (_) {},
                       textInputAction: TextInputAction.search,
                       onChanged: (value) =>
                           search.apply(search.filter.copyWith(query: value)),
+                      onSubmitted: (value) {
+                        search.remember(value);
+                        _focus.unfocus();
+                      },
                       decoration: InputDecoration(
-                        hintText: 'Films, creators, prompts',
+                        hintText: context.tr('Films, creators, prompts'),
                         prefixIcon: const Icon(
                           Icons.search,
                           color: AppColors.muted,
@@ -80,7 +115,7 @@ class _SearchViewState extends State<SearchView> {
                         suffixIcon: _query.text.isEmpty
                             ? null
                             : IconButton(
-                                tooltip: 'Clear search',
+                                tooltip: context.tr('Clear search'),
                                 icon: const Icon(
                                   Icons.close,
                                   color: AppColors.muted,
@@ -97,7 +132,7 @@ class _SearchViewState extends State<SearchView> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.outlined(
-                    tooltip: 'Filters',
+                    tooltip: context.tr('Filters'),
                     style: IconButton.styleFrom(
                       minimumSize: const Size(50, 50),
                       side: BorderSide(
@@ -114,48 +149,92 @@ class _SearchViewState extends State<SearchView> {
                   ),
                 ],
               ),
-              if (search.creators.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                const Text(
-                  'Channels',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 84,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: search.creators.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) => _ChannelChip(
-                      user: search.creators[i],
-                      onTap: () =>
-                          openCreatorProfile(context, search.creators[i].id),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Text(
-                '${films.length} ${films.length == 1 ? 'film' : 'films'}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 13),
-              ),
               const SizedBox(height: 8),
               Expanded(
-                child: films.isEmpty
-                    ? const EmptyView(message: 'No films match your search.')
-                    : GridView.builder(
+                child: showSuggestions
+                    ? _Suggestions(
+                        recent: search.recent,
+                        trending: search.trending,
+                        onTerm: _useTerm,
+                        onForget: search.forget,
+                        onClear: search.clearRecent,
+                        onDismiss: _focus.unfocus,
+                      )
+                    : CustomScrollView(
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 0.66,
+                        slivers: [
+                          if (unfinished.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: _ContinueRow(items: unfinished),
                             ),
-                        itemCount: films.length,
-                        itemBuilder: (_, i) => FilmCard(film: films[i]),
+                          if (search.creators.isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    'Channels',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 84,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: search.creators.length,
+                                      separatorBuilder: (_, _) =>
+                                          const SizedBox(width: 8),
+                                      itemBuilder: (_, i) => _ChannelChip(
+                                        user: search.creators[i],
+                                        onTap: () => openCreatorProfile(
+                                          context,
+                                          search.creators[i].id,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                top: 12,
+                                bottom: 8,
+                              ),
+                              child: Text(
+                                '${films.length} ${films.length == 1 ? 'film' : 'films'}',
+                                style: const TextStyle(
+                                  color: AppColors.muted,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (films.isEmpty)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: EmptyView(
+                                message: 'No films match your search.',
+                              ),
+                            )
+                          else
+                            SliverGrid.builder(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: 14,
+                                    childAspectRatio: 0.66,
+                                  ),
+                              itemCount: films.length,
+                              itemBuilder: (_, i) => FilmCard(film: films[i]),
+                            ),
+                        ],
                       ),
               ),
             ],
@@ -328,6 +407,299 @@ class _ChannelChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Films the person started and has not finished, to pick up again.
+class _ContinueRow extends StatelessWidget {
+  const _ContinueRow({required this.items});
+
+  final List<WatchProgress> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+        const Text(
+          'Continue watching',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 218,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, i) => _ContinueCard(progress: items[i]),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+}
+
+class _ContinueCard extends StatelessWidget {
+  const _ContinueCard({required this.progress});
+
+  final WatchProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final film = progress.film;
+    return GestureDetector(
+      key: Key('continue-${film.id}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        context.read<FeedController>().resume(film.id, progress.episodeNo);
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => PlayerView(film: film)));
+      },
+      child: SizedBox(
+        width: 124,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FilmPoster(film: film),
+                  Positioned(
+                    left: 8,
+                    bottom: 14,
+                    child: _PosterPill(
+                      icon: Icons.play_arrow_rounded,
+                      text: 'Episode ${progress.episodeNo}',
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(14),
+                      ),
+                      child: LinearProgressIndicator(
+                        value: progress.fraction,
+                        minHeight: 4,
+                        backgroundColor: const Color(0x66000000),
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              film.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown while the search box is focused and empty: what the person looked
+/// for before, and what everyone is watching.
+class _Suggestions extends StatelessWidget {
+  const _Suggestions({
+    required this.recent,
+    required this.trending,
+    required this.onTerm,
+    required this.onForget,
+    required this.onClear,
+    required this.onDismiss,
+  });
+
+  final VoidCallback onDismiss;
+  final List<String> recent;
+  final List<Film> trending;
+  final ValueChanged<String> onTerm;
+  final ValueChanged<String> onForget;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onDismiss,
+      child: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: const EdgeInsets.only(top: 4, bottom: 24),
+        children: [
+          if (recent.isNotEmpty) ...[
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Recent searches',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                GestureDetector(
+                  key: const Key('recent-clear'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onClear,
+                  child: const SizedBox(
+                    height: 44,
+                    child: Align(
+                      widthFactor: 1,
+                      child: Text(
+                        'Clear all',
+                        style: TextStyle(
+                          color: AppColors.link,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final term in recent)
+                  _RecentChip(
+                    term: term,
+                    onTap: () => onTerm(term),
+                    onRemove: () => onForget(term),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+          const Row(
+            children: [
+              Icon(
+                Icons.local_fire_department_rounded,
+                size: 20,
+                color: AppColors.gold,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Trending',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          for (final (i, film) in trending.indexed)
+            GestureDetector(
+              key: Key('trending-${film.id}'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTerm(film.title),
+              child: SizedBox(
+                height: 52,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: i < 3 ? AppColors.gold : AppColors.muted,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        film.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Text(
+                      '${compactCount(film.viewCount)} views',
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentChip extends StatelessWidget {
+  const _RecentChip({
+    required this.term,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  final String term;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            key: Key('recent-$term'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.history_rounded,
+                    size: 16,
+                    color: AppColors.muted,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(term, style: const TextStyle(fontSize: 13)),
+                ],
+              ),
+            ),
+          ),
+          GestureDetector(
+            key: Key('recent-remove-$term'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onRemove,
+            child: const Padding(
+              padding: EdgeInsets.fromLTRB(4, 12, 12, 12),
+              child: Icon(
+                Icons.close_rounded,
+                size: 16,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,13 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/upload_controller.dart';
 import '../../data/mock_data.dart';
+import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 
 /// Uploads a new film, or edits [film] when one is given.
 class UploadView extends StatefulWidget {
@@ -431,14 +433,16 @@ class _EpisodePriceCard extends StatelessWidget {
               onChanged: (_) => onPriceChanged(),
               decoration: InputDecoration(
                 counterText: '',
-                hintText: 'Coins',
+                hintText: context.tr('Coins'),
                 prefixIcon: const Icon(
                   Icons.toll_rounded,
                   color: AppColors.gold,
                   size: 20,
                 ),
-                suffixText: 'coins',
-                errorText: invalid ? 'Enter 1 to $maxPrice coins.' : null,
+                suffixText: context.tr('coins'),
+                errorText: invalid
+                    ? context.tr('Enter 1 to $maxPrice coins.')
+                    : null,
               ),
             ),
             const SizedBox(height: 8),

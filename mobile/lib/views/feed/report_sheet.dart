@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/feed_controller.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/text.dart';
 
 const _reasons = [
   'Audio or video problem',

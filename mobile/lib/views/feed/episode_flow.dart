@@ -39,7 +39,7 @@ Future<void> _open(
   final feed = context.read<FeedController>();
   final user = context.read<AuthController>().user;
   if (feed.repository.accessOf(user?.id, episode) != EpisodeAccess.locked) {
-    feed.play(episode);
+    feed.play(episode, userId: user?.id);
     return;
   }
   if (user == null) {
@@ -117,7 +117,10 @@ Future<void> _unlock(
   final before = wallet.balance;
   await wallet.unlock(episode.id);
   if (!context.mounted) return;
-  context.read<FeedController>().play(episode);
+  context.read<FeedController>().play(
+    episode,
+    userId: context.read<AuthController>().user?.id,
+  );
   final next = episodes.where((e) => e.episodeNo == episode.episodeNo + 1);
   await Navigator.of(context).push(
     MaterialPageRoute<void>(

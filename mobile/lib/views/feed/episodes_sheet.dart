@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -10,6 +10,7 @@ import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/ai_label_badge.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 import '../wallet/plus_view.dart';
 
 class EpisodesSheet extends StatelessWidget {

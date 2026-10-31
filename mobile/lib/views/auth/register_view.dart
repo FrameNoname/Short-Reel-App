@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../l10n/app_language.dart';
 import '../../models/user.dart';
 import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 
 const _passwordRule = 'At least 8 characters, with a letter and a number.';
 
@@ -118,7 +120,7 @@ class _RegisterViewState extends State<RegisterView> {
               controller: _username,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                hintText: 'Choose a username',
+                hintText: context.tr('Choose a username'),
                 enabledBorder: _usernameError == null ? null : _invalidBorder,
               ),
             ),
@@ -131,7 +133,7 @@ class _RegisterViewState extends State<RegisterView> {
               obscureText: _hidePassword,
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                hintText: 'Create a password',
+                hintText: context.tr('Create a password'),
                 enabledBorder: _passwordInvalid ? _invalidBorder : null,
                 suffixIcon: IconButton(
                   tooltip: _hidePassword ? 'Show password' : 'Hide password',
@@ -164,7 +166,7 @@ class _RegisterViewState extends State<RegisterView> {
               obscureText: _hidePassword,
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
-                hintText: 'Type it again',
+                hintText: context.tr('Type it again'),
                 enabledBorder: _confirmInvalid ? _invalidBorder : null,
               ),
             ),

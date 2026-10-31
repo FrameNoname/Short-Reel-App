@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../feed/film_page.dart';
 
@@ -17,7 +18,7 @@ class PlayerView extends StatelessWidget {
         leading: Padding(
           padding: const EdgeInsets.all(6),
           child: IconButton.filled(
-            tooltip: 'Back',
+            tooltip: context.tr('Back'),
             style: IconButton.styleFrom(
               backgroundColor: const Color(0x66000000),
               foregroundColor: Colors.white,

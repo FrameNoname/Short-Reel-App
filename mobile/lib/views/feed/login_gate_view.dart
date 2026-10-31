@@ -1,11 +1,13 @@
 import 'dart:ui';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
+import '../../l10n/app_language.dart';
 import '../../models/episode.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 import '../auth/login_view.dart';
 import '../auth/register_view.dart';
 
@@ -30,7 +32,7 @@ class LoginGateView extends StatelessWidget {
         leading: Padding(
           padding: const EdgeInsets.all(6),
           child: IconButton.filled(
-            tooltip: 'Back',
+            tooltip: context.tr('Back'),
             style: IconButton.styleFrom(
               backgroundColor: const Color(0x66000000),
               foregroundColor: Colors.white,

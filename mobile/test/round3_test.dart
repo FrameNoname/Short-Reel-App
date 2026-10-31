@@ -135,6 +135,13 @@ void main() {
       await openTab(tester, 'Profile');
       await tester.tap(find.text('Creator studio'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Edit film'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('Edit film').last);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Edit film'));
       await tester.pumpAndSettle();
 

@@ -16,6 +16,7 @@ class FeedController extends ChangeNotifier {
   bool isLoading = true;
 
   final Map<int, int> _currentEpisode = {};
+  Set<String> _preferred = const {};
 
   Future<void> load(int? userId) async {
     isLoading = true;
@@ -25,10 +26,21 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<Film>> _fetch(int? userId) {
-    return tab == FeedTab.following && userId != null
-        ? repository.followingFilms(userId)
-        : repository.films();
+  Future<List<Film>> _fetch(int? userId) async {
+    final films = tab == FeedTab.following && userId != null
+        ? await repository.followingFilms(userId)
+        : await repository.films();
+    if (_preferred.isEmpty) return films;
+    // Liked genres first; the order inside each group is unchanged.
+    return [
+      ...films.where((f) => _preferred.contains(f.genreName)),
+      ...films.where((f) => !_preferred.contains(f.genreName)),
+    ];
+  }
+
+  /// Puts these genres at the top of the feed.
+  void preferGenres(Set<String> genres) {
+    _preferred = genres;
   }
 
   Future<void> selectTab(FeedTab value, int? userId) async {
@@ -38,8 +50,17 @@ class FeedController extends ChangeNotifier {
 
   int currentEpisodeOf(int filmId) => _currentEpisode[filmId] ?? 1;
 
-  void play(Episode episode) {
+  void play(Episode episode, {int? userId}) {
     _currentEpisode[episode.filmId] = episode.episodeNo;
+    if (userId != null) {
+      repository.recordProgress(userId, episode.filmId, episode.episodeNo);
+    }
+    notifyListeners();
+  }
+
+  /// Picks a film up again at [episodeNo].
+  void resume(int filmId, int episodeNo) {
+    _currentEpisode[filmId] = episodeNo;
     notifyListeners();
   }
 

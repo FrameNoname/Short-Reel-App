@@ -1,13 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../data/app_repository.dart';
+import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/text.dart';
 import '../auth/login_view.dart';
 
 void showCommentsSheet(BuildContext context, Film film) {
@@ -121,7 +123,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
               ),
               const Spacer(),
               IconButton(
-                tooltip: 'Close',
+                tooltip: context.tr('Close'),
                 icon: const Icon(Icons.close_rounded),
                 onPressed: () => Navigator.of(context).pop(),
               ),
@@ -178,7 +180,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     ),
                     IconButton(
                       key: const Key('reply-cancel'),
-                      tooltip: 'Cancel reply',
+                      tooltip: context.tr('Cancel reply'),
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.close_rounded, size: 18),
                       onPressed: () => setState(() => _replyTo = null),
@@ -208,9 +210,11 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                             }) => null,
                         onSubmitted: (_) => _send(userId),
                         decoration: InputDecoration(
-                          hintText: replyTo == null
-                              ? 'Add a comment'
-                              : 'Reply to @${replyTo.username}',
+                          hintText: context.tr(
+                            replyTo == null
+                                ? 'Add a comment'
+                                : 'Reply to @${replyTo.username}',
+                          ),
                           filled: true,
                           fillColor: AppColors.surface,
                           contentPadding: const EdgeInsets.symmetric(
@@ -226,7 +230,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     const SizedBox(width: 8),
                     IconButton.filled(
                       key: const Key('comment-send'),
-                      tooltip: 'Send comment',
+                      tooltip: context.tr('Send comment'),
                       style: IconButton.styleFrom(
                         minimumSize: const Size(48, 48),
                         backgroundColor: canSend

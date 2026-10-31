@@ -1,12 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
+import '../../l10n/app_language.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/loading_view.dart';
+import '../../widgets/text.dart';
 import '../auth/login_view.dart';
+import '../notifications/notifications_view.dart';
 import 'film_page.dart';
 
 class FeedView extends StatefulWidget {
@@ -72,7 +75,12 @@ class _FeedViewState extends State<FeedView> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
                 child: Row(
                   children: [
-                    const Spacer(),
+                    const Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: NotificationBell(),
+                      ),
+                    ),
                     _FeedTabLabel(
                       label: 'Following',
                       selected: feed.tab == FeedTab.following,
@@ -88,7 +96,7 @@ class _FeedViewState extends State<FeedView> {
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: IconButton(
-                          tooltip: 'Search',
+                          tooltip: context.tr('Search'),
                           icon: const Icon(Icons.search),
                           onPressed: widget.onSearch,
                         ),
