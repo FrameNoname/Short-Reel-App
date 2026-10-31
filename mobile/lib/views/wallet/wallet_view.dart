@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -10,6 +10,7 @@ import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/login_prompt.dart';
+import '../../widgets/text.dart';
 import '../auth/login_view.dart';
 import 'plus_view.dart';
 import 'top_up_view.dart';
@@ -64,10 +65,14 @@ class _WalletViewState extends State<WalletView> {
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Wallet',
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                Flexible(
+                  child: Text(
+                    'Wallet',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                  ),
                 ),
+                SizedBox(width: 8),
                 DemoBadge(),
               ],
             ),
@@ -463,11 +468,13 @@ class _FilterChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         for (final filter in _HistoryFilter.values)
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: EdgeInsets.zero,
             child: Semantics(
               button: true,
               selected: filter == selected,

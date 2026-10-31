@@ -14,6 +14,11 @@ void main() {
   ) async {
     await openWallet(tester);
     expect(find.text('Ember Protocol, Episode 3'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Demo top-up'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Demo top-up'), findsOneWidget);
     expect(find.text('Episode unlock'), findsOneWidget);
     expect(find.text('Top-up'), findsOneWidget);

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/admin_controller.dart';
@@ -11,8 +11,10 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/text.dart';
 import '../upload/upload_view.dart';
 import 'creator_profile_view.dart';
+import 'creator_stats.dart';
 
 class CreatorDashboardView extends StatelessWidget {
   const CreatorDashboardView({super.key});
@@ -115,6 +117,13 @@ class CreatorDashboardView extends StatelessWidget {
                 child: StatTile(value: '${earnings.unlocks}', label: 'Unlocks'),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          PerformanceCard(stats: repository.dailyStatsOf(userId)),
+          const SizedBox(height: 10),
+          TopFilmsCard(
+            films: films.where((f) => f.status == 'approved').toList(),
+            coinsOf: (film) => repository.earningsOfFilm(film.id),
           ),
           const SizedBox(height: 16),
           Row(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
+import '../l10n/app_language.dart';
 import '../models/user.dart';
 import '../theme/app_theme.dart';
 import 'admin/admin_view.dart';
@@ -64,14 +65,14 @@ class _AppShellState extends State<AppShell> {
   };
 
   NavigationDestination _destinationFor(AppTab tab) => switch (tab) {
-    AppTab.feed => const NavigationDestination(
+    AppTab.feed => NavigationDestination(
       icon: Icon(Icons.home_outlined),
       selectedIcon: Icon(Icons.home),
-      label: 'Home',
+      label: context.tr('Home'),
     ),
-    AppTab.search => const NavigationDestination(
+    AppTab.search => NavigationDestination(
       icon: Icon(Icons.search),
-      label: 'Search',
+      label: context.tr('Search'),
     ),
     AppTab.upload => NavigationDestination(
       icon: Container(
@@ -84,22 +85,22 @@ class _AppShellState extends State<AppShell> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       label: '',
-      tooltip: 'Upload',
+      tooltip: context.tr('Upload'),
     ),
-    AppTab.wallet => const NavigationDestination(
+    AppTab.wallet => NavigationDestination(
       icon: Icon(Icons.account_balance_wallet_outlined),
       selectedIcon: Icon(Icons.account_balance_wallet),
-      label: 'Wallet',
+      label: context.tr('Wallet'),
     ),
-    AppTab.profile => const NavigationDestination(
+    AppTab.profile => NavigationDestination(
       icon: Icon(Icons.person_outline),
       selectedIcon: Icon(Icons.person),
-      label: 'Profile',
+      label: context.tr('Profile'),
     ),
-    AppTab.admin => const NavigationDestination(
+    AppTab.admin => NavigationDestination(
       icon: Icon(Icons.shield_outlined),
       selectedIcon: Icon(Icons.shield),
-      label: 'Admin',
+      label: context.tr('Admin'),
     ),
   };
 

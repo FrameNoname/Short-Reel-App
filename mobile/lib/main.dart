@@ -6,24 +6,34 @@ import 'controllers/admin_controller.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/feed_controller.dart';
 import 'controllers/film_search_controller.dart';
+import 'controllers/notifications_controller.dart';
 import 'controllers/profile_controller.dart';
 import 'controllers/settings_controller.dart';
 import 'controllers/upload_controller.dart';
 import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
 import 'data/mock_repository.dart';
+import 'l10n/app_language.dart';
 import 'theme/app_theme.dart';
 import 'views/app_shell.dart';
 import 'views/auth/login_view.dart';
+import 'views/onboarding/onboarding_view.dart';
 
 void main() {
-  runApp(ShortReelApp(repository: MockRepository()));
+  runApp(ShortReelApp(repository: MockRepository(), showOnboarding: true));
 }
 
 class ShortReelApp extends StatelessWidget {
-  const ShortReelApp({super.key, required this.repository});
+  const ShortReelApp({
+    super.key,
+    required this.repository,
+    this.showOnboarding = false,
+  });
 
   final AppRepository repository;
+
+  /// Shows the first-run slides before the login screen.
+  final bool showOnboarding;
 
   @override
   Widget build(BuildContext context) {
@@ -39,13 +49,21 @@ class ShortReelApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileController(repository)),
         ChangeNotifierProvider(create: (_) => UploadController(repository)),
         ChangeNotifierProvider(create: (_) => AdminController(repository)),
-        ChangeNotifierProvider(create: (_) => SettingsController()),
+        ChangeNotifierProvider(
+          create: (_) => SettingsController(onboarded: !showOnboarding),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationsController(repository),
+        ),
       ],
       child: MaterialApp(
         title: 'ShortReel',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
-        builder: (_, child) => _PhoneFrame(child: child!),
+        builder: (context, child) => LanguageScope(
+          language: context.watch<SettingsController>().language,
+          child: _PhoneFrame(child: child!),
+        ),
         home: const _Root(),
       ),
     );
@@ -57,6 +75,9 @@ class _Root extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!context.watch<SettingsController>().onboarded) {
+      return const OnboardingView();
+    }
     final hasEntered = context.watch<AuthController>().hasEntered;
     return hasEntered ? const AppShell() : const LoginView();
   }

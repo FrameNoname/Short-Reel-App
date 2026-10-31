@@ -1,17 +1,20 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/profile_controller.dart';
+import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/login_prompt.dart';
+import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
 import '../search/search_view.dart';
+import '../notifications/notifications_view.dart';
 import 'creator_dashboard_view.dart';
 import 'creator_profile_view.dart';
 import 'edit_profile_view.dart';
@@ -34,7 +37,7 @@ class ProfileView extends StatelessWidget {
           title: const Text('Profile'),
           actions: [
             IconButton(
-              tooltip: 'Settings',
+              tooltip: context.tr('Settings'),
               icon: const Icon(Icons.settings_rounded),
               onPressed: () => _open(context, const SettingsView()),
             ),
@@ -125,8 +128,9 @@ class ProfileView extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const NotificationBell(),
                     IconButton(
-                      tooltip: 'Settings',
+                      tooltip: context.tr('Settings'),
                       icon: const Icon(Icons.settings_rounded),
                       onPressed: () => _open(context, const SettingsView()),
                     ),

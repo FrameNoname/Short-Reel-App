@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import '../widgets/text.dart';
 
 class EmptyView extends StatelessWidget {
   const EmptyView({super.key, required this.message});

@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../theme/app_theme.dart';
+import '../widgets/text.dart';
 
 class AiLabelBadge extends StatelessWidget {
   const AiLabelBadge({super.key});

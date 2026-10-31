@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
+import '../../l10n/app_language.dart';
 import '../../models/episode.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/text.dart';
 
 class UnlockSuccessView extends StatelessWidget {
   const UnlockSuccessView({
@@ -32,7 +34,7 @@ class UnlockSuccessView extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: IconButton(
-                tooltip: 'Close',
+                tooltip: context.tr('Close'),
                 icon: const Icon(Icons.close),
                 onPressed: close,
               ),

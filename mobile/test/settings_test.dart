@@ -85,7 +85,11 @@ void main() {
     await logIn(tester, 'viewer01');
     await openSettings(tester);
     final logout = find.byKey(const Key('settings-logout'));
-    await tester.ensureVisible(logout);
+    await tester.scrollUntilVisible(
+      logout,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(logout);
     await tester.pumpAndSettle();
     expect(find.text('Log out?'), findsOneWidget);
@@ -100,7 +104,11 @@ void main() {
     await logIn(tester, 'viewer01');
     await openSettings(tester);
     final logout = find.byKey(const Key('settings-logout'));
-    await tester.ensureVisible(logout);
+    await tester.scrollUntilVisible(
+      logout,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(logout);
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Log out'));

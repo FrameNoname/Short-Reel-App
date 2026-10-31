@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import '../models/app_notification.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
@@ -19,6 +22,7 @@ class MockRepository implements AppRepository {
     }
     _seedUnlocks();
     _seedWallets();
+    _seedNotifications();
   }
 
   static const _episodePrice = 20;
@@ -65,6 +69,12 @@ class MockRepository implements AppRepository {
   final Set<(int, int)> _commentLikes = {(6, 2), (3, 2), (2, 1)};
   int _nextCommentId = 3;
 
+  final Map<int, List<AppNotification>> _notifications = {};
+  int _nextNotificationId = 1;
+
+  /// (filmId, episodeNo) per person, the most recent first.
+  final Map<int, List<(int, int)>> _progress = {};
+
   int _adminSharePercent = 30;
   double _salesUsd = 8.97;
   int _nextEpisodeId = 1;
@@ -80,6 +90,141 @@ class MockRepository implements AppRepository {
       isFree: price == 0,
       priceCoins: price,
     );
+  }
+
+  void _seedNotifications() {
+    void seed(
+      int to,
+      NotificationKind kind,
+      Duration ago, {
+      int? actor,
+      int? film,
+      int? episode,
+      bool read = false,
+    }) {
+      _notifications
+          .putIfAbsent(to, () => [])
+          .add(
+            AppNotification(
+              id: _nextNotificationId++,
+              userId: to,
+              kind: kind,
+              createdAt: _now.subtract(ago),
+              actorId: actor,
+              actorName: actor == null ? '' : _users[actor]!.username,
+              filmId: film,
+              filmTitle: film == null ? '' : _films[film]!.title,
+              episodeNo: episode,
+              read: read,
+            ),
+          );
+    }
+
+    // The newest first, since each list is read top to bottom.
+    seed(2, NotificationKind.like, const Duration(hours: 2), actor: 4, film: 1);
+    seed(
+      2,
+      NotificationKind.comment,
+      const Duration(hours: 5),
+      actor: 6,
+      film: 1,
+    );
+    seed(
+      2,
+      NotificationKind.follow,
+      const Duration(days: 1),
+      actor: 6,
+      read: true,
+    );
+    seed(
+      2,
+      NotificationKind.unlock,
+      const Duration(days: 3),
+      actor: 4,
+      film: 1,
+      episode: 3,
+      read: true,
+    );
+    seed(
+      6,
+      NotificationKind.reply,
+      const Duration(hours: 1),
+      actor: 4,
+      film: 1,
+    );
+    seed(
+      4,
+      NotificationKind.like,
+      const Duration(minutes: 30),
+      actor: 6,
+      film: 3,
+    );
+    seed(
+      4,
+      NotificationKind.unlock,
+      const Duration(days: 1),
+      actor: 6,
+      film: 3,
+      episode: 3,
+      read: true,
+    );
+  }
+
+  /// Tells [recipientId] about something. Nobody hears about their own
+  /// actions, and a repeated like or follow does not pile up.
+  void _notify(
+    int recipientId,
+    NotificationKind kind, {
+    int? actorId,
+    int? filmId,
+    int? episodeNo,
+  }) {
+    if (actorId != null && actorId == recipientId) return;
+    final list = _notifications.putIfAbsent(recipientId, () => []);
+    final repeatable =
+        kind == NotificationKind.like || kind == NotificationKind.follow;
+    if (repeatable &&
+        list.any(
+          (n) =>
+              !n.read &&
+              n.kind == kind &&
+              n.actorId == actorId &&
+              n.filmId == filmId,
+        )) {
+      return;
+    }
+    list.insert(
+      0,
+      AppNotification(
+        id: _nextNotificationId++,
+        userId: recipientId,
+        kind: kind,
+        createdAt: DateTime.now(),
+        actorId: actorId,
+        actorName: actorId == null ? '' : _user(actorId).username,
+        filmId: filmId,
+        filmTitle: filmId == null ? '' : _films[filmId]!.title,
+        episodeNo: episodeNo,
+      ),
+    );
+  }
+
+  @override
+  Film? filmById(int id) => _films[id];
+
+  @override
+  List<AppNotification> notificationsOf(int userId) =>
+      List.unmodifiable(_notifications[userId] ?? const []);
+
+  @override
+  int unreadNotificationCount(int userId) =>
+      (_notifications[userId] ?? const []).where((n) => !n.read).length;
+
+  @override
+  void markNotificationsRead(int userId) {
+    final list = _notifications[userId];
+    if (list == null) return;
+    _notifications[userId] = [for (final n in list) n.asRead()];
   }
 
   void _seedUnlocks() {
@@ -345,6 +490,22 @@ class MockRepository implements AppRepository {
     _commentFilm[id] = filmId;
     final film = _films[filmId]!;
     _films[filmId] = film.copyWith(commentCount: film.commentCount + 1);
+    if (parentId == null) {
+      _notify(
+        film.creatorId,
+        NotificationKind.comment,
+        actorId: userId,
+        filmId: filmId,
+      );
+    } else {
+      final parent = _comments.firstWhere((c) => c.id == parentId);
+      _notify(
+        parent.userId,
+        NotificationKind.reply,
+        actorId: userId,
+        filmId: filmId,
+      );
+    }
   }
 
   @override
@@ -440,6 +601,13 @@ class MockRepository implements AppRepository {
       updated.coinBalance,
       '${film.title}, Episode ${episode.episodeNo}',
     );
+    _notify(
+      film.creatorId,
+      NotificationKind.unlock,
+      actorId: userId,
+      filmId: film.id,
+      episodeNo: episode.episodeNo,
+    );
     return updated;
   }
 
@@ -521,6 +689,14 @@ class MockRepository implements AppRepository {
     _films[filmId] = film.copyWith(
       likeCount: film.likeCount + (added ? 1 : -1),
     );
+    if (added) {
+      _notify(
+        film.creatorId,
+        NotificationKind.like,
+        actorId: userId,
+        filmId: filmId,
+      );
+    }
   }
 
   @override
@@ -530,7 +706,9 @@ class MockRepository implements AppRepository {
 
   @override
   void toggleFollow(int userId, int creatorId) {
-    if (!_follows.add((userId, creatorId))) {
+    if (_follows.add((userId, creatorId))) {
+      _notify(creatorId, NotificationKind.follow, actorId: userId);
+    } else {
       _follows.remove((userId, creatorId));
     }
   }
@@ -546,6 +724,39 @@ class MockRepository implements AppRepository {
         .map((u) => _episodes[u.episodeId]!.filmId)
         .toSet();
     return filmIds.map((id) => _films[id]!).toList();
+  }
+
+  @override
+  void recordProgress(int userId, int filmId, int episodeNo) {
+    final list = _progress.putIfAbsent(userId, () => []);
+    list.removeWhere((entry) => entry.$1 == filmId);
+    list.insert(0, (filmId, episodeNo));
+  }
+
+  @override
+  List<WatchProgress> continueWatching(int userId) {
+    final entries = [...?_progress[userId]];
+    final seen = {for (final entry in entries) entry.$1};
+
+    // Episodes someone unlocked count as watching, even before they play one.
+    final furthest = <int, int>{};
+    for (final unlock in _unlocks.where((u) => u.userId == userId)) {
+      final episode = _episodes[unlock.episodeId]!;
+      final current = furthest[episode.filmId] ?? 0;
+      if (episode.episodeNo > current) {
+        furthest[episode.filmId] = episode.episodeNo;
+      }
+    }
+    for (final entry in furthest.entries) {
+      if (!seen.contains(entry.key)) entries.add((entry.key, entry.value));
+    }
+
+    return [
+      for (final (filmId, episodeNo) in entries)
+        if (_films[filmId] case final film?
+            when film.status == 'approved' && episodeNo < film.episodeCount)
+          WatchProgress(film: film, episodeNo: episodeNo),
+    ];
   }
 
   @override
@@ -661,6 +872,48 @@ class MockRepository implements AppRepository {
       _films.values.where((f) => f.creatorId == creatorId).toList();
 
   @override
+  List<DailyStat> dailyStatsOf(int creatorId, {int days = 60}) {
+    final totals = earningsOf(creatorId);
+    final views = _spread(totals.views, days, creatorId, 1);
+    final likes = _spread(totals.likes, days, creatorId, 2);
+    final coins = _spread(totals.coins, days, creatorId, 3);
+    final today = DateTime(_now.year, _now.month, _now.day);
+    return [
+      for (var i = 0; i < days; i++)
+        DailyStat(
+          day: today.subtract(Duration(days: days - 1 - i)),
+          views: views[i],
+          likes: likes[i],
+          coins: coins[i],
+        ),
+    ];
+  }
+
+  /// Spreads a lifetime [total] over [days] days with a rising, uneven shape,
+  /// so the same channel always draws the same chart.
+  List<int> _spread(int total, int days, int seed, int channel) {
+    if (total <= 0 || days <= 0) return List.filled(days, 0);
+    final weights = [
+      for (var i = 0; i < days; i++)
+        (0.25 + (1 + math.sin(i * 0.75 + seed * 1.7 + channel)) / 2) *
+            (0.6 + 0.8 * i / math.max(days - 1, 1)),
+    ];
+    final sum = weights.fold(0.0, (a, b) => a + b);
+    final exact = [for (final w in weights) total * w / sum];
+    final parts = [for (final x in exact) x.floor()];
+    // Largest remainder: the days that lost the most to rounding get the
+    // leftovers, so small totals still look uneven rather than flat.
+    var left = total - parts.fold(0, (a, b) => a + b);
+    final byRemainder = [for (var i = 0; i < days; i++) i]
+      ..sort((a, b) => (exact[b] - parts[b]).compareTo(exact[a] - parts[a]));
+    for (var k = 0; left > 0; k = (k + 1) % days) {
+      parts[byRemainder[k]]++;
+      left--;
+    }
+    return parts;
+  }
+
+  @override
   Earnings earningsOf(int creatorId) {
     final films = filmsOf(creatorId);
     final filmIds = films.map((f) => f.id).toSet();
@@ -689,7 +942,17 @@ class MockRepository implements AppRepository {
 
   @override
   void review(int filmId, String status, {String? note}) {
-    _films[filmId] = _films[filmId]!.copyWith(status: status, reviewNote: note);
+    final film = _films[filmId]!;
+    _films[filmId] = film.copyWith(status: status, reviewNote: note);
+    final kind = switch (status) {
+      'approved' => NotificationKind.approved,
+      'rejected' => NotificationKind.rejected,
+      'taken_down' => NotificationKind.takenDown,
+      _ => null,
+    };
+    if (kind != null && film.status != status) {
+      _notify(film.creatorId, kind, filmId: filmId);
+    }
     if (status == 'taken_down') {
       final open = _reports.where((r) => r.isOpen && r.filmId == filmId);
       for (final report in open.toList()) {

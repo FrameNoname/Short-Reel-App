@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 
 import '../models/film.dart';
 import '../theme/app_theme.dart';
+import '../widgets/text.dart';
 import 'ai_label_badge.dart';
 
 /// Small rounded surface used across the cards in the design.
@@ -301,5 +302,15 @@ const _months = [
   'Nov',
   'Dec',
 ];
+
+/// How long ago [time] was, for lists: "5m ago", "3h ago", or the date.
+String timeAgo(DateTime time, {DateTime? now}) {
+  final diff = (now ?? DateTime.now()).difference(time);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+  if (diff.inDays < 1) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return shortDate(time);
+}
 
 String shortDate(DateTime date) => '${_months[date.month - 1]} ${date.day}';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/admin_controller.dart';
@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
+import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 
 enum _Section { queue, reports, live }

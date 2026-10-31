@@ -1,3 +1,4 @@
+import '../models/app_notification.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
@@ -20,6 +21,21 @@ class Earnings {
   final int unlocks;
   final int views;
   final int likes;
+}
+
+/// One day of a channel's numbers.
+class DailyStat {
+  const DailyStat({
+    required this.day,
+    required this.views,
+    required this.likes,
+    required this.coins,
+  });
+
+  final DateTime day;
+  final int views;
+  final int likes;
+  final int coins;
 }
 
 class AdminSales {
@@ -65,6 +81,18 @@ class FilmComment {
   bool get isReply => parentId != null;
 }
 
+/// How far a person has got in a film they have not finished.
+class WatchProgress {
+  const WatchProgress({required this.film, required this.episodeNo});
+
+  final Film film;
+  final int episodeNo;
+
+  /// Share of the film's episodes reached, from 0 to 1.
+  double get fraction =>
+      film.episodeCount == 0 ? 0 : episodeNo / film.episodeCount;
+}
+
 class EpisodePricing {
   const EpisodePricing({
     required this.freeCount,
@@ -93,6 +121,14 @@ abstract class AppRepository {
 
   /// Channels (creators and admins) whose name matches [query].
   List<User> searchCreators(String query);
+
+  /// One film by id, or null when it does not exist.
+  Film? filmById(int id);
+
+  /// The person's inbox, newest first.
+  List<AppNotification> notificationsOf(int userId);
+  int unreadNotificationCount(int userId);
+  void markNotificationsRead(int userId);
 
   /// Saves the person's channel name and bio.
   Future<User> updateProfile(
@@ -137,6 +173,12 @@ abstract class AppRepository {
   List<Film> watchlistOf(int userId);
   List<Film> unlockedFilmsOf(int userId);
   List<User> followingOf(int userId);
+
+  /// Remembers that [userId] reached [episodeNo] of a film.
+  void recordProgress(int userId, int filmId, int episodeNo);
+
+  /// Unfinished films, the one watched most recently first.
+  List<WatchProgress> continueWatching(int userId);
   int followerCount(int userId);
 
   Future<Film> upload({
@@ -161,6 +203,9 @@ abstract class AppRepository {
   EpisodePricing pricingOf(int filmId);
   List<Film> filmsOf(int creatorId);
   Earnings earningsOf(int creatorId);
+
+  /// The channel's numbers for each of the last [days] days, oldest first.
+  List<DailyStat> dailyStatsOf(int creatorId, {int days = 60});
   int earningsOfFilm(int filmId);
 
   List<Film> reviewQueue();

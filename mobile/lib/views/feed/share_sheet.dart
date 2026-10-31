@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
 import 'package:flutter/services.dart';
 
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/text.dart';
 
 const playbackSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
 
