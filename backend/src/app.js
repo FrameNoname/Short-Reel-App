@@ -10,14 +10,17 @@ const subscriptionRoutes = require('./routes/subscriptions');
 const creatorRoutes = require('./routes/creator');
 const adminRoutes = require('./routes/admin');
 const socialRoutes = require('./routes/social');
+const catalogRoutes = require('./routes/catalog');
 
 // The Flutter web dev server runs on localhost; the mobile app does not need CORS.
 const LOCAL_WEB_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
-function createApp({ pool, jwtSecret }) {
+function createApp({ pool, jwtSecret, catalog, catalogAllowGuest = false }) {
   const app = express();
   app.locals.pool = pool;
   app.locals.jwtSecret = jwtSecret;
+  app.locals.catalog = catalog;
+  app.locals.catalogAllowGuest = catalogAllowGuest;
 
   app.use(cors({ origin: LOCAL_WEB_ORIGIN }));
   app.use(express.json());
@@ -32,6 +35,7 @@ function createApp({ pool, jwtSecret }) {
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/catalog', catalogRoutes);
   app.use('/api/films', filmRoutes);
   app.use('/api/episodes', episodeRoutes);
   app.use('/api/wallet', walletRouter);
