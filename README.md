@@ -10,10 +10,6 @@
 
 - `backend/`: REST API, Multer upload, argon2id + JWT, ตรวจสิทธิ์ทุกคำขอ
 - `mobile/`: แอป Flutter แบบ MVC (`models/ views/ controllers/` + `data/` repository)
-- `docs/api.md`: รายการ endpoint, กติกาสิทธิ์/unlock/ส่วนแบ่ง
-- `docs/acceptance-checklist.md`: เทียบเอกสารข้อกำหนดกับของที่มีจริงทีละข้อ (ทำแล้ว / ยังเป็น mock / ยังไม่ทำ)
-- `docs/sprint-1-2-checklist.md` และ `docs/sprint-1-2-results.md`: สถานะ Sprint 1–2 รายข้อ พร้อมคำสั่งและผลการทดสอบจริง
-- `docs/er-diagram.md`: ER diagram (Mermaid) และกติกายอดเหรียญ/ส่วนแบ่ง/subscription · `docs/screens-index.md`: ดัชนีหน้าจอ · `docs/postman/`: Postman collection + วิธีรัน
 
 การจ่ายเงินทั้งหมด **จำลอง** (ปุ่ม demo +100 เหรียญ, coin pack, Plus) ไม่มี payment gateway และไม่มีเงินจริง
 
@@ -94,7 +90,7 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 
 ### ทำถึงขั้นไหนแล้ว
 
-รายละเอียดทีละข้อกำหนดอยู่ใน [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md) สรุปสั้น ๆ:
+สรุปสั้น ๆ:
 
 | ส่วน | สถานะ |
 |---|---|
@@ -120,10 +116,6 @@ An AI short-film app with a vertical feed (Group 7, Project 2) · Flutter → RE
 
 - `backend/`: REST API, Multer uploads, argon2id + JWT, authorization checked on every request
 - `mobile/`: Flutter app using MVC (`models/ views/ controllers/` + a `data/` repository)
-- `docs/api.md`: endpoint list and the rules for permissions, unlocking and revenue share
-- `docs/acceptance-checklist.md`: the requirements document compared item by item with what actually exists (done / still mock / not done)
-- `docs/sprint-1-2-checklist.md` and `docs/sprint-1-2-results.md`: Sprint 1–2 status per item, with the commands and real test results
-- `docs/er-diagram.md`: ER diagram (Mermaid) and the rules for coin balances, revenue share and subscriptions · `docs/screens-index.md`: screen index · `docs/postman/`: Postman collection and how to run it
 
 All payments are **simulated** (the demo +100 coins button, coin packs, Plus). There is no payment gateway and no real money.
 
@@ -204,7 +196,7 @@ Lint the Flutter code with `cd mobile && flutter analyze`.
 
 ### Project status
 
-Per-requirement details are in [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md). Summary:
+Summary:
 
 | Area | Status |
 |---|---|
