@@ -16,7 +16,6 @@ import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
 import '../search/search_view.dart';
-import '../notifications/notifications_view.dart';
 import 'creator_dashboard_view.dart';
 import 'creator_profile_view.dart';
 import 'edit_profile_view.dart';
@@ -51,7 +50,7 @@ class ProfileView extends StatelessWidget {
     final repository = context.watch<ProfileController>().repository;
     final following = repository.followingOf(user.id);
     final isCreator = user.role != UserRole.viewer;
-    return OnInit(
+    return OnActivated(
       run: () => context.read<ProfileController>().load(user.id),
       child: _scaffold(context, user, repository, following, isCreator),
     );
@@ -143,7 +142,6 @@ class ProfileView extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const NotificationBell(),
                     IconButton(
                       tooltip: context.tr('Settings'),
                       icon: const Icon(Icons.settings_rounded),

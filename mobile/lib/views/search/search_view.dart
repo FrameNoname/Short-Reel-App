@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
-import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../controllers/film_search_controller.dart';
-import '../../data/app_repository.dart';
 import '../../data/film_filter.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
@@ -75,12 +73,7 @@ class _SearchViewState extends State<SearchView> {
   Widget build(BuildContext context) {
     final search = context.watch<FilmSearchController>();
     final films = search.results;
-    final userId = context.watch<AuthController>().user?.id;
     final showSuggestions = _suggesting && _query.text.isEmpty;
-    final browsing = _query.text.isEmpty && !search.filter.hasFilters;
-    final unfinished = userId != null && browsing
-        ? search.repository.continueWatching(userId)
-        : const <WatchProgress>[];
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -165,10 +158,6 @@ class _SearchViewState extends State<SearchView> {
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         slivers: [
-                          if (unfinished.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: _ContinueRow(items: unfinished),
-                            ),
                           if (search.creators.isNotEmpty)
                             SliverToBoxAdapter(
                               child: Column(
@@ -306,15 +295,6 @@ class _FilmCardState extends State<FilmCard> {
                     top: 8,
                     child: _PosterPill(text: '${film.episodeCount} eps'),
                   ),
-                  if (film.viewCount > 0)
-                    Positioned(
-                      left: 8,
-                      bottom: 8,
-                      child: _PosterPill(
-                        icon: Icons.play_arrow_rounded,
-                        text: compactCount(film.viewCount),
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -352,10 +332,9 @@ class _FilmCardState extends State<FilmCard> {
 }
 
 class _PosterPill extends StatelessWidget {
-  const _PosterPill({required this.text, this.icon});
+  const _PosterPill({required this.text});
 
   final String text;
-  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +347,6 @@ class _PosterPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[Icon(icon, size: 14), const SizedBox(width: 2)],
           Text(
             text,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
@@ -413,106 +391,6 @@ class _ChannelChip extends StatelessWidget {
               verified: user.isVerified,
               badgeSize: 12,
               style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Films the person started and has not finished, to pick up again.
-class _ContinueRow extends StatelessWidget {
-  const _ContinueRow({required this.items});
-
-  final List<WatchProgress> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 6),
-        const Text(
-          'Continue watching',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 218,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (_, i) => _ContinueCard(progress: items[i]),
-          ),
-        ),
-        const SizedBox(height: 10),
-      ],
-    );
-  }
-}
-
-class _ContinueCard extends StatelessWidget {
-  const _ContinueCard({required this.progress});
-
-  final WatchProgress progress;
-
-  @override
-  Widget build(BuildContext context) {
-    final film = progress.film;
-    return GestureDetector(
-      key: Key('continue-${film.id}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        context.read<FeedController>().resume(film.id, progress.episodeNo);
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (_) => PlayerView(film: film)));
-      },
-      child: SizedBox(
-        width: 124,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  FilmPoster(film: film),
-                  Positioned(
-                    left: 8,
-                    bottom: 14,
-                    child: _PosterPill(
-                      icon: Icons.play_arrow_rounded,
-                      text: 'Episode ${progress.episodeNo}',
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(14),
-                      ),
-                      child: LinearProgressIndicator(
-                        value: progress.fraction,
-                        minHeight: 4,
-                        backgroundColor: const Color(0x66000000),
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              film.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -637,7 +515,7 @@ class _Suggestions extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${compactCount(film.viewCount)} views',
+                      '${compactCount(film.likeCount)} likes',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 12,

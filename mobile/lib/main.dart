@@ -7,7 +7,6 @@ import 'controllers/auth_controller.dart';
 import 'controllers/catalog_controller.dart';
 import 'controllers/feed_controller.dart';
 import 'controllers/film_search_controller.dart';
-import 'controllers/notifications_controller.dart';
 import 'controllers/profile_controller.dart';
 import 'controllers/settings_controller.dart';
 import 'controllers/upload_controller.dart';
@@ -71,6 +70,10 @@ class ShortReelApp extends StatelessWidget {
   /// Opens the video picker on the Upload screen; tests pass a fake.
   final VideoPicker pickVideos;
 
+  /// Lets a logout or an expired session close every screen pushed on top of
+  /// the root, so none of them is left showing (or reading) the old account.
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -79,6 +82,9 @@ class ShortReelApp extends StatelessWidget {
           create: (_) {
             final auth = AuthController(repository);
             api?.onUnauthorized = auth.sessionExpired;
+            auth.addLogoutListener(
+              () => navigatorKey.currentState?.popUntil((r) => r.isFirst),
+            );
             if (restoreSession) auth.restoreSession();
             return auth;
           },
@@ -109,15 +115,13 @@ class ShortReelApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => SettingsController(onboarded: !showOnboarding),
         ),
-        ChangeNotifierProvider(
-          create: (_) => NotificationsController(repository),
-        ),
         if (catalog != null)
           ChangeNotifierProvider(create: (_) => CatalogController(catalog!)),
       ],
       child: MaterialApp(
         title: 'ShortReel',
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
         theme: AppTheme.dark,
         builder: (context, child) => LanguageScope(
           language: context.watch<SettingsController>().language,

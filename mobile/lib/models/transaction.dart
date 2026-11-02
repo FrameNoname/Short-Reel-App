@@ -34,7 +34,9 @@ class Transaction {
   static String _label(Map<String, dynamic> json) {
     if (json['type'] == 'unlock') {
       final title = json['film_title'] as String?;
-      return title == null ? 'Unlocked episode' : '$title, Episode ${json['episode_no']}';
+      return title == null
+          ? 'Unlocked episode'
+          : '$title, Episode ${json['episode_no']}';
     }
     if (json['pack_name'] != null) return '${json['pack_name']} pack';
     return 'Demo top-up';

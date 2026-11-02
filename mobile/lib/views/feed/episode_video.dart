@@ -27,7 +27,21 @@ class EpisodeVideo extends StatefulWidget {
     required this.onEnded,
     required this.onLocked,
     required this.overlay,
+    this.active = true,
+    this.onEpisodes,
+    this.onResolved,
   });
+
+  /// False while another page of the feed (or another route) is the current
+  /// one. An inactive page holds no video: only one is ever loaded or playing.
+  final bool active;
+
+  /// Reports the film's real episode numbers once they are known.
+  final void Function(List<int> numbers)? onEpisodes;
+
+  /// Reports the episode actually shown when [episodeNo] does not exist (it was
+  /// deleted), so the page and the list follow what is on screen.
+  final void Function(int episodeNo)? onResolved;
 
   final Film film;
   final int episodeNo;
@@ -82,6 +96,16 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
   @override
   void didUpdateWidget(EpisodeVideo old) {
     super.didUpdateWidget(old);
+    if (old.active != widget.active) {
+      _reset();
+      if (widget.active) {
+        _scheduleLoad();
+      } else {
+        // Leaving the page: the video and any download still pending are gone.
+        _loading = false;
+      }
+      return;
+    }
     if (old.episodeNo != widget.episodeNo || old.film.id != widget.film.id) {
       _reset();
       _scheduleLoad();
@@ -103,7 +127,7 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
   void _applyPlayState() {
     final video = _video;
     if (video == null) return;
-    _visible && !widget.paused ? video.play() : video.pause();
+    _visible && widget.active && !widget.paused ? video.play() : video.pause();
   }
 
   void _reset() {
@@ -119,7 +143,7 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
     final token = _token;
     // Wait a moment so swiping past a page does not start a download.
     Future<void>.delayed(_settle, () {
-      if (mounted && token == _token) _load();
+      if (mounted && token == _token && widget.active) _load();
     });
   }
 
@@ -132,8 +156,18 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
     try {
       final repository = context.read<FeedController>().repository;
       final episodes = await repository.episodes(widget.film.id);
-      final match = episodes.where((e) => e.episodeNo == widget.episodeNo);
-      if (match.isEmpty) throw StateError('no such episode');
+      if (token != _token || !mounted) return;
+      if (episodes.isEmpty) throw StateError('no such episode');
+      final numbers = [for (final e in episodes) e.episodeNo]..sort();
+      widget.onEpisodes?.call(numbers);
+      // Episode numbers may have gaps; an episode that is gone falls forward
+      // to the next one the film really has.
+      final wanted = numbers.firstWhere(
+        (n) => n >= widget.episodeNo,
+        orElse: () => numbers.last,
+      );
+      if (wanted != widget.episodeNo) widget.onResolved?.call(wanted);
+      final match = episodes.where((e) => e.episodeNo == wanted);
       final playback = await repository.playback(match.first.id);
       if (token != _token || !mounted) return;
       final url = playback.streamUrl;
@@ -148,32 +182,42 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
         });
         return;
       }
+      // Owned here until it is installed as _video: whatever happens before
+      // that (initialize fails, the page goes away) disposes it exactly once.
       final next = VideoPlayerController.networkUrl(Uri.parse(url));
-      await next.initialize();
-      if (token != _token || !mounted) {
-        await next.dispose();
-        return;
+      var installed = false;
+      try {
+        await next.initialize();
+        if (token != _token || !mounted) return;
+        await next.setPlaybackSpeed(widget.speed);
+        var finished = false;
+        next.addListener(() {
+          final value = next.value;
+          if (value.hasError &&
+              token == _token &&
+              mounted &&
+              _message == null) {
+            setState(() => _message = 'This video cannot be played.');
+          }
+          if (finished ||
+              !value.isInitialized ||
+              value.duration == Duration.zero) {
+            return;
+          }
+          if (value.position >= value.duration && !value.isPlaying) {
+            finished = true;
+            widget.onEnded();
+          }
+        });
+        setState(() {
+          _video = next;
+          _loading = false;
+        });
+        installed = true;
+        if (_visible && widget.active && !widget.paused) await next.play();
+      } finally {
+        if (!installed) await next.dispose();
       }
-      await next.setPlaybackSpeed(widget.speed);
-      var finished = false;
-      next.addListener(() {
-        final value = next.value;
-        if (value.hasError && token == _token && mounted && _message == null) {
-          setState(() => _message = 'This video cannot be played.');
-        }
-        if (finished || !value.isInitialized || value.duration == Duration.zero) {
-          return;
-        }
-        if (value.position >= value.duration && !value.isPlaying) {
-          finished = true;
-          widget.onEnded();
-        }
-      });
-      setState(() {
-        _video = next;
-        _loading = false;
-      });
-      if (_visible && !widget.paused) await next.play();
     } on Object catch (e) {
       if (token != _token || !mounted) return;
       setState(() {
@@ -237,44 +281,44 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
           PointerInterceptor(
             child: Center(
               child: Padding(
-              // Clear of the action buttons down the right edge.
-              padding: const EdgeInsets.fromLTRB(24, 24, 84, 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _message!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.text),
-                  ),
-                  const SizedBox(height: 10),
-                  if (_locked)
-                    FilledButton(
-                      key: const Key('video-unlock'),
-                      onPressed: () async {
-                        await widget.onLocked();
-                        if (!mounted) return;
-                        _reset();
-                        _load();
-                      },
-                      child: Text(
-                        context.read<AuthController>().isLoggedIn
-                            ? 'Unlock'
-                            : 'Log in or unlock',
-                      ),
-                    )
-                  else
-                    OutlinedButton(
-                      key: const Key('video-retry'),
-                      onPressed: () {
-                        _reset();
-                        _load();
-                      },
-                      child: const Text('Try again'),
+                // Clear of the action buttons down the right edge.
+                padding: const EdgeInsets.fromLTRB(24, 24, 84, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _message!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: AppColors.text),
                     ),
-                ],
+                    const SizedBox(height: 10),
+                    if (_locked)
+                      FilledButton(
+                        key: const Key('video-unlock'),
+                        onPressed: () async {
+                          await widget.onLocked();
+                          if (!mounted) return;
+                          _reset();
+                          _load();
+                        },
+                        child: Text(
+                          context.read<AuthController>().isLoggedIn
+                              ? 'Unlock'
+                              : 'Log in or unlock',
+                        ),
+                      )
+                    else
+                      OutlinedButton(
+                        key: const Key('video-retry'),
+                        onPressed: () {
+                          _reset();
+                          _load();
+                        },
+                        child: const Text('Try again'),
+                      ),
+                  ],
+                ),
               ),
-            ),
             ),
           ),
       ],

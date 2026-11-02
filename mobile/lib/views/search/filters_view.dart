@@ -54,9 +54,19 @@ class _FiltersViewState extends State<FiltersView> {
     _refreshCount();
   }
 
+  int _countRequest = 0;
+
   Future<void> _refreshCount() async {
-    final count = await context.read<FilmSearchController>().countFor(_filter);
-    if (mounted) setState(() => _count = count);
+    final request = ++_countRequest;
+    try {
+      final count = await context.read<FilmSearchController>().countFor(
+        _filter,
+      );
+      // An older answer, or one that arrives after the screen closed, is dropped.
+      if (mounted && request == _countRequest) setState(() => _count = count);
+    } on Object {
+      // The count is a hint on the button; a failed one leaves the last number.
+    }
   }
 
   void _update(FilmFilter filter) {

@@ -31,6 +31,14 @@ class ApiException implements Exception {
   String toString() => 'ApiException($code, $statusCode): $message';
 }
 
+/// Code of the [ApiException] thrown when an answer arrives after the person it
+/// was asked for has logged out or been replaced by another login. The answer
+/// is dropped; callers must not show it or apply it.
+const staleSessionCode = 'STALE_SESSION';
+
+bool isStaleSession(Object error) =>
+    error is ApiException && error.code == staleSessionCode;
+
 class ApiClient {
   ApiClient({required TokenStore tokens, Dio? dio, this.onUnauthorized})
     : _tokens = tokens,
@@ -50,6 +58,15 @@ class ApiClient {
 
   final Dio _dio;
   final TokenStore _tokens;
+  int _generation = 0;
+
+  /// Counts logins and logouts. A request that was sent with a token remembers
+  /// the number it started under; if it has changed when the answer arrives,
+  /// the answer belongs to someone else and is dropped.
+  int get generation => _generation;
+
+  /// Called whenever a different person (or nobody) becomes the signed-in user.
+  void beginNewSession() => _generation++;
 
   /// Called when the server rejects a token the app sent (expired, or the
   /// account is gone), so the app can log the person out.
@@ -68,6 +85,7 @@ class ApiClient {
       _send(() => _dio.delete<dynamic>(path));
 
   Future<dynamic> _send(Future<Response<dynamic>> Function() request) async {
+    final startedUnder = _generation;
     try {
       final response = await request();
       final data = response.data;
@@ -79,21 +97,39 @@ class ApiClient {
           statusCode: response.statusCode,
         );
       }
+      _dropIfStale(response.requestOptions, startedUnder);
       return data;
     } on DioException catch (e) {
+      _dropIfStale(e.requestOptions, startedUnder);
       final error = _toApiException(e);
-      final sentToken =
-          e.requestOptions.headers.containsKey('Authorization');
+      final sentToken = e.requestOptions.headers.containsKey('Authorization');
       final isLoginAttempt = e.requestOptions.path.contains('/auth/login');
       if (error.statusCode == 401 && sentToken && !isLoginAttempt) {
         // A token the server refuses must stop being sent, or guest browsing
-        // would fail too: the server rejects any bad token it is shown.
-        await _tokens.clear();
-        onUnauthorized?.call();
+        // would fail too: the server rejects any bad token it is shown. Only
+        // the token that is still the current one may be cleared.
+        final current = await _tokens.read();
+        final refused = e.requestOptions.headers['Authorization'];
+        if (current != null && refused == 'Bearer $current') {
+          await _tokens.clear();
+          onUnauthorized?.call();
+        } else {
+          throw _stale();
+        }
       }
       throw error;
     }
   }
+
+  void _dropIfStale(RequestOptions options, int startedUnder) {
+    final carriedIdentity = options.headers.containsKey('Authorization');
+    if (carriedIdentity && startedUnder != _generation) throw _stale();
+  }
+
+  ApiException _stale() => const ApiException(
+    code: staleSessionCode,
+    message: 'The session changed while this request was running',
+  );
 
   ApiException _toApiException(DioException e) {
     final response = e.response;

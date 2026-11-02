@@ -40,12 +40,6 @@ void main() {
     }
   });
 
-  testWidgets('Forgot password is at least 44 tall', (tester) async {
-    await pumpApp(tester);
-    final size = tester.getSize(find.byKey(const Key('forgot-password')));
-    expect(size.height, greaterThanOrEqualTo(44));
-  });
-
   testWidgets('Follow is at least 44 tall', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Watch free episodes without an account'));

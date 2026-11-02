@@ -99,7 +99,6 @@ const mockFilms = [
     posterAsset: 'assets/images/salt_signal.jpg',
     likeCount: 2300,
     commentCount: 312,
-    viewCount: 41200,
     episodeCount: 8,
   ),
   Film(
@@ -119,7 +118,6 @@ const mockFilms = [
     posterAsset: 'assets/images/paper_moons.jpg',
     likeCount: 1800,
     commentCount: 204,
-    viewCount: 31500,
     episodeCount: 8,
   ),
   Film(
@@ -139,7 +137,6 @@ const mockFilms = [
     posterAsset: 'assets/images/ember_protocol.jpg',
     likeCount: 4000,
     commentCount: 96,
-    viewCount: 26700,
     episodeCount: 8,
   ),
   Film(
@@ -174,7 +171,6 @@ const mockFilms = [
     aiToolName: 'Mixed',
     likeCount: 640,
     commentCount: 18,
-    viewCount: 9800,
     episodeCount: 8,
   ),
   Film(

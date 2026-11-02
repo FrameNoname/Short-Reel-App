@@ -10,7 +10,6 @@ import '../../widgets/error_view.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/text.dart';
 import '../auth/login_view.dart';
-import '../notifications/notifications_view.dart';
 import 'film_page.dart';
 
 class FeedView extends StatefulWidget {
@@ -23,6 +22,9 @@ class FeedView extends StatefulWidget {
 }
 
 class _FeedViewState extends State<FeedView> {
+  /// The page the feed has settled on; only it may load or play a video.
+  int _page = 0;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +49,8 @@ class _FeedViewState extends State<FeedView> {
   @override
   Widget build(BuildContext context) {
     final feed = context.watch<FeedController>();
+    // A reload swaps the PageView out, so the new one starts on its first page.
+    if (feed.isLoading) _page = 0;
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
@@ -70,7 +74,13 @@ class _FeedViewState extends State<FeedView> {
             PageView.builder(
               scrollDirection: Axis.vertical,
               itemCount: feed.films.length,
-              itemBuilder: (_, index) => FilmPage(film: feed.films[index]),
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, index) => FilmPage(
+                key: ValueKey(feed.films[index].id),
+                film: feed.films[index],
+                // Only the page the feed has settled on may load or play.
+                active: index == _page,
+              ),
             ),
           Positioned(
             top: 0,
@@ -81,12 +91,7 @@ class _FeedViewState extends State<FeedView> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
                 child: Row(
                   children: [
-                    const Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: NotificationBell(),
-                      ),
-                    ),
+                    const Spacer(),
                     _FeedTabLabel(
                       label: 'Following',
                       selected: feed.tab == FeedTab.following,

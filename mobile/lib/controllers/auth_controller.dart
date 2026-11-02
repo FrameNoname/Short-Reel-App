@@ -13,6 +13,11 @@ class AuthController extends ChangeNotifier {
   bool _restoring = false;
   final List<VoidCallback> _onLogout = [];
 
+  /// Bumped on every login, logout and expiry. An answer that was asked for
+  /// under an older number is ignored, so a slow request of the previous
+  /// person can never change, or bring back, the current one.
+  int _epoch = 0;
+
   User? get user => _user;
 
   UserRole get role => _user?.role ?? UserRole.guest;
@@ -31,24 +36,39 @@ class AuthController extends ChangeNotifier {
 
   /// Signs back in from the token kept on the device.
   Future<void> restoreSession() async {
+    final epoch = _epoch;
     _restoring = true;
     notifyListeners();
+    User? restored;
     try {
-      _user = await _repository.restoreSession();
+      restored = await _repository.restoreSession();
     } on Object {
-      _user = null;
+      restored = null;
     }
+    if (epoch != _epoch) {
+      // Someone logged in or out while the stored token was being checked.
+      _restoring = false;
+      notifyListeners();
+      return;
+    }
+    _user = restored;
     _restoring = false;
     notifyListeners();
   }
 
   Future<void> login(String username, String password) async {
-    _user = await _repository.login(username, password);
+    final epoch = ++_epoch;
+    final user = await _repository.login(username, password);
+    if (epoch != _epoch) return;
+    _user = user;
     notifyListeners();
   }
 
   Future<void> register(String username, String password, UserRole role) async {
-    _user = await _repository.register(username, password, role);
+    final epoch = ++_epoch;
+    final user = await _repository.register(username, password, role);
+    if (epoch != _epoch) return;
+    _user = user;
     notifyListeners();
   }
 
@@ -74,6 +94,7 @@ class AuthController extends ChangeNotifier {
   }
 
   void _expire() {
+    _epoch++;
     _user = null;
     _enteredAsGuest = false;
     for (final callback in _onLogout) {
@@ -88,15 +109,21 @@ class AuthController extends ChangeNotifier {
   }) async {
     final user = _user;
     if (user == null) return;
-    _user = await _repository.updateProfile(
+    final epoch = _epoch;
+    final updated = await _repository.updateProfile(
       user.id,
       displayName: displayName,
       bio: bio,
     );
+    if (epoch != _epoch || _user?.id != user.id) return;
+    _user = updated;
     notifyListeners();
   }
 
+  /// Applies a fresh copy of the signed-in person (a new balance, say). Dropped
+  /// when nobody is signed in or it describes someone else.
   void updateUser(User user) {
+    if (_user?.id != user.id) return;
     _user = user;
     notifyListeners();
   }

@@ -40,6 +40,11 @@ class _UploadViewState extends State<UploadView> {
   bool _aiLabel = false;
   bool _busy = false;
 
+  /// While editing, the episodes are read from the server first. Saving stays
+  /// off until they are all here, so an empty price list can never pass.
+  bool _episodesLoading = false;
+  String? _episodesError;
+
   bool get _isEditing => widget.film != null;
 
   bool get _videosChosen => _videos.isNotEmpty;
@@ -52,19 +57,32 @@ class _UploadViewState extends State<UploadView> {
 
   Future<void> _loadEpisodes() async {
     final repository = context.read<UploadController>().repository;
-    final episodes = await repository.episodes(widget.film!.id);
-    if (!mounted) return;
-    for (final field in _priceFields) {
-      field.dispose();
-    }
     setState(() {
-      _episodeIds = [for (final e in episodes) e.id];
-      _episodeFree = [for (final e in episodes) e.isFree];
-      _priceFields = [
-        for (final e in episodes)
-          TextEditingController(text: e.isFree ? '20' : '${e.priceCoins}'),
-      ];
+      _episodesLoading = true;
+      _episodesError = null;
     });
+    try {
+      final episodes = await repository.episodes(widget.film!.id);
+      if (!mounted) return;
+      for (final field in _priceFields) {
+        field.dispose();
+      }
+      setState(() {
+        _episodesLoading = false;
+        _episodeIds = [for (final e in episodes) e.id];
+        _episodeFree = [for (final e in episodes) e.isFree];
+        _priceFields = [
+          for (final e in episodes)
+            TextEditingController(text: e.isFree ? '20' : '${e.priceCoins}'),
+        ];
+      });
+    } on Object catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _episodesLoading = false;
+        _episodesError = errorMessage(e);
+      });
+    }
   }
 
   @override
@@ -106,11 +124,19 @@ class _UploadViewState extends State<UploadView> {
     }
   }
 
-  bool get _hasDetails =>
-      _title.text.trim().isNotEmpty && _prompt.text.trim().isNotEmpty;
+  // The same limits the API enforces, so the form never promises more.
+  static const _maxTitle = 100;
+  static const _maxPrompt = 500;
 
-  /// A paid episode needs a whole number of coins from 1 to [_maxPrice].
-  static const _maxPrice = 999;
+  bool get _hasDetails =>
+      _title.text.trim().isNotEmpty &&
+      _title.text.trim().length <= _maxTitle &&
+      _prompt.text.trim().isNotEmpty &&
+      _prompt.text.trim().length <= _maxPrompt;
+
+  /// A paid episode needs a whole number of coins from 1 to [_maxPrice]
+  /// (the API refuses more than 500).
+  static const _maxPrice = 500;
 
   int? _priceOf(int i) {
     if (_episodeFree[i]) return 0;
@@ -121,9 +147,14 @@ class _UploadViewState extends State<UploadView> {
   bool get _pricesValid =>
       List.generate(_episodeFree.length, _priceOf).every((p) => p != null);
 
+  bool get _episodesReady =>
+      !_isEditing ||
+      (!_episodesLoading && _episodesError == null && _episodeIds.isNotEmpty);
+
   bool get _ready =>
       _hasDetails &&
       _pricesValid &&
+      _episodesReady &&
       (_isEditing || (_aiLabel && _videosChosen));
 
   String get _submitLabel {
@@ -284,6 +315,27 @@ class _UploadViewState extends State<UploadView> {
             maxLines: 2,
             onChanged: (_) => setState(() {}),
           ),
+          if (_isEditing && _episodesLoading) ...[
+            const SizedBox(height: 14),
+            const LinearProgressIndicator(key: Key('episodes-loading')),
+          ],
+          if (_isEditing && _episodesError != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              _episodesError!,
+              key: const Key('episodes-error'),
+              style: const TextStyle(color: AppColors.danger),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 160,
+              child: OutlinedButton(
+                key: const Key('episodes-retry'),
+                onPressed: _loadEpisodes,
+                child: const Text('Try again'),
+              ),
+            ),
+          ],
           if (_episodeFree.isNotEmpty) ...[
             const SizedBox(height: 14),
             const FieldLabel('Episode pricing'),
@@ -478,7 +530,7 @@ class _EpisodePriceCard extends StatelessWidget {
               controller: controller,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              maxLength: 3,
+              maxLength: 3, // 500 at most, see _maxPrice
               onChanged: (_) => onPriceChanged(),
               decoration: InputDecoration(
                 counterText: '',

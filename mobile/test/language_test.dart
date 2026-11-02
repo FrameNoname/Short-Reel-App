@@ -32,8 +32,10 @@ void main() {
     test('translates dates', () {
       expect(thaiOf('Oct 29'), '29 ต.ค.');
       expect(
-        thaiOf('Oct 31 to Nov 30, cancel anytime'),
-        '31 ต.ค. ถึง 30 พ.ย. ยกเลิกได้ทุกเมื่อ',
+        thaiOf(
+          'Paid through Nov 30. Buying again adds one more month after that.',
+        ),
+        'จ่ายครอบคลุมถึง 30 พ.ย. ซื้อซ้ำจะเพิ่มอีกหนึ่งเดือนต่อจากนั้น',
       );
     });
 
