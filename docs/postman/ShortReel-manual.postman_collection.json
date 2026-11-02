@@ -1,0 +1,912 @@
+{
+  "info": {
+    "name": "ShortReel manual tests",
+    "description": "Manual API tests, no scripts. Send each request in order (folders 1 to 6) and compare the status with \"Expected\" in the request description.\n\nTokens: after Register viewer, Register creator and Login admin, copy the token from the response into the collection Variables tab (token_viewer, token_creator, token_admin) and save.\nfilm_id: copy the id from \"Create film\".\n\nUse a throwaway test server on port 3100 with a test database only (see docs/postman/README.md). Never point this at the real database.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "token_viewer",
+      "value": ""
+    },
+    {
+      "key": "token_creator",
+      "value": ""
+    },
+    {
+      "key": "token_admin",
+      "value": ""
+    },
+    {
+      "key": "film_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1 No login needed",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/health"
+            },
+            "description": "Expected: 200, status ok, db up",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Film feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/films"
+            },
+            "description": "Expected: 200, approved films only",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Film 1 details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/films/1"
+            },
+            "description": "Expected: 200, includes the episode list",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Free episode (episode 1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/1"
+            },
+            "description": "Expected: 200, has a stream_url",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Paid episode (episode 3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/3"
+            },
+            "description": "Expected: 200, stream_url is null",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Stream a paid episode without login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/3/stream"
+            },
+            "description": "Expected: 401 (correct: login required)",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Lookups",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/lookups"
+            },
+            "description": "Expected: 200",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Coin packs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/coin-packs"
+            },
+            "description": "Expected: 200",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 Register and login",
+      "item": [
+        {
+          "name": "Register viewer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/register"
+            },
+            "description": "Expected: 201 with a token -> copy it into the token_viewer variable",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_test\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"viewer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Register duplicate username",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/register"
+            },
+            "description": "Expected: 409",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_test\",\n  \"password\": \"Sprint12pw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Password too short",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/register"
+            },
+            "description": "Expected: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"short_test\",\n  \"password\": \"a1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Register as admin (refused)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/register"
+            },
+            "description": "Expected: 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"sneaky_test\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Register creator",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/register"
+            },
+            "description": "Expected: 201 with a token -> copy it into the token_creator variable",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"creator_test\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"creator\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Login viewer",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/login"
+            },
+            "description": "Expected: 200 with a token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_test\",\n  \"password\": \"Sprint12pw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Login wrong password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/login"
+            },
+            "description": "Expected: 401",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_test\",\n  \"password\": \"Wrong123pw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Login admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/login"
+            },
+            "description": "Expected: 200 with a token -> copy it into the token_admin variable",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"1111\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Profile without token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/me"
+            },
+            "description": "Expected: 401",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Profile with token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/auth/me"
+            },
+            "description": "Expected: 200, role viewer",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 Coins and unlock (viewer)",
+      "item": [
+        {
+          "name": "Wallet balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/wallet"
+            },
+            "description": "Expected: 200, balance 0",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock with no coins",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/3/unlock"
+            },
+            "description": "Expected: 402, not enough coins",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top up demo +100",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/wallet/topup"
+            },
+            "description": "Expected: 201, 100 coins (simulated)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"demo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock episode 3",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/3/unlock"
+            },
+            "description": "Expected: 200, charged 20, balance 80",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock again",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/3/unlock"
+            },
+            "description": "Expected: 200, not charged again, still 80",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Episode 3 after unlock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/episodes/3"
+            },
+            "description": "Expected: 200, now has a stream_url",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Coin history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/wallet/transactions"
+            },
+            "description": "Expected: 200, one top-up and one unlock",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 Subscription (viewer)",
+      "item": [
+        {
+          "name": "Subscription status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/subscription"
+            },
+            "description": "Expected: 200, not subscribed yet",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscribe",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/subscription"
+            },
+            "description": "Expected: 201, active",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel subscription",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/subscription"
+            },
+            "description": "Expected: 200, still active until the end date",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 Creator films",
+      "item": [
+        {
+          "name": "Viewer cannot create a film",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/films"
+            },
+            "description": "Expected: 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"x\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"is_ai_generated\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create film without AI label",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/films"
+            },
+            "description": "Expected: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test film\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"is_ai_generated\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_creator}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create film",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/films"
+            },
+            "description": "Expected: 201, status pending -> copy the id into the film_id variable",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test film\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"prompt_credit\": \"prompt credit\",\n  \"is_ai_generated\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_creator}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload episode (pick an mp4 file)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/films/{{film_id}}/episodes"
+            },
+            "description": "Expected: 201 (in the video row click Select Files and choose an mp4, e.g. from backend/uploads)",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "price_coins",
+                  "value": "0",
+                  "type": "text"
+                },
+                {
+                  "key": "episode_no",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_creator}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 Admin",
+      "item": [
+        {
+          "name": "Viewer cannot open the review queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/reviews"
+            },
+            "description": "Expected: 403",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_viewer}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/reviews"
+            },
+            "description": "Expected: 200, lists pending films",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve film",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/films/{{film_id}}/review"
+            },
+            "description": "Expected: 200, approved",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject without a note",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/films/4/review"
+            },
+            "description": "Expected: 400, a note is required",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"rejected\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Revenue share",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/settings/revenue-share"
+            },
+            "description": "Expected: 200",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Set revenue share to 101%",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/settings/revenue-share"
+            },
+            "description": "Expected: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admin_share_percent\": 101\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3100/api/admin/sales"
+            },
+            "description": "Expected: 200",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_admin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
