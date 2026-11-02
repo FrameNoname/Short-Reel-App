@@ -1,0 +1,13 @@
+== before migrations (schema from commit 20eddf5, seed data)
+users	films	eps	unlocks	tx	subs	coins_spent	creator_share
+6	5	40	4	8	1	80	42
+== run 1: 001 + 002
+users	films	eps	unlocks	tx	subs	coins_spent	creator_share
+7	5	40	4	8	1	80	42
+== run 2 (repeat): 001 + 002
+users	films	eps	unlocks	tx	subs	coins_spent	creator_share
+7	5	40	4	8	1	80	42
+== snapshot column
+owner_is_admin	n
+0	3
+1	1

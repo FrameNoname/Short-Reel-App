@@ -1,0 +1,1017 @@
+{
+  "tool": "docs/postman/run-collection.js (not Newman)",
+  "base_url": "http://localhost:3100/api",
+  "requests": 116,
+  "assertions": 168,
+  "failed": 0,
+  "results": [
+    {
+      "group": "1 Guest and public",
+      "request": "Health check",
+      "test": "Health check: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Health check",
+      "test": "API and database are up",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: feed lists approved films only",
+      "test": "Guest: feed lists approved films only: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: feed lists approved films only",
+      "test": "feed has films",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: feed lists approved films only",
+      "test": "every film is approved",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: film detail shows episodes with access labels",
+      "test": "Guest: film detail shows episodes with access labels: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: film detail shows episodes with access labels",
+      "test": "a free and a paid episode exist",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: film detail shows episodes with access labels",
+      "test": "free episode is labelled free, paid one login_required",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: free episode gives a playback link",
+      "test": "Guest: free episode gives a playback link: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: free episode gives a playback link",
+      "test": "stream_url is a short-lived link",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: paid episode has no playback link",
+      "test": "Guest: paid episode has no playback link: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: paid episode has no playback link",
+      "test": "stream_url is null and access is login_required",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: paid episode stream is denied",
+      "test": "Guest: paid episode stream is denied: status is 401",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: paid episode stream is denied",
+      "test": "error code",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Guest: unlock needs a login",
+      "test": "Guest: unlock needs a login: status is 401",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Public: lookups",
+      "test": "Public: lookups: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Public: lookups",
+      "test": "genres and tools",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Public: coin packs are labelled simulated",
+      "test": "Public: coin packs are labelled simulated: status is 200",
+      "ok": true
+    },
+    {
+      "group": "1 Guest and public",
+      "request": "Public: coin packs are labelled simulated",
+      "test": "simulated",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register viewer: valid",
+      "test": "Register viewer: valid: status is 201",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register viewer: valid",
+      "test": "token and viewer role, no password in the answer",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register viewer: duplicate username",
+      "test": "Register viewer: duplicate username: status is 409",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register: password too short",
+      "test": "Register: password too short: status is 400",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register: password without a number",
+      "test": "Register: password without a number: status is 400",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register: missing username",
+      "test": "Register: missing username: status is 400",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register: admin role is refused",
+      "test": "Register: admin role is refused: status is 403",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register creator: valid",
+      "test": "Register creator: valid: status is 201",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register creator: valid",
+      "test": "creator role",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Register second creator (for ownership checks)",
+      "test": "Register second creator (for ownership checks): status is 201",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login: valid",
+      "test": "Login: valid: status is 200",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login: valid",
+      "test": "token returned",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login: wrong password",
+      "test": "Login: wrong password: status is 401",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login: unknown user gives the same message",
+      "test": "Login: unknown user gives the same message: status is 401",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login: unknown user gives the same message",
+      "test": "same message as a wrong password",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login admin (seed account)",
+      "test": "Login admin (seed account): status is 200",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Login admin (seed account)",
+      "test": "admin role",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Token missing",
+      "test": "Token missing: status is 401",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Token expired or invalid",
+      "test": "Token expired or invalid: status is 401",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Me: valid token",
+      "test": "Me: valid token: status is 200",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Me: valid token",
+      "test": "own account",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Role: viewer cannot create a film",
+      "test": "Role: viewer cannot create a film: status is 403",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Role: viewer cannot open the admin queue",
+      "test": "Role: viewer cannot open the admin queue: status is 403",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Role: creator cannot open the admin queue",
+      "test": "Role: creator cannot open the admin queue: status is 403",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Role: creator cannot change the revenue share",
+      "test": "Role: creator cannot change the revenue share: status is 403",
+      "ok": true
+    },
+    {
+      "group": "2 Auth and roles",
+      "request": "Role: viewer has no creator earnings",
+      "test": "Role: viewer has no creator earnings: status is 403",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Creator: film without the AI label is refused",
+      "test": "Creator: film without the AI label is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Creator: film with an unknown genre is refused",
+      "test": "Creator: film with an unknown genre is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Creator: create film (pending)",
+      "test": "Creator: create film (pending): status is 201",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Creator: create film (pending)",
+      "test": "starts pending",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: other creator cannot add an episode to a pending film (hidden, 404)",
+      "test": "Upload: other creator cannot add an episode to a pending film (hidden, 404): status is 404",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: not a video (wrong type)",
+      "test": "Upload: not a video (wrong type): status is 400",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: MP4 header only, no video track",
+      "test": "Upload: MP4 header only, no video track: status is 400",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: MP4 header only, no video track",
+      "test": "says why",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: price above 500 is refused",
+      "test": "Upload: price above 500 is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: episode 1, free (multipart)",
+      "test": "Upload: episode 1, free (multipart): status is 201",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: episode 1, free (multipart)",
+      "test": "free",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: episode 2, 30 coins (multipart)",
+      "test": "Upload: episode 2, 30 coins (multipart): status is 201",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Upload: episode 2, 30 coins (multipart)",
+      "test": "priced",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: guest cannot see a pending film",
+      "test": "Review visibility: guest cannot see a pending film: status is 404",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: pending film is not in the feed",
+      "test": "Review visibility: pending film is not in the feed: status is 200",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: pending film is not in the feed",
+      "test": "not listed",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: guest cannot stream a pending film",
+      "test": "Review visibility: guest cannot stream a pending film: status is 404",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: owner can see it",
+      "test": "Review visibility: owner can see it: status is 200",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: owner can see it",
+      "test": "two episodes",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: viewer cannot approve",
+      "test": "Review: viewer cannot approve: status is 403",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: admin sees the film in the queue",
+      "test": "Review: admin sees the film in the queue: status is 200",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: admin sees the film in the queue",
+      "test": "queued",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: rejecting needs a note",
+      "test": "Review: rejecting needs a note: status is 400",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: a pending film cannot be taken down",
+      "test": "Review: a pending film cannot be taken down: status is 409",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: admin approves",
+      "test": "Review: admin approves: status is 200",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review: admin approves",
+      "test": "approved",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Review visibility: guest now sees the film",
+      "test": "Review visibility: guest now sees the film: status is 200",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Ownership: other creator cannot edit the film",
+      "test": "Ownership: other creator cannot edit the film: status is 403",
+      "ok": true
+    },
+    {
+      "group": "3 Upload and review",
+      "request": "Ownership: other creator cannot delete the film",
+      "test": "Ownership: other creator cannot delete the film: status is 403",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Guest sees the new free episode, paid one is locked for a viewer",
+      "test": "Guest sees the new free episode, paid one is locked for a viewer: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Guest sees the new free episode, paid one is locked for a viewer",
+      "test": "locked, no link",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlock with no coins is refused (402)",
+      "test": "Unlock with no coins is refused (402): status is 402",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlock with no coins is refused (402)",
+      "test": "code",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: balance is still 0 after the refusal",
+      "test": "Wallet: balance is still 0 after the refusal: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: balance is still 0 after the refusal",
+      "test": "0 coins",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Top-up: the client cannot choose the amount",
+      "test": "Top-up: the client cannot choose the amount: status is 400",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Top-up: demo +100 (simulated)",
+      "test": "Top-up: demo +100 (simulated): status is 201",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Top-up: demo +100 (simulated)",
+      "test": "100 coins, simulated",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlock: first time charges the server price",
+      "test": "Unlock: first time charges the server price: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlock: first time charges the server price",
+      "test": "charged 30, balance 70",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlock: repeating does not charge again",
+      "test": "Unlock: repeating does not charge again: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlock: repeating does not charge again",
+      "test": "charged 0, balance still 70",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: balance read from the server",
+      "test": "Wallet: balance read from the server: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: balance read from the server",
+      "test": "70 coins",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: ledger lists the top-up and one unlock",
+      "test": "Wallet: ledger lists the top-up and one unlock: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: ledger lists the top-up and one unlock",
+      "test": "two rows, newest first, with a paging flag",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: unlocked list reads the rights themselves",
+      "test": "Wallet: unlocked list reads the rights themselves: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Wallet: unlocked list reads the rights themselves",
+      "test": "one purchase",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlocked episode now has a playback link",
+      "test": "Unlocked episode now has a playback link: status is 200",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Unlocked episode now has a playback link",
+      "test": "unlocked with link",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "Another viewer is still locked out",
+      "test": "Another viewer is still locked out: status is 403",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "A film with paid unlocks cannot be deleted",
+      "test": "A film with paid unlocks cannot be deleted: status is 409",
+      "ok": true
+    },
+    {
+      "group": "4 Wallet and unlock",
+      "request": "A paid-for episode cannot be deleted",
+      "test": "A paid-for episode cannot be deleted: status is 409",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: none yet",
+      "test": "Subscription: none yet: status is 200",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: none yet",
+      "test": "inactive",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: subscribe (simulated)",
+      "test": "Subscription: subscribe (simulated): status is 201",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: subscribe (simulated)",
+      "test": "active with inclusive dates",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: renew twice, plans never overlap",
+      "test": "Subscription: renew twice, plans never overlap: status is 201",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: third purchase starts after the second ends",
+      "test": "Subscription: third purchase starts after the second ends: status is 201",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: third purchase starts after the second ends",
+      "test": "paid through moved further and 3 plans remain",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: the latest plan is read back",
+      "test": "Subscription: the latest plan is read back: status is 200",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: the latest plan is read back",
+      "test": "active, paid through is after the first end date",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: cancel keeps access until the end",
+      "test": "Subscription: cancel keeps access until the end: status is 200",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: cancel keeps access until the end",
+      "test": "still active, flagged cancelled",
+      "ok": true
+    },
+    {
+      "group": "5 Subscription",
+      "request": "Subscription: another user has nothing to cancel",
+      "test": "Subscription: another user has nothing to cancel: status is 404",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Creator earnings match the stored 70/30 split",
+      "test": "Creator earnings match the stored 70/30 split: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Creator earnings match the stored 70/30 split",
+      "test": "30 coins spent, creator earned 21, in coins",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Admin sales: coins and simulated dollars stay separate",
+      "test": "Admin sales: coins and simulated dollars stay separate: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Admin sales: coins and simulated dollars stay separate",
+      "test": "coin totals add up",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: read",
+      "test": "Share setting: read: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: read",
+      "test": "a percentage",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: out of range is refused",
+      "test": "Share setting: out of range is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: admin changes it to 50",
+      "test": "Share setting: admin changes it to 50: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: earnings recorded earlier do not change",
+      "test": "Share setting: earnings recorded earlier do not change: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: earnings recorded earlier do not change",
+      "test": "still 21",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Share setting: put it back to 30",
+      "test": "Share setting: put it back to 30: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Role change: admin promotes the creator",
+      "test": "Role change: admin promotes the creator: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Role change: past earnings do not change",
+      "test": "Role change: past earnings do not change: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Role change: past earnings do not change",
+      "test": "still 21 after becoming admin",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Role change: demote again",
+      "test": "Role change: demote again: status is 200",
+      "ok": true
+    },
+    {
+      "group": "6 Revenue and share setting",
+      "request": "Admin cannot change their own role",
+      "test": "Admin cannot change their own role: status is 409",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Profile: update display name and bio",
+      "test": "Profile: update display name and bio: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Profile: update display name and bio",
+      "test": "saved",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Profile: display name is required",
+      "test": "Profile: display name is required: status is 400",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Creator: lists their own films with every status",
+      "test": "Creator: lists their own films with every status: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Creator: lists their own films with every status",
+      "test": "includes the uploaded film",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Episode: owner changes the price of an episode",
+      "test": "Episode: owner changes the price of an episode: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Episode: owner changes the price of an episode",
+      "test": "now paid",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Episode: another creator cannot change it",
+      "test": "Episode: another creator cannot change it: status is 403",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Episode: a price above 500 is refused",
+      "test": "Episode: a price above 500 is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Episode: owner puts it back to free",
+      "test": "Episode: owner puts it back to free: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Like: viewer likes the film",
+      "test": "Like: viewer likes the film: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Like: viewer likes the film",
+      "test": "liked",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Like: guest cannot like",
+      "test": "Like: guest cannot like: status is 401",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Like: viewer removes the like",
+      "test": "Like: viewer removes the like: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Watchlist: save the film",
+      "test": "Watchlist: save the film: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Watchlist: the saved list holds it",
+      "test": "Watchlist: the saved list holds it: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Watchlist: the saved list holds it",
+      "test": "contains the film",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Watchlist: remove it",
+      "test": "Watchlist: remove it: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Comments: guest can read",
+      "test": "Comments: guest can read: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Comments: guest cannot write",
+      "test": "Comments: guest cannot write: status is 401",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Comments: empty comment is refused",
+      "test": "Comments: empty comment is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Comments: viewer writes one",
+      "test": "Comments: viewer writes one: status is 201",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Comments: someone else cannot delete it",
+      "test": "Comments: someone else cannot delete it: status is 403",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Comments: the author deletes it",
+      "test": "Comments: the author deletes it: status is 204",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Follow: viewer follows the creator",
+      "test": "Follow: viewer follows the creator: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Follow: unfollow",
+      "test": "Follow: unfollow: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Report: viewer reports the film",
+      "test": "Report: viewer reports the film: status is 201",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: the report is listed",
+      "test": "Admin: the report is listed: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: the report is listed",
+      "test": "listed",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: resolve the report",
+      "test": "Admin: resolve the report: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: viewer cannot resolve reports",
+      "test": "Admin: viewer cannot resolve reports: status is 403",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: user list",
+      "test": "Admin: user list: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: user list",
+      "test": "users",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: live films",
+      "test": "Admin: live films: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Admin: an unknown status filter is refused",
+      "test": "Admin: an unknown status filter is refused: status is 400",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Film: owner edits prices and details in one request (goes back to review)",
+      "test": "Film: owner edits prices and details in one request (goes back to review): status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Film: an owner edit puts it back in the review queue",
+      "test": "Film: an owner edit puts it back in the review queue: status is 200",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Film: an owner edit puts it back in the review queue",
+      "test": "queued again",
+      "ok": true
+    },
+    {
+      "group": "7 Profile, social and the other endpoints",
+      "request": "Film: admin approves it again",
+      "test": "Film: admin approves it again: status is 200",
+      "ok": true
+    },
+    {
+      "group": "8 Take down",
+      "request": "Admin takes the film down",
+      "test": "Admin takes the film down: status is 200",
+      "ok": true
+    },
+    {
+      "group": "8 Take down",
+      "request": "Guest can no longer see it",
+      "test": "Guest can no longer see it: status is 404",
+      "ok": true
+    },
+    {
+      "group": "8 Take down",
+      "request": "Even an unlocked viewer can no longer stream it",
+      "test": "Even an unlocked viewer can no longer stream it: status is 404",
+      "ok": true
+    }
+  ]
+}

@@ -17,7 +17,7 @@
 | Logout ล้าง token และ state | `POST /auth/logout` (stateless) | Settings → Log out | — | F: api_repository (ล้าง token แม้เซิร์ฟเวอร์ล่ม); controller ที่เก็บข้อมูลผู้ใช้ถูกรีเซ็ตผ่าน `addLogoutListener` | ทำแล้ว (ไม่มีการเพิกถอน token ฝั่งเซิร์ฟเวอร์ ดู "ข้อจำกัด") |
 | 401 กลางทางพาไปหน้า login และไม่ส่ง token ที่ถูกปฏิเสธซ้ำ | — | — | — | F: api_repository (`onUnauthorized`, ไม่นับรหัสผ่านผิด, หลัง 401 คำขอถัดไปไม่มี `Authorization`) | ทำแล้ว |
 | ลิงก์เล่นวิดีโอใช้เป็น login token ไม่ได้ (รวมถึงกับ `/api/catalog/*`) | `readToken` ปฏิเสธ payload ที่มี `typ` | — | — | B: auth, playback | ทำแล้ว |
-| รองรับ Viewer / Creator / Admin | `role` ใน `users` | tab ตาม role | `users.role` | B: endpoints (ตาราง role ครบ 47 endpoint) | ทำแล้ว |
+| รองรับ Viewer / Creator / Admin | `role` ใน `users` | tab ตาม role | `users.role` | B: endpoints (ตาราง role ครบทุก endpoint ที่ mount (48 รายการ ตรวจจำนวนเทียบกับไฟล์ routes อัตโนมัติ) พร้อม status/body ที่คาดหวังของแต่ละรายการ) | ทำแล้ว |
 | ตรวจ role และ ownership ที่ backend | `requireRole`, `loadOwnedFilm` | — | — | B: accounts, upload_review (แก้/ลบของคนอื่น → 403, role อ่านจาก DB ทุกคำขอ) | ทำแล้ว |
 | Creator แก้ไขได้เฉพาะหนังของตน | `PUT/DELETE /films/:id`, `/episodes/:id` | Creator studio | `films.creator_id` | B: upload_review | ทำแล้ว |
 | สมัครเป็น Admin ไม่ได้ | `register` ส่ง `role:"admin"` → 403 | — | — | B: accounts | ทำแล้ว |
@@ -28,7 +28,7 @@
 | ข้อกำหนด | Endpoint | หน้าจอ | ตาราง | Test / เดโม | สถานะ |
 |---|---|---|---|---|---|
 | Feed แสดงเฉพาะ approved | `GET /films` | Feed, Search | `films.status` | B: playback, upload_review | ทำแล้ว |
-| เล่นวิดีโอจริง ครั้งละหนึ่งรายการ | `GET /episodes/:id` → `/stream` | Feed (`EpisodeVideo`) | `episodes.video_path` | D2 (เล่นจริงในเบราว์เซอร์: `readyState 4`, `currentTime` ไหล) · มี `VideoPlayerController` เดียวต่อหน้า ถูก dispose เมื่อเปลี่ยนตอน/หน้า | ทำแล้ว (ลองบนเว็บ Chromium; ยังไม่ได้ลองบน Android/iOS) |
+| เล่นวิดีโอจริง ครั้งละหนึ่งรายการ | `GET /episodes/:id` → `/stream` | Feed (`EpisodeVideo`) | `episodes.video_path` | D2 (เล่นจริงในเบราว์เซอร์: `readyState 4`, `currentTime` ไหล) · ฟีดส่ง `active` ให้เฉพาะหน้าที่เลือกอยู่; หน้าอื่นไม่โหลด/ไม่เล่น, controller ที่ initialize ล้มเหลวหรือผู้ใช้ออกก่อนถูก dispose (F: episode_video_test ด้วย platform ปลอมที่นับ create/dispose/play) | ทำแล้ว (ลองบนเว็บ Chromium; ยังไม่ได้ลองบน Android) |
 | Guest ดูตอนฟรีได้ | `access:"free"` | Feed | `episodes.is_free` | B: playback · D2 | ทำแล้ว |
 | ตอนเสียเงินแสดงคำเชิญ login/ปลดล็อก | `stream_url:null`, `/stream` → 401 | prompt "Log in or unlock" | — | B: playback · D3 | ทำแล้ว |
 | ดูตอนเสียเงินได้เมื่อซื้อแล้วหรือ subscription ไม่หมดอายุ | `access: unlocked/subscription` | Feed | `unlocked_episodes`, `subscriptions` | B: wallet, playback | ทำแล้ว |
@@ -120,7 +120,7 @@
 | ข้อกำหนด | สถานะ |
 |---|---|
 | Search/filter ตาม genre, length, AI tool จากข้อมูลจริง (`GET /films?genre=&ai_tool=&length=&q=`) | ทำแล้ว (B: playback; F: api_repository ส่ง filter ถูกต้อง). ช่วงความยาวนับเวลารวมทุกตอน; รายชื่อ genre/AI tool ในหน้า Upload/Filter ยังมาจากค่าคงที่ในแอปที่ตรงกับ seed ไม่ได้ดึงจาก `/api/lookups` |
-| Profile และ dashboard เชื่อม API | ทำแล้ว (`PUT /auth/me`, รายการที่บันทึก/ปลดล็อกจาก API). ยอดวิวและกราฟรายวัน **ไม่มี** ใน backend: แอปซ่อนกราฟและแสดงจำนวนหนังกับไลก์แทนยอดวิว |
+| Profile และ dashboard เชื่อม API | ทำแล้ว (`PUT /auth/me`, รายการที่บันทึก/ปลดล็อกจาก API). ยอดวิวและกราฟรายวัน **ถอดออกจากแอปแล้ว** (ไม่มีใน backend): dashboard แสดงจำนวนหนัง ไลก์ และการปลดล็อกแทน; Trending ในหน้า Search เรียงตามยอดถูกใจ |
 | MVC ตามเอกสาร | ทำแล้ว: Flutter `models/ views/ controllers/` (+ `data/` repository, `services/`), backend `routes/ controllers/ models/` |
 | loading / empty / error / retry | ทำแล้วใน Feed, Search, Wallet, Top up, Admin, Creator studio, หน้า channel, ตัวเล่นวิดีโอ (F: error_states) |
 | repository รองรับ async | ทำแล้ว: ส่วน core ทั้งหมดเป็น `Future` และปรับผู้เรียกครบ; ส่วนที่ยังอ่านแบบ sync คือ cache ของ like/save/follow ที่โหลดมากับ API |
@@ -132,9 +132,9 @@
 | Like / Save (watchlist) / Follow | `POST/DELETE` พร้อม test (B: social) | `ApiRepository` เรียก API จริง | ทำแล้ว |
 | Comment (เรียบ) | `GET/POST/DELETE` (B: social) | โหลด/เพิ่ม/ลบผ่าน API | ทำแล้ว; การตอบกลับซ้อนและ like คอมเมนต์ **ไม่มีใน backend**: ตอบกลับถูกโพสต์เป็นคอมเมนต์ปกติ, like คอมเมนต์เก็บในหน่วยความจำของเครื่องเท่านั้น |
 | Report + Admin resolve | `POST /films/:id/reports`, `/admin/reports` (B: social) | ส่งและจัดการผ่าน API | ทำแล้ว |
-| Continue watching | ไม่มี | เก็บในหน่วยความจำของเครื่อง | **ยังเป็น local** |
-| Notifications | ไม่มี | `ApiRepository` ตอบรายการว่าง | **ยังไม่ทำ** (มีเฉพาะตอนใช้ mock) |
-| Forgot password | ไม่มี | ลิงก์ยังไม่มีผล | **ยังไม่ทำ** |
+| Continue watching | ไม่มี | ถอดออกจากแอปแล้ว | **ถอดออก** (ไม่มีตารางใน DB) |
+| Notifications | ไม่มี | ถอดออกจากแอปแล้ว (ทั้งกระดิ่งและหน้ารายการ) | **ถอดออก** (ไม่มีตารางใน DB) |
+| Forgot password | ไม่มี | ถอดลิงก์ออกจากหน้า Login | **ถอดออก** (ไม่มีตารางใน DB) |
 | ภาษาไทย / onboarding / settings | — | ทำในแอป | ไม่ได้เกี่ยวกับ backend |
 | ถูกใจ/คอมเมนต์ในหนังจาก catalog | — | like/save ทำในเครื่อง, comment แจ้งว่าไม่รองรับ | ตั้งใจ |
 
@@ -173,12 +173,12 @@
 
 ## ข้อจำกัดและสิ่งที่ยังไม่ได้ทดสอบ
 
-- ยังไม่ได้ทดสอบบน Android/iOS จริงหรืออุปกรณ์เป้าหมาย (ลองบนเว็บ Chromium เท่านั้น)
+- ยังไม่ได้ทดสอบบน Android จริงหรืออุปกรณ์เป้าหมาย (ลองบนเว็บ Chromium เท่านั้น)
 - คลิปชุดชั่วคราว: ฐานข้อมูลพัฒนา (`shortreel`) ตอนนี้ชี้ 40 ตอนของหนัง seed ไปที่คลิปที่สร้างเอง 12 คลิป (ภาพเคลื่อนไหวกราฟิก 4 วินาที ไม่มีลิขสิทธิ์ของใคร) กับคลิปยาว 24 วินาทีอีก 1 คลิป (ตอน 1 ของ "ShortReel Intro" ไว้ลอง seek) อยู่ใน `backend/uploads/`. ไม่ใช่คลิปของทีม ใช้ `import-demo-clips.js` แทนที่ด้วยคลิปที่ทีมมีสิทธิ์ใช้ได้ เป็นคลิปที่ MediaRecorder ของเบราว์เซอร์เข้ารหัสแบบ fragmented MP4 ซึ่งไม่ใส่ความยาวใน header (สคริปต์จึงคงค่า `duration_sec` เดิมของ seed)
 - Android: เพิ่ม `usesCleartextTraffic` เพราะ API เดโมเป็น `http://10.0.2.2:3000`; ไม่มี emulator/อุปกรณ์ในเครื่องนี้ จึงยังไม่ได้ลองบน Android
 - Logout เป็น stateless: token ที่ถูกขโมยยังใช้ได้จนหมดอายุ (`JWT_EXPIRES_IN`, ค่าเริ่มต้น 7 วัน) ยกเว้นบัญชีถูกลบ/ลดสิทธิ์ซึ่งมีผลทันที
 - ไม่มี rate limiting ของ login
-- ฐานข้อมูลที่ import ไปก่อนหน้า (`shortreel`) ถูกเพิ่มคอลัมน์ด้วย `db/migrations/001_core_flow.sql` (ไม่ลบข้อมูล). `shortreel.sql` ยัง `DROP DATABASE` ตามเดิม ห้าม import ทับข้อมูลที่ต้องการเก็บ
+- ไม่มีโฟลเดอร์ migration แล้ว: ฐาน `shortreel` ที่ใช้อยู่ถูกเพิ่มคอลัมน์ให้ตรงกับ `shortreel.sql` แล้ว. `shortreel.sql` ยัง `DROP DATABASE` ตามเดิม ห้าม import ทับข้อมูลที่ต้องการเก็บ
 - งานอ่านและตัดสินใจเรื่อง catalog bug เดิม (ดูหัวข้อ 2)
 
 ## ผลทดสอบ (รันล่าสุด)
@@ -200,4 +200,4 @@
 
 **ที่ลองมือจริง (Chromium ในแอป, backend ต่อ MariaDB `shortreel`):** login → ปิดแล้วเปิดใหม่ยังอยู่ → logout แล้วเปิดใหม่ต้อง login ใหม่ → ฟีดจาก API → วิดีโอเล่นจริง (12 คลิปทดสอบ 4 วินาที, `/stream` ตอบ 206) → ตอนที่ต้องจ่ายขึ้นข้อความ login/ปลดล็อก → Wallet (ยอดและประวัติจาก DB, ปุ่ม +100 เขียนลง `coin_transactions` จริง) → Profile (watchlist จาก DB) → Admin (คิว, รายงาน, ยอดขาย) → วิดีโอหยุดเมื่อสลับไปแท็บ Wallet. ข้อมูลที่เปลี่ยนจากการลองถูกคืนกลับ (ยอดของ `viewer01` = 80).
 
-**ไม่ได้ลองมือ:** การเลือกไฟล์ด้วยหน้าต่างของระบบ, upload จากหน้าจอจริงจนถึงฟีด (ครอบคลุมด้วย test ของ backend และ test ของ repository), Android/iOS, บั๊ก catalog/player เดิม
+**ไม่ได้ลองมือ:** การเลือกไฟล์ด้วยหน้าต่างของระบบ, upload จากหน้าจอจริงจนถึงฟีด (ครอบคลุมด้วย test ของ backend และ test ของ repository), Android, บั๊ก catalog/player เดิม
