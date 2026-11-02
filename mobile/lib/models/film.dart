@@ -17,7 +17,6 @@ class Film {
     this.reviewNote,
     this.likeCount = 0,
     this.commentCount = 0,
-    this.viewCount = 0,
     this.episodeCount = 0,
     this.catalogDramaId,
     this.genreTags = const [],
@@ -41,7 +40,6 @@ class Film {
   final String? reviewNote;
   final int likeCount;
   final int commentCount;
-  final int viewCount;
   final int episodeCount;
 
   /// The Series Jeen id when this film comes from the catalog, else null.
@@ -63,7 +61,8 @@ class Film {
     aiToolId: json['ai_tool_id'] as int,
     promptCredit: json['prompt_credit'] as String?,
     // The API sends booleans; older fixtures send 0/1.
-    isAiGenerated: json['is_ai_generated'] == 1 || json['is_ai_generated'] == true,
+    isAiGenerated:
+        json['is_ai_generated'] == 1 || json['is_ai_generated'] == true,
     status: json['status'] as String,
     creatorName: (json['creator'] as Map?)?['name'] as String? ?? '',
     genreName: json['genre'] as String? ?? '',
@@ -106,7 +105,6 @@ class Film {
       reviewNote: clearReviewNote ? null : reviewNote ?? this.reviewNote,
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
-      viewCount: viewCount,
       episodeCount: episodeCount,
       catalogDramaId: catalogDramaId,
       genreTags: genreTags,

@@ -41,9 +41,14 @@ class _PlusViewState extends State<PlusView> {
 
   @override
   Widget build(BuildContext context) {
-    final planPrice = context.watch<WalletController>().planPrice;
-    final start = DateTime.now();
-    final end = start.add(const Duration(days: 30));
+    final wallet = context.watch<WalletController>();
+    final planPrice = wallet.planPrice;
+    final plan = wallet.subscription;
+    // No automatic renewal exists: each purchase adds one calendar month after
+    // whatever is already paid, and the server decides the exact dates.
+    final terms = plan == null
+        ? 'One month from the day you start. No automatic renewal.'
+        : 'Paid through ${shortDate(plan.lastDay)}. Buying again adds one more month after that.';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -107,9 +112,9 @@ class _PlusViewState extends State<PlusView> {
                         subtitle: 'Keep your coins for later',
                       ),
                       const _Benefit(
-                        icon: Icons.favorite_rounded,
-                        title: 'Support creators',
-                        subtitle: 'Your plan helps fund AI filmmakers',
+                        icon: Icons.info_outline_rounded,
+                        title: 'Simulated in this demo',
+                        subtitle: 'Plus is not paid out to creators yet',
                       ),
                     ],
                   ),
@@ -133,7 +138,7 @@ class _PlusViewState extends State<PlusView> {
                                   style: TextStyle(fontWeight: FontWeight.w800),
                                 ),
                                 Text(
-                                  '${shortDate(start)} to ${shortDate(end)}, cancel anytime',
+                                  terms,
                                   style: const TextStyle(
                                     color: AppColors.muted,
                                     fontSize: 12,

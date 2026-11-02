@@ -30,7 +30,15 @@ const _textShadow = [Shadow(blurRadius: 6, color: Color(0xAA000000))];
 /// Gestures follow the short-video convention: tap to pause or resume, double
 /// tap anywhere to like.
 class FilmPage extends StatefulWidget {
-  const FilmPage({super.key, required this.film, this.episode});
+  const FilmPage({
+    super.key,
+    required this.film,
+    this.episode,
+    this.active = true,
+  });
+
+  /// False while another feed page is the current one: no video is loaded.
+  final bool active;
 
   final Film film;
 
@@ -168,9 +176,12 @@ class _FilmPageState extends State<FilmPage> {
                 );
                 if (film.catalogDramaId == null && !playsVideo) return gestures;
                 void next() {
-                  if (episode < film.episodeCount) {
-                    feed.resume(film.id, episode + 1);
-                  }
+                  final after = feed.episodeAfter(
+                    film.id,
+                    episode,
+                    fallbackCount: film.episodeCount,
+                  );
+                  if (after != null) feed.resume(film.id, after);
                 }
 
                 // On the web the video is an HTML element that takes every
@@ -199,6 +210,10 @@ class _FilmPageState extends State<FilmPage> {
                         )),
                         film: film,
                         episodeNo: episode,
+                        active: widget.active,
+                        onEpisodes: (numbers) =>
+                            feed.learnEpisodes(film.id, numbers),
+                        onResolved: (number) => feed.resume(film.id, number),
                         paused: _paused,
                         speed: _boosting ? _boostSpeed : _speed,
                         onEnded: next,

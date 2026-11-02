@@ -1,4 +1,3 @@
-import '../models/app_notification.dart';
 import '../models/catalog.dart';
 import '../models/coin_pack.dart';
 import 'dart:typed_data';
@@ -16,7 +15,6 @@ class Earnings {
   const Earnings({
     required this.coins,
     required this.unlocks,
-    required this.views,
     required this.likes,
     this.coinsByFilm = const {},
     this.adminSharePercent,
@@ -25,8 +23,6 @@ class Earnings {
   final int coins;
   final int unlocks;
 
-  /// Only the mock counts views; the API does not track them yet (0).
-  final int views;
   final int likes;
 
   /// Coins the channel earned from each of its films, by film id.
@@ -34,21 +30,6 @@ class Earnings {
 
   /// The admin's current cut, so a creator can see how earnings are split.
   final int? adminSharePercent;
-}
-
-/// One day of a channel's numbers.
-class DailyStat {
-  const DailyStat({
-    required this.day,
-    required this.views,
-    required this.likes,
-    required this.coins,
-  });
-
-  final DateTime day;
-  final int views;
-  final int likes;
-  final int coins;
 }
 
 /// Coins and dollars are different units and are kept in separate fields.
@@ -134,18 +115,6 @@ class FilmComment {
   bool get isReply => parentId != null;
 }
 
-/// How far a person has got in a film they have not finished.
-class WatchProgress {
-  const WatchProgress({required this.film, required this.episodeNo});
-
-  final Film film;
-  final int episodeNo;
-
-  /// Share of the film's episodes reached, from 0 to 1.
-  double get fraction =>
-      film.episodeCount == 0 ? 0 : episodeNo / film.episodeCount;
-}
-
 class EpisodePricing {
   const EpisodePricing({
     required this.freeCount,
@@ -184,11 +153,6 @@ abstract class AppRepository {
 
   /// Genres of the catalog films, the most common first, for the filters.
   List<String> catalogGenres();
-
-  /// The person's inbox, newest first.
-  List<AppNotification> notificationsOf(int userId);
-  int unreadNotificationCount(int userId);
-  void markNotificationsRead(int userId);
 
   /// Saves the person's channel name and bio.
   Future<User> updateProfile(
@@ -233,7 +197,10 @@ abstract class AppRepository {
   void toggleCommentLike(int userId, int commentId);
   Future<void> reportFilm(int userId, int filmId, String reason);
 
+  /// Reads the current balance from the server (it may have changed elsewhere).
+  Future<User> refreshBalance(int userId);
   Future<User> unlock(int userId, int episodeId);
+
   /// Simulated purchase of [pack]; the server decides what it is worth.
   Future<User> topUpPack(int userId, CoinPack pack);
 
@@ -264,11 +231,6 @@ abstract class AppRepository {
   List<Film> unlockedFilmsOf(int userId);
   List<User> followingOf(int userId);
 
-  /// Remembers that [userId] reached [episodeNo] of a film.
-  void recordProgress(int userId, int filmId, int episodeNo);
-
-  /// Unfinished films, the one watched most recently first.
-  List<WatchProgress> continueWatching(int userId);
   int followerCount(int userId);
 
   Future<Film> upload({
@@ -285,6 +247,9 @@ abstract class AppRepository {
     required String genre,
     required String aiTool,
     required String promptCredit,
+
+    /// New prices by episode id, saved together with the details or not at all.
+    Map<int, int> episodePrices = const {},
   });
   Future<void> deleteFilm(int filmId);
 
@@ -293,10 +258,6 @@ abstract class AppRepository {
   Future<EpisodePricing> pricingOf(int filmId);
   Future<List<Film>> filmsOf(int creatorId);
   Future<Earnings> earningsOf(int creatorId);
-
-  /// The channel's numbers for each of the last [days] days, oldest first.
-  /// Only the mock has these; the API returns an empty list.
-  List<DailyStat> dailyStatsOf(int creatorId, {int days = 60});
 
   Future<List<Film>> reviewQueue();
   Future<List<Film>> liveFilms();

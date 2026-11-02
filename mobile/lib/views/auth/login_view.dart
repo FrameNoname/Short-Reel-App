@@ -86,13 +86,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const FieldLabel('Password'),
-                      const _ForgotPasswordLink(),
-                    ],
-                  ),
+                  const FieldLabel('Password'),
                   TextField(
                     key: const Key('login-password'),
                     controller: _password,
@@ -171,35 +165,6 @@ class _LoginViewState extends State<LoginView> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ForgotPasswordLink extends StatelessWidget {
-  const _ForgotPasswordLink();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('forgot-password'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset is not ready yet.')),
-      ),
-      child: const SizedBox(
-        height: 44,
-        child: Center(
-          widthFactor: 1,
-          child: Text(
-            'Forgot password?',
-            style: TextStyle(
-              color: AppColors.link,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ),
     );

@@ -47,7 +47,6 @@ const _exact = {
   'You can log back in any time.': 'คุณเข้าสู่ระบบใหม่ได้ทุกเมื่อ',
   'Create account': 'สร้างบัญชี',
   'Create your account': 'สร้างบัญชีของคุณ',
-  'Forgot password?': 'ลืมรหัสผ่าน?',
   'Show password': 'แสดงรหัสผ่าน',
   'Hide password': 'ซ่อนรหัสผ่าน',
   'Watch free episodes without an account': 'ดูตอนฟรีได้โดยไม่ต้องมีบัญชี',
@@ -134,7 +133,6 @@ const _exact = {
   'Legend': 'คำอธิบาย',
 
   // Search and filters
-  'Continue watching': 'ดูต่อ',
   'Recent searches': 'ค้นหาล่าสุด',
   'Clear all': 'ล้างทั้งหมด',
   'Trending': 'กำลังฮิต',
@@ -205,13 +203,9 @@ const _exact = {
   'Choose a few genres and we will show them first.':
       'เลือกแนวหนังที่ชอบสักหน่อย เราจะแสดงแนวนั้นก่อน',
 
-  // Notifications
-  'Notifications': 'การแจ้งเตือน',
   'New': 'ใหม่',
   'Earlier': 'ก่อนหน้า',
-  'No notifications yet.': 'ยังไม่มีการแจ้งเตือน',
   'Just now': 'เมื่อสักครู่',
-  'started following you': 'เริ่มติดตามคุณ',
 
   // Settings
   'Account': 'บัญชี',
@@ -275,6 +269,11 @@ const _exact = {
   'Your plan helps fund AI filmmakers':
       'แพ็กเกจของคุณช่วยสนับสนุนผู้สร้างหนัง AI',
   'Plus monthly': 'Plus รายเดือน',
+  'One month from the day you start. No automatic renewal.':
+      'หนึ่งเดือนนับจากวันที่เริ่ม ไม่ต่ออายุอัตโนมัติ',
+  'Simulated in this demo': 'จำลองในเดโมนี้',
+  'Plus is not paid out to creators yet':
+      'Plus ยังไม่มีการแบ่งรายได้ให้ผู้สร้าง',
   '/mo': '/เดือน',
 
   // Upload and creator studio
@@ -307,26 +306,17 @@ const _exact = {
   'Your films': 'หนังของคุณ',
   '+ Upload': '+ อัปโหลด',
   'Upload your first film.': 'อัปโหลดหนังเรื่องแรกของคุณ',
-  'Views': 'ยอดดู',
   'Unlocks': 'การปลดล็อก',
   'Waiting for admin review': 'รอแอดมินตรวจสอบ',
   'Taken down by admin': 'ถูกแอดมินถอดออก',
   'Delete this film?': 'ลบหนังเรื่องนี้หรือไม่?',
   'This film has paid unlocks, so it cannot be deleted.':
       'หนังเรื่องนี้มีการปลดล็อกแบบเสียเงินแล้ว จึงลบไม่ได้',
-  'A price must be 0 to 999 coins.': 'ราคาต้องอยู่ระหว่าง 0 ถึง 999 เหรียญ',
+  'A price must be 0 to 500 coins.': 'ราคาต้องอยู่ระหว่าง 0 ถึง 500 เหรียญ',
   'Taken down': 'ถูกถอดออก',
   'Pending': 'รอตรวจสอบ',
   'Approved': 'อนุมัติแล้ว',
   'Rejected': 'ไม่อนุมัติ',
-
-  // Creator stats
-  'Performance': 'ผลงาน',
-  'Top films': 'หนังยอดนิยมของคุณ',
-  'No change': 'ไม่เปลี่ยนแปลง',
-  'No data yet. Views, likes and coins show up here.':
-      'ยังไม่มีข้อมูล ยอดดู ถูกใจ และเหรียญจะแสดงที่นี่',
-  'Published films are ranked here.': 'หนังที่เผยแพร่แล้วจะถูกจัดอันดับที่นี่',
 
   // Admin
   'Moderator': 'ผู้ดูแล',
@@ -410,14 +400,18 @@ final _rules = <(RegExp, String Function(Match))>[
     (m) => 'ดูได้ทุกตอน ไม่ต้องใช้เหรียญ\n${m[1]} ต่อเดือน',
   ),
   (
-    RegExp(r'^(\w{3} \d+) to (\w{3} \d+), cancel anytime$'),
-    (m) => '${_date(m[1]!)} ถึง ${_date(m[2]!)} ยกเลิกได้ทุกเมื่อ',
+    RegExp(
+      r'^Paid through (\w{3} \d+)\. Buying again adds one more month after '
+      r'that\.$',
+    ),
+    (m) =>
+        'จ่ายครอบคลุมถึง ${_date(m[1]!)} ซื้อซ้ำจะเพิ่มอีกหนึ่งเดือนต่อจากนั้น',
   ),
   (RegExp(r'^Started (\w{3} \d+)$'), (m) => 'เริ่ม ${_date(m[1]!)}'),
   (RegExp(r'^Ends (\w{3} \d+)$'), (m) => 'สิ้นสุด ${_date(m[1]!)}'),
   (
-    RegExp(r'^(\d+) days left, renews (\w{3} \d+)$'),
-    (m) => 'เหลือ ${m[1]} วัน ต่ออายุ ${_date(m[2]!)}',
+    RegExp(r'^(\d+) days? left, paid through (\w{3} \d+)$'),
+    (m) => 'เหลือ ${m[1]} วัน จ่ายครอบคลุมถึง ${_date(m[2]!)}',
   ),
   (
     RegExp(
@@ -444,7 +438,7 @@ final _rules = <(RegExp, String Function(Match))>[
   (RegExp(r'^Review queue \((\d+)\)$'), (m) => 'คิวตรวจสอบ (${m[1]})'),
   (RegExp(r'^Reports \((\d+)\)$'), (m) => 'รายงาน (${m[1]})'),
   (RegExp(r'^Live \((\d+)\)$'), (m) => 'เผยแพร่อยู่ (${m[1]})'),
-  (RegExp(r'^(.+) views$'), (m) => 'ยอดดู ${m[1]}'),
+  (RegExp(r'^(.+) likes$'), (m) => 'ถูกใจ ${m[1]}'),
   (RegExp(r'^Enter 1 to (\d+) coins\.$'), (m) => 'ใส่ 1 ถึง ${m[1]} เหรียญ'),
   (
     RegExp(r'^(\d+) demo videos selected$'),
@@ -512,7 +506,6 @@ final _rules = <(RegExp, String Function(Match))>[
   (RegExp(r'^(.+) was approved$'), (m) => '${m[1]} ได้รับการอนุมัติแล้ว'),
   (RegExp(r'^(.+) was rejected$'), (m) => '${m[1]} ไม่ได้รับการอนุมัติ'),
   (RegExp(r'^(.+) was taken down$'), (m) => '${m[1]} ถูกถอดออก'),
-  (RegExp(r'^Notifications, (\d+) new$'), (m) => 'การแจ้งเตือน ใหม่ ${m[1]}'),
 ];
 
 String _date(String english) {

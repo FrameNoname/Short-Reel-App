@@ -62,7 +62,7 @@ class _WalletViewState extends State<WalletView> {
 
   Future<void> _cancelPlan() async {
     final wallet = context.read<WalletController>();
-    final end = shortDate(wallet.subscription!.endDate);
+    final end = shortDate(wallet.subscription!.lastDay);
     final confirmed = await showConfirmDialog(
       context,
       title: 'Cancel Plus?',
@@ -309,8 +309,10 @@ class _PlusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final plan = subscription;
-    final daysLeft = plan?.endDate.difference(DateTime.now()).inDays ?? 0;
-    final total = plan?.endDate.difference(plan.startDate).inDays ?? 1;
+    final daysLeft = plan?.daysLeft ?? 0;
+    final total = plan == null
+        ? 1
+        : plan.lastDay.difference(plan.startDate).inDays + 1;
     return GestureDetector(
       onTap: plan == null ? onGet : null,
       child: AppCard(
@@ -380,8 +382,8 @@ class _PlusCard extends StatelessWidget {
                   Flexible(
                     child: Text(
                       plan.isCancelled
-                          ? 'Ends ${shortDate(plan.endDate)}'
-                          : '$daysLeft days left, renews ${shortDate(plan.endDate)}',
+                          ? 'Ends ${shortDate(plan.lastDay)}'
+                          : '$daysLeft ${daysLeft == 1 ? 'day' : 'days'} left, paid through ${shortDate(plan.lastDay)}',
                       textAlign: TextAlign.right,
                       style: const TextStyle(fontSize: 12),
                     ),

@@ -24,12 +24,18 @@ Future<void> _takeDown(BuildContext context, int filmId) async {
     confirmLabel: 'Take down',
   );
   if (reason != null && context.mounted) {
-    await _guard(context, () => admin.review(filmId, 'taken_down', note: reason));
+    await _guard(
+      context,
+      () => admin.review(filmId, 'taken_down', note: reason),
+    );
   }
 }
 
 /// Runs an admin action and shows the server's message if it fails.
-Future<void> _guard(BuildContext context, Future<void> Function() action) async {
+Future<void> _guard(
+  BuildContext context,
+  Future<void> Function() action,
+) async {
   final messenger = ScaffoldMessenger.of(context);
   try {
     await action();
@@ -120,7 +126,9 @@ class _AdminViewState extends State<AdminView> {
               ],
             ),
             const SizedBox(height: 14),
-            if (admin.isLoading && admin.queue.isEmpty && admin.liveFilms.isEmpty)
+            if (admin.isLoading &&
+                admin.queue.isEmpty &&
+                admin.liveFilms.isEmpty)
               const LinearProgressIndicator(),
             if (admin.error != null)
               AppCard(
@@ -175,7 +183,8 @@ class _AdminViewState extends State<AdminView> {
                     ],
                   ),
                   Slider(
-                    value: _draggedCreatorShare ?? (100 - adminShare).toDouble(),
+                    value:
+                        _draggedCreatorShare ?? (100 - adminShare).toDouble(),
                     max: 100,
                     divisions: 20,
                     label:
@@ -338,10 +347,32 @@ class _FilmSummary extends StatelessWidget {
   }
 }
 
-class _ReviewCard extends StatelessWidget {
+/// A film waiting for review. The server only lets a pending film become
+/// approved or rejected (taking down is for live films), so only those two
+/// actions are offered, and they are off while one is being sent.
+class _ReviewCard extends StatefulWidget {
   const _ReviewCard({required this.film});
 
   final Film film;
+
+  @override
+  State<_ReviewCard> createState() => _ReviewCardState();
+}
+
+class _ReviewCardState extends State<_ReviewCard> {
+  bool _busy = false;
+
+  Film get film => widget.film;
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _guard(context, action);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _reject(BuildContext context) async {
     final admin = context.read<AdminController>();
@@ -351,8 +382,8 @@ class _ReviewCard extends StatelessWidget {
       hint: 'Tell the creator what to fix',
       confirmLabel: 'Reject',
     );
-    if (reason != null && context.mounted) {
-      await _guard(context, () => admin.review(film.id, 'rejected', note: reason));
+    if (reason != null && mounted) {
+      await _run(() => admin.review(film.id, 'rejected', note: reason));
     }
   }
 
@@ -386,8 +417,9 @@ class _ReviewCard extends StatelessWidget {
                       backgroundColor: AppColors.green,
                       foregroundColor: Colors.black,
                     ),
-                    onPressed: () =>
-                        _guard(context, () => admin.review(film.id, 'approved')),
+                    onPressed: _busy
+                        ? null
+                        : () => _run(() => admin.review(film.id, 'approved')),
                     child: const Text('Approve'),
                   ),
                 ),
@@ -397,16 +429,8 @@ class _ReviewCard extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.danger,
                     ),
-                    onPressed: () => _reject(context),
+                    onPressed: _busy ? null : () => _reject(context),
                     child: const Text('Reject'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(padding: EdgeInsets.zero),
-                    onPressed: () => _takeDown(context, film.id),
-                    child: const Text('Take down'),
                   ),
                 ),
               ],
@@ -463,9 +487,9 @@ class _ReportCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => _guard(
                       context,
-                      () => context
-                          .read<AdminController>()
-                          .resolveReport(report.id),
+                      () => context.read<AdminController>().resolveReport(
+                        report.id,
+                      ),
                     ),
                     child: const Text('Mark resolved'),
                   ),
@@ -504,7 +528,7 @@ class _LiveFilmCard extends StatelessWidget {
           children: [
             _FilmSummary(
               film: film,
-              detail: '${compactCount(film.viewCount)} views',
+              detail: '${compactCount(film.likeCount)} likes',
             ),
             const SizedBox(height: 10),
             OutlinedButton(

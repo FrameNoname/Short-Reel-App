@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 
-import '../models/app_notification.dart';
 import '../models/catalog.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
@@ -18,8 +17,7 @@ import 'film_filter.dart';
 ///
 /// Small caches (films, channels, like/save/follow flags) let the screens read
 /// synchronously what the last request returned. Not wired to the backend yet,
-/// and kept only on the device for the session: comment likes, watch progress,
-/// and notifications (always empty).
+/// and kept only on the device for the session: comment likes.
 class ApiRepository implements AppRepository {
   ApiRepository({
     required ApiClient client,
@@ -52,10 +50,10 @@ class ApiRepository implements AppRepository {
   final Set<int> _saved = {};
   final Set<int> _following = {};
   final Set<int> _unlockedFilmIds = {};
+  final Map<int, int> _episodeFilm = {};
   List<int> _watchlistIds = const [];
   final Map<int, List<FilmComment>> _comments = {};
   final Set<(int, int)> _commentLikes = {};
-  final Map<int, List<(int, int)>> _progress = {};
 
   List<Film> _catalogFilms = const [];
   Future<void>? _catalogLoading;
@@ -78,6 +76,7 @@ class ApiRepository implements AppRepository {
             )
             as Map<String, dynamic>;
     await _tokens.write(json['token'] as String);
+    _api.beginNewSession();
     return _userFrom(json['user'] as Map<String, dynamic>);
   }
 
@@ -94,6 +93,7 @@ class ApiRepository implements AppRepository {
             )
             as Map<String, dynamic>;
     await _tokens.write(json['token'] as String);
+    _api.beginNewSession();
     return _userFrom(json['user'] as Map<String, dynamic>);
   }
 
@@ -123,6 +123,8 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<void> clearSession() async {
+    // First, so answers still on their way for the old person are dropped.
+    _api.beginNewSession();
     await _tokens.clear();
     _me = null;
     _liked.clear();
@@ -131,7 +133,6 @@ class ApiRepository implements AppRepository {
     _unlockedFilmIds.clear();
     _watchlistIds = const [];
     _comments.clear();
-    _progress.clear();
   }
 
   @override
@@ -186,22 +187,37 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<List<Film>> films([FilmFilter filter = const FilmFilter()]) async {
-    final json = await _api.get(
-      '/films',
-      query: {
-        if (filter.query.isNotEmpty) 'q': filter.query,
-        if (filter.genres.isNotEmpty) 'genre': filter.genres.join(','),
-        if (filter.aiTools.isNotEmpty) 'ai_tool': filter.aiTools.join(','),
-        if (_lengthParam[filter.length] != null)
-          'length': _lengthParam[filter.length],
-      },
-    );
-    final core = _rememberAll(json);
+    final core = await _allPages('/films', {
+      if (filter.query.isNotEmpty) 'q': filter.query,
+      if (filter.genres.isNotEmpty) 'genre': filter.genres.join(','),
+      if (filter.aiTools.isNotEmpty) 'ai_tool': filter.aiTools.join(','),
+      if (_lengthParam[filter.length] != null)
+        'length': _lengthParam[filter.length],
+    });
     // The catalog is an extra: it follows the app's own films and a failure
     // there never touches them.
     final extra = await _matchingCatalogFilms(filter);
     return [...core, ...extra];
   }
+
+  /// Reads every page of a film list (the server says whether another exists),
+  /// so nothing past the first page is silently cut off.
+  Future<List<Film>> _allPages(String path, Map<String, dynamic> query) async {
+    final all = <Film>[];
+    for (var page = 1; page <= _maxPages; page++) {
+      final json =
+          await _api.get(
+                path,
+                query: {...query, 'page': page, 'page_size': 100},
+              )
+              as Map<String, dynamic>;
+      all.addAll(_rememberAll(json));
+      if (json['has_more'] != true) break;
+    }
+    return all;
+  }
+
+  static const _maxPages = 20;
 
   Future<List<Film>> _matchingCatalogFilms(FilmFilter filter) async {
     // The catalog has no AI tool or running time, so those filters hide it.
@@ -247,11 +263,8 @@ class ApiRepository implements AppRepository {
   @override
   Future<List<Film>> filmsOf(int creatorId) async {
     final isOwn = creatorId == _me?.id;
-    final json = await _api.get(
-      isOwn ? '/creator/films' : '/films',
-      query: isOwn ? null : {'creator_id': creatorId},
-    );
-    return _rememberAll(json);
+    if (!isOwn) return _allPages('/films', {'creator_id': creatorId});
+    return _rememberAll(await _api.get('/creator/films'));
   }
 
   @override
@@ -259,10 +272,14 @@ class ApiRepository implements AppRepository {
     if (filmId >= catalogFilmIdBase) return _catalogEpisodes(filmId);
     final json = await _api.get('/films/$filmId') as Map<String, dynamic>;
     _remember(json['film'] as Map<String, dynamic>);
-    return [
+    final list = [
       for (final e in json['episodes'] as List)
         Episode.fromJson(e as Map<String, dynamic>),
     ];
+    for (final e in list) {
+      _episodeFilm[e.id] = e.filmId;
+    }
+    return list;
   }
 
   @override
@@ -279,8 +296,10 @@ class ApiRepository implements AppRepository {
   Future<Playback> playback(int episodeId) async {
     final json = await _api.get('/episodes/$episodeId') as Map<String, dynamic>;
     final url = json['stream_url'] as String?;
+    final episode = Episode.fromJson(json['episode'] as Map<String, dynamic>);
+    _episodeFilm[episode.id] = episode.filmId;
     return Playback(
-      episode: Episode.fromJson(json['episode'] as Map<String, dynamic>),
+      episode: episode,
       streamUrl: url == null ? null : '$_origin$url',
     );
   }
@@ -294,9 +313,19 @@ class ApiRepository implements AppRepository {
   }
 
   @override
+  Future<User> refreshBalance(int userId) async {
+    final json = await _api.get('/wallet') as Map<String, dynamic>;
+    return _withBalance(json['coin_balance'] as int);
+  }
+
+  @override
   Future<User> unlock(int userId, int episodeId) async {
     final json =
         await _api.post('/episodes/$episodeId/unlock') as Map<String, dynamic>;
+    final filmId = _episodeFilm[episodeId];
+    if (filmId != null && (json['charged'] as int? ?? 0) > 0) {
+      _unlockedFilmIds.add(filmId);
+    }
     return _withBalance(json['balance'] as int);
   }
 
@@ -318,13 +347,16 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<List<Transaction>> transactionsOf(int userId) async {
-    final json =
-        await _api.get('/wallet/transactions') as Map<String, dynamic>;
-    final rows = (json['transactions'] as List).cast<Map<String, dynamic>>();
-    for (final row in rows) {
-      if (row['type'] == 'unlock' && row['film_id'] is int) {
-        _unlockedFilmIds.add(row['film_id'] as int);
-      }
+    final rows = <Map<String, dynamic>>[];
+    for (var page = 0; page < _maxPages; page++) {
+      final json =
+          await _api.get(
+                '/wallet/transactions',
+                query: {'limit': 200, 'offset': rows.length},
+              )
+              as Map<String, dynamic>;
+      rows.addAll((json['transactions'] as List).cast<Map<String, dynamic>>());
+      if (json['has_more'] != true) break;
     }
     return [for (final row in rows) Transaction.fromJson(row)];
   }
@@ -352,13 +384,16 @@ class ApiRepository implements AppRepository {
   Subscription? _subscriptionFrom(Map<String, dynamic> json) {
     final plan = json['subscription'];
     if (json['active'] != true || plan is! Map<String, dynamic>) return null;
-    return Subscription.fromJson(plan);
+    return Subscription.fromJson(
+      plan,
+      paidThrough: json['paid_through'] as String?,
+      today: json['today'] as String?,
+    );
   }
 
   @override
   Future<Subscription> subscribe(int userId) async {
-    final json =
-        await _api.post('/subscription') as Map<String, dynamic>;
+    final json = await _api.post('/subscription') as Map<String, dynamic>;
     return _subscriptionFrom(json)!;
   }
 
@@ -431,6 +466,7 @@ class ApiRepository implements AppRepository {
     required String genre,
     required String aiTool,
     required String promptCredit,
+    Map<int, int> episodePrices = const {},
   }) async {
     await _api.put(
       '/films/$filmId',
@@ -439,6 +475,11 @@ class ApiRepository implements AppRepository {
         'genre': genre,
         'ai_tool': aiTool,
         'prompt_credit': promptCredit,
+        if (episodePrices.isNotEmpty)
+          'episode_prices': [
+            for (final e in episodePrices.entries)
+              {'id': e.key, 'price_coins': e.value},
+          ],
         // Kept as it was, because an update replaces every field.
         if (_films[filmId]?.synopsis != null)
           'synopsis': _films[filmId]!.synopsis,
@@ -455,7 +496,10 @@ class ApiRepository implements AppRepository {
   @override
   Future<void> setEpisodePrices(Map<int, int> pricesByEpisodeId) async {
     for (final entry in pricesByEpisodeId.entries) {
-      await _api.put('/episodes/${entry.key}', data: {'price_coins': entry.value});
+      await _api.put(
+        '/episodes/${entry.key}',
+        data: {'price_coins': entry.value},
+      );
     }
   }
 
@@ -479,7 +523,6 @@ class ApiRepository implements AppRepository {
     return Earnings(
       coins: json['coins_earned'] as int,
       unlocks: json['unlock_count'] as int,
-      views: 0, // the API does not count views yet
       likes: own.fold(0, (sum, f) => sum + f.likeCount),
       adminSharePercent: json['admin_share_percent'] as int?,
       coinsByFilm: {
@@ -489,10 +532,6 @@ class ApiRepository implements AppRepository {
       },
     );
   }
-
-  /// Daily charts need view tracking, which the backend does not have.
-  @override
-  List<DailyStat> dailyStatsOf(int creatorId, {int days = 60}) => const [];
 
   // ---- admin ------------------------------------------------------------
 
@@ -540,8 +579,7 @@ class ApiRepository implements AppRepository {
     final coins = json['coins'] as Map<String, dynamic>;
     final usd = json['simulated_payments'] as Map<String, dynamic>;
     double dollars(String key) =>
-        ((usd[key] as Map<String, dynamic>)['simulated_usd'] as num)
-            .toDouble();
+        ((usd[key] as Map<String, dynamic>)['simulated_usd'] as num).toDouble();
     return AdminSales(
       // Simulated dollars only; coins stay in their own fields.
       totalUsd: dollars('coin_topups') + dollars('subscriptions'),
@@ -555,8 +593,7 @@ class ApiRepository implements AppRepository {
   @override
   Future<int> adminSharePercent() async {
     final json =
-        await _api.get('/admin/settings/revenue-share')
-            as Map<String, dynamic>;
+        await _api.get('/admin/settings/revenue-share') as Map<String, dynamic>;
     return json['admin_share_percent'] as int;
   }
 
@@ -611,6 +648,10 @@ class ApiRepository implements AppRepository {
         ? await _api.post('/films/$filmId/watchlist')
         : await _api.delete('/films/$filmId/watchlist');
     on ? _saved.add(filmId) : _saved.remove(filmId);
+    // The saved list on Profile reads this, so it must follow the heart.
+    _watchlistIds = on
+        ? [filmId, ..._watchlistIds.where((id) => id != filmId)]
+        : [..._watchlistIds.where((id) => id != filmId)];
   }
 
   @override
@@ -719,7 +760,14 @@ class ApiRepository implements AppRepository {
     _saved
       ..removeWhere((id) => !_isCatalog(id))
       ..addAll(_watchlistIds);
-    await transactionsOf(userId);
+    // Purchases are read from the unlock rows, never guessed from the ledger.
+    final unlocked = await _api.get('/wallet/unlocked') as Map<String, dynamic>;
+    _unlockedFilmIds
+      ..clear()
+      ..addAll([
+        for (final row in unlocked['unlocked'] as List)
+          (row as Map<String, dynamic>)['film_id'] as int,
+      ]);
     for (final id in {..._watchlistIds, ..._unlockedFilmIds}) {
       if (_films.containsKey(id)) continue;
       try {
@@ -741,35 +789,11 @@ class ApiRepository implements AppRepository {
   ];
 
   @override
-  List<User> followingOf(int userId) => [
-    for (final id in _following) ?_users[id],
-  ];
-
-  @override
-  void recordProgress(int userId, int filmId, int episodeNo) {
-    final list = _progress.putIfAbsent(userId, () => []);
-    list.removeWhere((entry) => entry.$1 == filmId);
-    list.insert(0, (filmId, episodeNo));
-  }
-
-  @override
-  List<WatchProgress> continueWatching(int userId) => [
-    for (final (filmId, episodeNo) in _progress[userId] ?? const <(int, int)>[])
-      if (_films[filmId] case final film?
-          when film.status == 'approved' && episodeNo < film.episodeCount)
-        WatchProgress(film: film, episodeNo: episodeNo),
-  ];
-
-  // ---- notifications: not part of the backend yet -----------------------
-
-  @override
-  List<AppNotification> notificationsOf(int userId) => const [];
-
-  @override
-  int unreadNotificationCount(int userId) => 0;
-
-  @override
-  void markNotificationsRead(int userId) {}
+  List<User> followingOf(int userId) => userId == _me?.id
+      // Only the signed-in person's follows are known. Another person's list
+      // is not available from the API, so none is shown rather than these.
+      ? [for (final id in _following) ?_users[id]]
+      : const [];
 
   // ---- optional Series Jeen catalog -------------------------------------
 

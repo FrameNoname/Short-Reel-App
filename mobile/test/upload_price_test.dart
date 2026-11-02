@@ -86,7 +86,7 @@ void main() {
     await tester.enterText(price, '0');
     await tester.pumpAndSettle();
 
-    expect(find.text('Enter 1 to 999 coins.'), findsOneWidget);
+    expect(find.text('Enter 1 to 500 coins.'), findsOneWidget);
     final submit = find.widgetWithText(
       FilledButton,
       'Set a price for every paid episode',

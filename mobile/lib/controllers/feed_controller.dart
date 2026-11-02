@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../data/app_repository.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
+import '../services/api_client.dart' show isStaleSession;
 import '../services/errors.dart';
 
 enum FeedTab { following, forYou }
@@ -17,18 +18,27 @@ class FeedController extends ChangeNotifier {
   bool isLoading = true;
 
   final Map<int, int> _currentEpisode = {};
+  final Map<int, List<int>> _episodeNumbers = {};
+
+  // Counts feed loads; an answer from an older load is dropped, so a slow reply
+  // for one tab can never replace the films of the tab chosen after it.
+  int _loadId = 0;
   Set<String> _preferred = const {};
 
   /// Why the last load failed, or null.
   String? error;
 
   Future<void> load(int? userId) async {
+    final id = ++_loadId;
     isLoading = true;
     error = null;
     notifyListeners();
     try {
-      films = await _fetch(userId);
+      final loaded = await _fetch(userId);
+      if (id != _loadId) return;
+      films = loaded;
     } on Object catch (e) {
+      if (id != _loadId || isStaleSession(e)) return;
       films = const [];
       error = errorMessage(e);
     }
@@ -60,11 +70,24 @@ class FeedController extends ChangeNotifier {
 
   int currentEpisodeOf(int filmId) => _currentEpisode[filmId] ?? 1;
 
-  void play(Episode episode, {int? userId}) {
-    _currentEpisode[episode.filmId] = episode.episodeNo;
-    if (userId != null) {
-      repository.recordProgress(userId, episode.filmId, episode.episodeNo);
+  /// The episode numbers a film really has (they need not run 1, 2, 3...).
+  void learnEpisodes(int filmId, List<int> numbers) {
+    _episodeNumbers[filmId] = [...numbers]..sort();
+  }
+
+  /// The episode after [current] in the film's real list, or null at the end.
+  /// Until the list is known, falls back to counting from the episode count.
+  int? episodeAfter(int filmId, int current, {required int fallbackCount}) {
+    final known = _episodeNumbers[filmId];
+    if (known == null) return current < fallbackCount ? current + 1 : null;
+    for (final number in known) {
+      if (number > current) return number;
     }
+    return null;
+  }
+
+  void play(Episode episode) {
+    _currentEpisode[episode.filmId] = episode.episodeNo;
     notifyListeners();
   }
 
@@ -80,6 +103,8 @@ class FeedController extends ChangeNotifier {
     error = null;
     tab = FeedTab.forYou;
     _currentEpisode.clear();
+    _episodeNumbers.clear();
+    _loadId++;
     notifyListeners();
   }
 

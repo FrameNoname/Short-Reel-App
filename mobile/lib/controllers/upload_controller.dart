@@ -48,13 +48,14 @@ class UploadController extends ChangeNotifier {
     required String promptCredit,
     Map<int, int> episodePrices = const {},
   }) async {
-    await repository.setEpisodePrices(episodePrices);
+    // One request: prices and details are accepted together or not at all.
     await repository.updateFilm(
       filmId,
       title: title,
       genre: genre,
       aiTool: aiTool,
       promptCredit: promptCredit,
+      episodePrices: episodePrices,
     );
     notifyListeners();
   }

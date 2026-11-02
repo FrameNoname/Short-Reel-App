@@ -16,7 +16,6 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/text.dart';
 import '../upload/upload_view.dart';
 import 'creator_profile_view.dart';
-import 'creator_stats.dart';
 
 /// Everything the studio shows, read from the backend in one go.
 class _Studio {
@@ -57,7 +56,11 @@ class _CreatorDashboardViewState extends State<CreatorDashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    final userId = context.watch<AuthController>().user!.id;
+    // Logged out (or expired) while this page is still on screen: show nothing
+    // while the app closes it, instead of reading a user that is gone.
+    final user = context.watch<AuthController>().user;
+    if (user == null) return const Scaffold(body: SizedBox.shrink());
+    final userId = user.id;
     // Re-read after an upload, edit or delete.
     context.watch<UploadController>();
     return FutureBuilder<_Studio>(
@@ -81,7 +84,6 @@ class _CreatorDashboardViewState extends State<CreatorDashboardView> {
   }
 
   Widget _buildStudio(BuildContext context, int userId, _Studio data) {
-    final repository = context.read<UploadController>().repository;
     final earnings = data.earnings;
     final films = data.films;
     final adminShare = earnings.adminSharePercent ?? 30;
@@ -175,14 +177,6 @@ class _CreatorDashboardViewState extends State<CreatorDashboardView> {
             ],
           ),
           const SizedBox(height: 10),
-          if (repository.dailyStatsOf(userId).isNotEmpty) ...[
-            PerformanceCard(stats: repository.dailyStatsOf(userId)),
-            const SizedBox(height: 10),
-          ],
-          TopFilmsCard(
-            films: films.where((f) => f.status == 'approved').toList(),
-            coinsOf: (film) => earnings.coinsByFilm[film.id] ?? 0,
-          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -192,9 +186,13 @@ class _CreatorDashboardViewState extends State<CreatorDashboardView> {
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
               ),
               TextButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const UploadView()),
-                ),
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const UploadView()),
+                  );
+                  // A film uploaded meanwhile must show up with its status.
+                  if (mounted) _reload();
+                },
                 child: const Text(
                   '+ Upload',
                   style: TextStyle(color: AppColors.link),
