@@ -40,6 +40,9 @@ test('register validates username, password and role', async () => {
     { username: 'ab', password: 'secret123' },
     { username: 'bad name!', password: 'secret123' },
     { username: 'okname', password: '123' },
+    { username: 'okname', password: '123456' },
+    { username: 'okname', password: 'abcdefgh' },
+    { username: 'okname', password: '        ' },
     { username: 'okname', password: 'secret123', role: 'wizard' },
     {},
   ]) {
@@ -105,4 +108,13 @@ test('the profile can be updated', async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.user.display_name, 'Pro File');
   assert.equal(res.body.user.bio, 'hello');
+});
+
+test('passwords are never trimmed: spaces are part of the password', async () => {
+  const username = 'spacey_user';
+  assert.equal((await register({ username, password: '  pass 1234  ' })).status, 201);
+  const exact = await env.req('post', '/api/auth/login').send({ username, password: '  pass 1234  ' });
+  assert.equal(exact.status, 200);
+  const trimmed = await env.req('post', '/api/auth/login').send({ username, password: 'pass 1234' });
+  assert.equal(trimmed.status, 401);
 });

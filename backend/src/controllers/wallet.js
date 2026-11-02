@@ -18,10 +18,23 @@ exports.listTransactions = async (req, res) => {
   const limit = req.query.limit === undefined ? 50 : pathId(req.query.limit, 'limit');
   const offset = req.query.offset === undefined ? 0 : Number(pathId(req.query.offset, 'offset'));
   if (limit < 1 || limit > 200) throw bad('limit is not valid');
+  const rows = await wallet.listTransactions(req.app.locals.pool, req.user.id, {
+    limit: limit + 1,
+    offset,
+  });
   res.json({
     simulated_payment: true,
-    transactions: await wallet.listTransactions(req.app.locals.pool, req.user.id, { limit, offset }),
+    transactions: rows.slice(0, limit),
+    limit,
+    offset,
+    has_more: rows.length > limit,
   });
+};
+
+// Every episode the user paid for, read from the unlock rows themselves, so an
+// old purchase never falls out of view behind newer ledger entries.
+exports.listUnlocked = async (req, res) => {
+  res.json({ unlocked: await wallet.listUnlocked(req.app.locals.pool, req.user.id) });
 };
 
 exports.topup = async (req, res) => {

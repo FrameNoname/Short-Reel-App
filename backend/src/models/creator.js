@@ -1,13 +1,15 @@
-// What the film owner earns from an unlock. An admin's own films pay the whole
-// price to the admin, so their share column is the admin one.
-const OWNER_SHARE = `CASE WHEN u.role = 'admin' THEN ue.admin_share ELSE ue.creator_share END`;
+// What the film owner earned from an unlock. An admin's own films pay the whole
+// price to the admin, so their share column is the admin one. Whether the owner
+// was an admin is the snapshot taken at purchase, so a later role change cannot
+// rewrite past earnings.
+const OWNER_SHARE = `CASE WHEN ue.owner_is_admin = 1 THEN ue.admin_share ELSE ue.creator_share END`;
 
 exports.earnings = async (pool, ownerId) => {
   const [perFilm] = await pool.query(
     `SELECT f.id AS film_id, f.title, f.status, COUNT(ue.id) AS unlock_count,
             COALESCE(SUM(ue.coins_spent), 0) AS coins_spent,
             COALESCE(SUM(${OWNER_SHARE}), 0) AS coins_earned
-       FROM films f JOIN users u ON u.id = f.creator_id
+       FROM films f
        LEFT JOIN episodes e ON e.film_id = f.id
        LEFT JOIN unlocked_episodes ue ON ue.episode_id = e.id
       WHERE f.creator_id = ?
@@ -20,7 +22,6 @@ exports.earnings = async (pool, ownerId) => {
        FROM unlocked_episodes ue
        JOIN episodes e ON e.id = ue.episode_id
        JOIN films f ON f.id = e.film_id
-       JOIN users u ON u.id = f.creator_id
       WHERE f.creator_id = ? ORDER BY ue.id DESC LIMIT 20`,
     [ownerId],
   );

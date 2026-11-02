@@ -34,13 +34,32 @@ function signToken(req, user) {
   });
 }
 
+// The password is used exactly as typed (never trimmed). Registration enforces
+// the same rule as the app: 8-72 characters with at least a letter and a number.
+function rawPassword(body, { strong }) {
+  const value = body?.password;
+  if (value === undefined || value === null || value === '') {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'password is required');
+  }
+  if (typeof value !== 'string') throw new ApiError(400, 'VALIDATION_ERROR', 'password must be text');
+  if (value.length > 72) throw new ApiError(400, 'VALIDATION_ERROR', 'password must be at most 72 characters');
+  if (strong && !(value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value))) {
+    throw new ApiError(
+      400,
+      'VALIDATION_ERROR',
+      'password must be at least 8 characters with a letter and a number',
+    );
+  }
+  return value;
+}
+
 exports.register = async (req, res) => {
   const pool = req.app.locals.pool;
   const username = text(req.body, 'username', { min: 3, max: 30 });
   if (!USERNAME.test(username)) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'username may use letters, numbers, "_" and "."');
   }
-  const password = text(req.body, 'password', { min: 6, max: 72 });
+  const password = rawPassword(req.body, { strong: true });
   const role = req.body?.role ?? 'viewer';
   // Admin accounts are never created from the outside; an admin promotes users.
   if (role === 'admin') throw new ApiError(403, 'FORBIDDEN', 'Admin accounts cannot be self-registered');
@@ -62,7 +81,8 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const pool = req.app.locals.pool;
   const username = text(req.body, 'username', { max: 30 });
-  const password = text(req.body, 'password', { max: 72 });
+  // Login accepts any password already stored, including the 4-digit seed ones.
+  const password = rawPassword(req.body, { strong: false });
   const user = await users.findByUsername(pool, username);
   const valid = await argon2.verify(user ? user.password : await getDummyHash(), password).catch(() => false);
   if (!user || !valid) throw new ApiError(401, 'UNAUTHENTICATED', 'Username or password is wrong');

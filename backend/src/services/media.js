@@ -12,17 +12,75 @@ async function discard(file) {
   if (file) await fs.unlink(file.path ?? file).catch(() => {});
 }
 
-// MP4 files carry an 'ftyp' box right at the start.
-async function looksLikeMp4(filePath) {
+// Sample-entry codes of the video codecs a browser <video> can play from MP4.
+const VIDEO_CODECS = new Set(['avc1', 'avc3', 'hvc1', 'hev1', 'av01', 'vp09', 'mp4v']);
+
+// Walks the box headers of an MP4 (never the media data) and answers whether it
+// holds a playable video track: an 'ftyp' box, a 'moov' with a 'trak' whose
+// handler is 'vide' and whose sample description names a supported codec, and
+// either media data ('mdat') or fragments ('moof', fragmented MP4).
+async function inspectMp4(filePath) {
   const fd = await fs.open(filePath, 'r');
   try {
-    const head = Buffer.alloc(12);
-    const { bytesRead } = await fd.read(head, 0, 12, 0);
-    return bytesRead >= 12 && head.toString('latin1', 4, 8) === 'ftyp';
+    const { size } = await fd.stat();
+    const read = async (offset, length) => {
+      const buf = Buffer.alloc(length);
+      const { bytesRead } = await fd.read(buf, 0, length, offset);
+      return buf.subarray(0, bytesRead);
+    };
+    const children = async (from, to) => {
+      const boxes = [];
+      let offset = from;
+      while (offset + 8 <= to && boxes.length < 64) {
+        const head = await read(offset, 16);
+        if (head.length < 8) break;
+        let boxSize = head.readUInt32BE(0);
+        let headSize = 8;
+        if (boxSize === 1 && head.length >= 16) {
+          boxSize = Number(head.readBigUInt64BE(8));
+          headSize = 16;
+        } else if (boxSize === 0) {
+          boxSize = to - offset;
+        }
+        if (boxSize < headSize || offset + boxSize > to) break;
+        boxes.push({ type: head.toString('latin1', 4, 8), start: offset, body: offset + headSize, end: offset + boxSize });
+        offset += boxSize;
+      }
+      return boxes;
+    };
+    const first = (boxes, type) => boxes.find((b) => b.type === type);
+
+    const top = await children(0, size);
+    if (top[0]?.type !== 'ftyp') return { valid: false, reason: 'not an MP4 file' };
+    const moov = first(top, 'moov');
+    if (!moov) return { valid: false, reason: 'the file has no movie header (moov)' };
+    if (!first(top, 'mdat') && !first(top, 'moof')) {
+      return { valid: false, reason: 'the file has no media data' };
+    }
+    for (const trak of (await children(moov.body, moov.end)).filter((b) => b.type === 'trak')) {
+      const mdia = first(await children(trak.body, trak.end), 'mdia');
+      if (!mdia) continue;
+      const mdiaBoxes = await children(mdia.body, mdia.end);
+      const hdlr = first(mdiaBoxes, 'hdlr');
+      if (!hdlr || (await read(hdlr.body + 8, 4)).toString('latin1') !== 'vide') continue;
+      const minf = first(mdiaBoxes, 'minf');
+      const stbl = minf && first(await children(minf.body, minf.end), 'stbl');
+      const stsd = stbl && first(await children(stbl.body, stbl.end), 'stsd');
+      if (!stsd) continue;
+      // full box header (4) + entry count (4) + entry size (4), then the entry type.
+      const codec = (await read(stsd.body + 12, 4)).toString('latin1');
+      if (VIDEO_CODECS.has(codec)) return { valid: true, codec };
+      return { valid: false, reason: `unsupported video codec "${codec}"` };
+    }
+    return { valid: false, reason: 'the file has no video track' };
+  } catch {
+    return { valid: false, reason: 'the file could not be read as an MP4' };
   } finally {
     await fd.close();
   }
 }
+
+const looksLikeMp4 = async (filePath) => (await inspectMp4(filePath)).valid;
 
 // Reads the length from the 'mvhd' box inside 'moov'. Returns 0 if it is not there.
 async function mp4DurationSec(filePath) {
@@ -69,4 +127,4 @@ async function mp4DurationSec(filePath) {
   }
 }
 
-module.exports = { resolveInside, discard, looksLikeMp4, mp4DurationSec };
+module.exports = { resolveInside, discard, inspectMp4, looksLikeMp4, mp4DurationSec };
