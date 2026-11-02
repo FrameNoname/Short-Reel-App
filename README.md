@@ -82,17 +82,14 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 
 ### รัน test
 
-```bash
-npm test --prefix backend
-```
+ชุด test อัตโนมัติของ backend และ Flutter ถูกลบออกเพื่อเขียนใหม่ ตอนนี้ยังไม่มี test ในโปรเจกต์ ไฟล์ใหม่ให้วางที่:
 
-integration test ของ backend (179 test) ต้องมี MariaDB เปิดอยู่ แต่ละไฟล์สร้างฐานข้อมูลของตัวเอง `shortreel_<ชื่อ>_test` จาก `db/shortreel.sql` แล้วลบทิ้ง และ **ไม่แตะฐานข้อมูล `shortreel`** (ตัวช่วยปฏิเสธชื่อที่ไม่ลงท้าย `_test`). ตั้งค่าเชื่อมต่อด้วย `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER`, `TEST_DB_PASSWORD` ถ้าไม่ใช่ค่าเริ่มต้นของ XAMPP
+- backend: `backend/test/*.test.js` รันด้วย `npm test --prefix backend` (`node --test`) ถ้า test ต้องใช้ฐานข้อมูล ให้ใช้ฐานชื่อลงท้าย `_test` เท่านั้น ห้ามชี้ไปที่ `shortreel`
+- Flutter: `mobile/test/*_test.dart` รันด้วย `cd mobile && flutter test`
 
-```bash
-cd mobile
-flutter analyze
-flutter test
-```
+ตรวจโค้ด Flutter ได้ด้วย `cd mobile && flutter analyze`
+
+ทดสอบ API ด้วยมือ: ใช้ collection "ShortReel ทดสอบเอง (ไม่มีโค้ด)" ใน Postman กับ server ทดสอบพอร์ต 3100 (วิธีเปิดฐานและ server ชั่วคราวอยู่ใน [`docs/postman/README.md`](docs/postman/README.md))
 
 ## ทำถึงขั้นไหนแล้ว
 
@@ -114,4 +111,6 @@ flutter test
 | ตัวเสริม Series Jeen | ทำงานแยก ไม่กระทบ flow หลัก; บั๊กเดิมของ catalog/player ยังไม่ได้ตรวจ |
 | คลิปเดโมของทีม 10–20 คลิป | **ยังไม่มี** มีสคริปต์นำเข้า และตอนนี้ฐานข้อมูลพัฒนาชี้ไปที่คลิปที่สร้างเอง 12 คลิป (+1 คลิปยาวสำหรับลอง seek) เป็นชุดชั่วคราว ให้ทีมแทนที่ด้วยคลิปที่มีสิทธิ์ใช้ |
 
-`MockRepository` ย้ายไปอยู่ `mobile/test/support/` ใช้ใน widget test เท่านั้น. `main.dart` ใช้ `ApiRepository`
+`main.dart` ใช้ `ApiRepository` (ต่อ backend จริง). `MockRepository` ถูกลบไปพร้อมชุด test เดิม
+
+แอปรองรับ Android และเว็บ ไม่มีโฟลเดอร์ iOS
