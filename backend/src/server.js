@@ -12,6 +12,7 @@ async function main() {
   const app = createApp({
     pool,
     jwtSecret: env.jwtSecret,
+    uploadDir: env.uploadDir,
     jwtExpiresIn: env.jwtExpiresIn,
     catalog,
     catalogAllowGuest: env.catalog.allowGuest,

@@ -11,10 +11,20 @@
 require('dotenv').config({ quiet: true });
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const mysql = require('mysql2/promise');
 const { looksLikeMp4, mp4DurationSec } = require('../src/services/media');
 
 const SEED_FILM_IDS = [1, 2, 3, 4, 5];
+
+// The stored name carries a hash of the file's bytes, so clips whose names
+// sanitize to the same text (Thai names, for example) can never overwrite each
+// other, and re-running with the same clips reuses the same file.
+function storedName(source) {
+  const hash = crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex').slice(0, 12);
+  const base = path.basename(source, path.extname(source)).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+  return `demo_${base ? `${base}_` : ''}${hash}.mp4`;
+}
 
 async function main() {
   const [folder, ...flags] = process.argv.slice(2);
@@ -53,14 +63,17 @@ async function main() {
       'SELECT id, film_id, episode_no FROM episodes WHERE film_id IN (?) ORDER BY film_id, episode_no',
       [SEED_FILM_IDS],
     );
-    const uploads = path.join(__dirname, '..', 'uploads');
+    const uploads = process.env.UPLOAD_DIR || path.join(__dirname, '..', 'uploads');
     fs.mkdirSync(uploads, { recursive: true });
     const copied = new Map();
     for (const [index, episode] of episodes.entries()) {
       const source = clips[index % clips.length];
-      const name = `demo_${path.basename(source).replace(/[^A-Za-z0-9._-]/g, '_')}`;
+      const name = storedName(source);
       if (!copied.has(source)) {
-        if (!dryRun) fs.copyFileSync(source, path.join(uploads, name));
+        // COPYFILE_EXCL: never replace a file that episodes may already point at.
+        if (!dryRun && !fs.existsSync(path.join(uploads, name))) {
+          fs.copyFileSync(source, path.join(uploads, name), fs.constants.COPYFILE_EXCL);
+        }
         copied.set(source, { name, seconds: await mp4DurationSec(source) });
       }
       const { name: stored, seconds } = copied.get(source);
@@ -79,7 +92,11 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message);
-  process.exit(1);
-});
+module.exports = { storedName };
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err.message);
+    process.exit(1);
+  });
+}

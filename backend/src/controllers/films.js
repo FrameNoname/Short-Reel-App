@@ -47,11 +47,19 @@ exports.list = async (req, res) => {
     aiTools: list(req.query.ai_tool),
     length,
     sort,
-    limit: pageSize,
+    limit: pageSize + 1,
     offset: (page - 1) * pageSize,
   });
-  const body = rows.map((row) => films.serialize(row));
-  res.json({ films: await withViewerFlags(req.app.locals.pool, req.user, rows, body) });
+  // One extra row tells the client whether another page exists.
+  const hasMore = rows.length > pageSize;
+  const pageRows = rows.slice(0, pageSize);
+  const body = pageRows.map((row) => films.serialize(row));
+  res.json({
+    films: await withViewerFlags(req.app.locals.pool, req.user, pageRows, body),
+    page,
+    page_size: pageSize,
+    has_more: hasMore,
+  });
 };
 
 exports.getOne = async (req, res) => {
@@ -116,11 +124,36 @@ exports.loadOwnedFilm = async (req, res, next) => {
   next();
 };
 
+// Optional `episode_prices: [{id, price_coins}]` changes several prices together
+// with the film details: everything is validated first and written in one
+// transaction, so a bad value leaves the film exactly as it was.
+function priceChanges(body) {
+  const raw = body?.episode_prices;
+  if (raw === undefined) return [];
+  if (!Array.isArray(raw) || raw.length > 255) throw bad('episode_prices must be a list');
+  const seen = new Set();
+  return raw.map((item) => {
+    const id = pathId(item?.id, 'episode_prices.id');
+    if (seen.has(id)) throw bad('episode_prices lists an episode twice');
+    seen.add(id);
+    return { id, price: int(item, 'price_coins', { min: 0, max: 500 }) };
+  });
+}
+
 exports.update = async (req, res) => {
   const pool = req.app.locals.pool;
   const fields = filmFields(req.body);
   const ids = await lookupIds(pool, req.body);
+  const changes = priceChanges(req.body);
   await withTransaction(pool, async (conn) => {
+    await conn.query('SELECT id FROM films WHERE id = ? FOR UPDATE', [req.film.id]);
+    const own = new Map((await episodes.listByFilm(conn, req.film.id)).map((e) => [e.id, e]));
+    for (const { id, price } of changes) {
+      const episode = own.get(id);
+      if (!episode) throw bad(`episode ${id} does not belong to this film`);
+      // Coins already paid keep their unlock; the new price applies to later buyers.
+      await episodes.update(conn, id, { title: episode.title, isFree: price === 0, priceCoins: price });
+    }
     await films.update(conn, req.film.id, { ...fields, ...ids });
     // An owner's edit puts an approved or rejected film back in the review queue.
     if (req.user.role !== 'admin') await films.sendBackToReview(conn, req.film.id);
@@ -159,9 +192,11 @@ exports.removeUnusedFiles = removeUnusedFiles;
 exports.addEpisode = async (req, res) => {
   const pool = req.app.locals.pool;
   const file = req.file;
+  let id;
   try {
     if (!file) throw bad('A video file is required in the "video" field');
-    if (!(await media.looksLikeMp4(file.path))) throw bad('The file is not a valid MP4 video');
+    const probe = await media.inspectMp4(file.path);
+    if (!probe.valid) throw bad(`The file is not a playable MP4 video: ${probe.reason}`);
     const episodeNo = int(req.body, 'episode_no', { min: 1, max: 255, optional: true });
     const title = text(req.body, 'title', { max: 100, optional: true });
     const isFree = bool(req.body, 'is_free', { optional: true });
@@ -172,7 +207,7 @@ exports.addEpisode = async (req, res) => {
       int(req.body, 'duration_sec', { min: 0, max: 65535, optional: true }) ??
       Math.min(await media.mp4DurationSec(file.path), 65535);
 
-    const id = await withTransaction(pool, async (conn) => {
+    id = await withTransaction(pool, async (conn) => {
       await conn.query('SELECT id FROM films WHERE id = ? FOR UPDATE', [req.film.id]);
       const newId = await episodes.create(conn, {
         filmId: req.film.id,
@@ -186,8 +221,6 @@ exports.addEpisode = async (req, res) => {
       if (req.user.role !== 'admin') await films.sendBackToReview(conn, req.film.id);
       return newId;
     });
-    const row = (await episodes.findWithFilm(pool, id));
-    res.status(201).json({ episode: episodes.serialize(row, 'owner') });
   } catch (err) {
     // The database never got the episode, so the saved file would be orphaned.
     await media.discard(file);
@@ -196,4 +229,9 @@ exports.addEpisode = async (req, res) => {
     }
     throw err;
   }
+  // The episode is committed and now references the file: from here on the file
+  // is never deleted, even if building the response fails.
+  const row = await episodes.findWithFilm(pool, id);
+  if (!row) return res.status(201).json({ episode: { id, film_id: req.film.id, access: 'owner' } });
+  res.status(201).json({ episode: episodes.serialize(row, 'owner') });
 };

@@ -42,6 +42,16 @@ exports.listTransactions = async (pool, userId, { limit, offset }) => {
   }));
 };
 
+exports.listUnlocked = async (pool, userId) => {
+  const [rows] = await pool.query(
+    `SELECT ue.episode_id, ue.coins_spent, ue.created_at, e.episode_no, f.id AS film_id, f.title AS film_title
+       FROM unlocked_episodes ue JOIN episodes e ON e.id = ue.episode_id JOIN films f ON f.id = e.film_id
+      WHERE ue.user_id = ? ORDER BY ue.id DESC`,
+    [userId],
+  );
+  return rows;
+};
+
 // Simulated purchase: the client names a pack (or the demo button) and the
 // server alone decides how many coins that is worth.
 exports.topUp = (pool, userId, { packId }) =>
@@ -78,17 +88,28 @@ exports.topUp = (pool, userId, { packId }) =>
 // returns without charging; UNIQUE(user_id, episode_id) is the final guard.
 exports.unlock = (pool, user, episodeId) =>
   withTransaction(pool, async (conn) => {
+    // Lock order is film (shared) -> user -> episode (shared), the same film lock
+    // a delete takes exclusively, so a purchase and a delete of the same episode
+    // are serialized: either the delete sees the unlock row and refuses, or the
+    // unlock re-reads the episode after the delete and answers 404.
+    const [[found]] = await conn.query('SELECT film_id FROM episodes WHERE id = ?', [episodeId]);
+    if (!found) throw new ApiError(404, 'NOT_FOUND', 'Episode not found');
+    const [filmRows] = await conn.query(
+      'SELECT creator_id, status FROM films WHERE id = ? LOCK IN SHARE MODE',
+      [found.film_id],
+    );
+    const [[owner]] = filmRows[0]
+      ? await conn.query('SELECT role FROM users WHERE id = ?', [filmRows[0].creator_id])
+      : [[undefined]];
     const [[locked]] = await conn.query(
       'SELECT coin_balance FROM users WHERE id = ? FOR UPDATE',
       [user.id],
     );
-    const [episodes] = await conn.query(
-      `SELECT e.id, e.is_free, e.price_coins, f.creator_id, f.status, u.role AS owner_role
-         FROM episodes e JOIN films f ON f.id = e.film_id JOIN users u ON u.id = f.creator_id
-        WHERE e.id = ?`,
-      [episodeId],
+    const [episodeRows] = await conn.query(
+      'SELECT id, is_free, price_coins FROM episodes WHERE id = ? AND film_id = ? LOCK IN SHARE MODE',
+      [episodeId, found.film_id],
     );
-    const episode = episodes[0];
+    const episode = filmRows[0] && episodeRows[0] && { ...episodeRows[0], ...filmRows[0], owner_role: owner?.role };
     const isOwner = episode && (user.role === 'admin' || user.id === episode.creator_id);
     if (!episode || (episode.status !== 'approved' && !isOwner)) {
       throw new ApiError(404, 'NOT_FOUND', 'Episode not found');
@@ -124,9 +145,9 @@ exports.unlock = (pool, user, episodeId) =>
     const creatorShare = episode.owner_role === 'admin' ? 0 : Math.floor((price * (100 - percent)) / 100);
     const adminShare = price - creatorShare;
     await conn.query(
-      `INSERT INTO unlocked_episodes (user_id, episode_id, coins_spent, creator_share, admin_share)
-       VALUES (?, ?, ?, ?, ?)`,
-      [user.id, episodeId, price, creatorShare, adminShare],
+      `INSERT INTO unlocked_episodes (user_id, episode_id, coins_spent, creator_share, admin_share, owner_is_admin)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [user.id, episodeId, price, creatorShare, adminShare, episode.owner_role === 'admin' ? 1 : 0],
     );
     await conn.query(
       `INSERT INTO coin_transactions (user_id, type, amount, balance_after, episode_id)

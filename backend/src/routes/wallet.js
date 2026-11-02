@@ -6,6 +6,7 @@ const router = Router();
 
 router.get('/', requireAuth, wallet.getWallet);
 router.get('/transactions', requireAuth, wallet.listTransactions);
+router.get('/unlocked', requireAuth, wallet.listUnlocked);
 router.post('/topup', requireAuth, wallet.topup);
 
 const coinPacksRouter = Router();

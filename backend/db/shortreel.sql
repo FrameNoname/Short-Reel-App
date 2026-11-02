@@ -3,7 +3,7 @@
 -- MariaDB 10.4 / XAMPP  ->  phpMyAdmin > Import > shortreel.sql > Go
 --
 -- WARNING: this file DROPs the 'shortreel' database. Never run it on data you
--- want to keep; use db/migrations/*.sql for existing databases.
+-- want to keep.
 --
 -- Passwords are argon2id hashes (varchar(97)), same as the Node.js
 -- 'argon2' package defaults (m=65536, t=3, p=4).
@@ -137,6 +137,7 @@ CREATE TABLE `unlocked_episodes` (
   `coins_spent`   smallint(5) UNSIGNED NOT NULL,
   `creator_share` smallint(5) UNSIGNED NOT NULL,    -- coins to the film owner
   `admin_share`   smallint(5) UNSIGNED NOT NULL,    -- coins to the admin
+  `owner_is_admin` tinyint(1) DEFAULT NULL,         -- snapshot: was the film owner an admin at purchase
   `created_at`    datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_episode` (`user_id`,`episode_id`),
@@ -273,6 +274,8 @@ INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `
 SELECT 3, 6, id, 20, 14, 6 FROM `episodes` WHERE film_id = 3 AND episode_no = 3;
 INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `creator_share`, `admin_share`)
 SELECT 4, 4, id, 20, 0, 20 FROM `episodes` WHERE film_id = 5 AND episode_no = 3;
+UPDATE `unlocked_episodes` ue JOIN `episodes` e ON e.id = ue.episode_id JOIN `films` f ON f.id = e.film_id
+  JOIN `users` u ON u.id = f.creator_id SET ue.owner_is_admin = (u.role = 'admin');
 
 -- wallet history (adds up to the balances above)
 INSERT INTO `coin_transactions` (`user_id`, `type`, `amount`, `balance_after`, `price_usd`, `coin_pack_id`, `episode_id`) VALUES

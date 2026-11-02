@@ -13,6 +13,8 @@ function loadEnv(source = process.env) {
       password: source.DB_PASSWORD ?? '',
       database: source.DB_NAME ?? 'shortreel',
     },
+    // Where uploaded videos live; empty means backend/uploads.
+    uploadDir: source.UPLOAD_DIR || undefined,
     jwtSecret: source.JWT_SECRET,
     jwtExpiresIn: source.JWT_EXPIRES_IN ?? '7d',
     // Optional: without a key the /api/catalog routes answer 503.

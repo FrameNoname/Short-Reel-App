@@ -30,7 +30,7 @@ const SEED_PASSWORDS = {
   viewer01: '6666',
 };
 
-// A tiny but structurally valid MP4: ftyp + moov(mvhd, 5 s) + mdat.
+// A tiny but structurally valid MP4: ftyp + moov(mvhd, 5 s, one avc1 video trak) + mdat.
 function makeMp4(payloadBytes = 2048, seconds = 5) {
   const box = (type, ...parts) => {
     const body = Buffer.concat(parts);
@@ -42,9 +42,12 @@ function makeMp4(payloadBytes = 2048, seconds = 5) {
   const mvhd = Buffer.alloc(100);
   mvhd.writeUInt32BE(1000, 12);
   mvhd.writeUInt32BE(seconds * 1000, 16);
+  const hdlr = Buffer.concat([Buffer.alloc(8), Buffer.from('vide', 'latin1'), Buffer.alloc(13)]);
+  const stsd = Buffer.concat([Buffer.from([0, 0, 0, 0, 0, 0, 0, 1]), box('avc1', Buffer.alloc(78))]);
+  const trak = box('trak', box('mdia', box('hdlr', hdlr), box('minf', box('stbl', box('stsd', stsd)))));
   return Buffer.concat([
     box('ftyp', Buffer.from('isom\0\0\2\0isomiso2', 'latin1')),
-    box('moov', box('mvhd', mvhd)),
+    box('moov', box('mvhd', mvhd), trak),
     box('mdat', Buffer.alloc(payloadBytes, 7)),
   ]);
 }
