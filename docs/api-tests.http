@@ -1,0 +1,1022 @@
+# ShortReel Sprint 1-2 API tests (VS Code "REST Client" extension: humao.rest-client)
+#
+# HOW TO USE
+#  1. Use a THROW-AWAY database and server, never the real `shortreel` (see docs/postman/README.md).
+#  2. Edit the variables below, then run the requests TOP TO BOTTOM (click "Send Request" above each one).
+#  3. Compare each response with the "Expect" lines above it.
+#  4. Change @run_id every time you start a new full run (usernames must be new).
+#
+# Seed ids below (film 1, episode 1 = free, episode 3 = paid) are valid for a fresh database from shortreel.sql.
+
+@base_url = http://localhost:3100/api
+@run_id = r1
+@admin_username = admin
+# Password of the seed admin account (see README). Not stored in git: type it here locally.
+@admin_password = 
+@token_expired = expired.invalid.token
+
+@seed_film_id = 1
+@free_episode_id = 1
+@paid_episode_id = 3
+
+# Filled from earlier responses (do not edit)
+@token_viewer = {{reg_viewer.response.body.$.token}}
+@viewer_id = {{reg_viewer.response.body.$.user.id}}
+@token_creator = {{reg_creator.response.body.$.token}}
+@creator_id = {{reg_creator.response.body.$.user.id}}
+@token_other_creator = {{reg_other.response.body.$.token}}
+@token_admin = {{login_admin.response.body.$.token}}
+@admin_id = {{login_admin.response.body.$.user.id}}
+@film_id = {{new_film.response.body.$.film.id}}
+@new_free_episode_id = {{up_free.response.body.$.episode.id}}
+@new_paid_episode_id = {{up_paid.response.body.$.episode.id}}
+@comment_id = {{new_comment.response.body.$.id}}
+@report_id = {{new_report.response.body.$.id}}
+
+###############################################################
+# 1 GUEST AND PUBLIC
+###############################################################
+
+### 1. Health check
+# Expect: HTTP 200
+#   check: API and database are up
+GET {{base_url}}/health HTTP/1.1
+
+### 2. Guest: feed lists approved films only
+# Expect: HTTP 200
+#   check: feed has films
+#   check: every film is approved
+GET {{base_url}}/films?page_size=100 HTTP/1.1
+
+### 3. Guest: film detail shows episodes with access labels
+# Expect: HTTP 200
+#   check: a free and a paid episode exist
+#   check: free episode is labelled free, paid one login_required
+GET {{base_url}}/films/{{seed_film_id}} HTTP/1.1
+
+### 4. Guest: free episode gives a playback link
+# Expect: HTTP 200
+#   check: stream_url is a short-lived link
+GET {{base_url}}/episodes/{{free_episode_id}} HTTP/1.1
+
+### 5. Guest: paid episode has no playback link
+# Expect: HTTP 200
+#   check: stream_url is null and access is login_required
+GET {{base_url}}/episodes/{{paid_episode_id}} HTTP/1.1
+
+### 6. Guest: paid episode stream is denied
+# Expect: HTTP 401
+#   check: error code
+GET {{base_url}}/episodes/{{paid_episode_id}}/stream HTTP/1.1
+
+### 7. Guest: unlock needs a login
+# Expect: HTTP 401
+POST {{base_url}}/episodes/{{paid_episode_id}}/unlock HTTP/1.1
+
+### 8. Public: lookups
+# Expect: HTTP 200
+#   check: genres and tools
+GET {{base_url}}/lookups HTTP/1.1
+
+### 9. Public: coin packs are labelled simulated
+# Expect: HTTP 200
+#   check: simulated
+GET {{base_url}}/coin-packs HTTP/1.1
+
+###############################################################
+# 2 AUTH AND ROLES
+###############################################################
+
+### 10. Register viewer: valid
+# Expect: HTTP 201
+#   check: token and viewer role, no password in the answer
+# @name reg_viewer
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "viewer_{{run_id}}",
+  "password": "Sprint12pw",
+  "role": "viewer"
+}
+
+### 11. Register viewer: duplicate username
+# Expect: HTTP 409
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "viewer_{{run_id}}",
+  "password": "Sprint12pw"
+}
+
+### 12. Register: password too short
+# Expect: HTTP 400
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "short_{{run_id}}",
+  "password": "a1"
+}
+
+### 13. Register: password without a number
+# Expect: HTTP 400
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "nonum_{{run_id}}",
+  "password": "onlyletters"
+}
+
+### 14. Register: missing username
+# Expect: HTTP 400
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "password": "Sprint12pw"
+}
+
+### 15. Register: admin role is refused
+# Expect: HTTP 403
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "sneaky_{{run_id}}",
+  "password": "Sprint12pw",
+  "role": "admin"
+}
+
+### 16. Register creator: valid
+# Expect: HTTP 201
+#   check: creator role
+# @name reg_creator
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "creator_{{run_id}}",
+  "password": "Sprint12pw",
+  "role": "creator"
+}
+
+### 17. Register second creator (for ownership checks)
+# Expect: HTTP 201
+# @name reg_other
+POST {{base_url}}/auth/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "other_{{run_id}}",
+  "password": "Sprint12pw",
+  "role": "creator"
+}
+
+### 18. Login: valid
+# Expect: HTTP 200
+#   check: token returned
+POST {{base_url}}/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "viewer_{{run_id}}",
+  "password": "Sprint12pw"
+}
+
+### 19. Login: wrong password
+# Expect: HTTP 401
+POST {{base_url}}/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "viewer_{{run_id}}",
+  "password": "wrong-password"
+}
+
+### 20. Login: unknown user gives the same message
+# Expect: HTTP 401
+#   check: same message as a wrong password
+POST {{base_url}}/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "nobody_{{run_id}}",
+  "password": "whatever1"
+}
+
+### 21. Login admin (seed account)
+# Expect: HTTP 200
+#   check: admin role
+# @name login_admin
+# (needs @admin_password set above)
+POST {{base_url}}/auth/login HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "{{admin_username}}",
+  "password": "{{admin_password}}"
+}
+
+### 22. Token missing
+# Expect: HTTP 401
+GET {{base_url}}/auth/me HTTP/1.1
+
+### 23. Token expired or invalid
+# Expect: HTTP 401
+GET {{base_url}}/auth/me HTTP/1.1
+Authorization: Bearer {{token_expired}}
+
+### 24. Me: valid token
+# Expect: HTTP 200
+#   check: own account
+GET {{base_url}}/auth/me HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 25. Role: viewer cannot create a film
+# Expect: HTTP 403
+POST {{base_url}}/films HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "title": "x",
+  "genre": "Drama",
+  "ai_tool": "Mixed",
+  "prompt_credit": "p",
+  "is_ai_generated": true
+}
+
+### 26. Role: viewer cannot open the admin queue
+# Expect: HTTP 403
+GET {{base_url}}/admin/reviews HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 27. Role: creator cannot open the admin queue
+# Expect: HTTP 403
+GET {{base_url}}/admin/reviews HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 28. Role: creator cannot change the revenue share
+# Expect: HTTP 403
+PUT {{base_url}}/admin/settings/revenue-share HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "admin_share_percent": 10
+}
+
+### 29. Role: viewer has no creator earnings
+# Expect: HTTP 403
+GET {{base_url}}/creator/earnings HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+###############################################################
+# 3 UPLOAD AND REVIEW
+###############################################################
+
+### 30. Creator: film without the AI label is refused
+# Expect: HTTP 400
+POST {{base_url}}/films HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "title": "No label",
+  "genre": "Drama",
+  "ai_tool": "Mixed",
+  "prompt_credit": "p",
+  "is_ai_generated": false
+}
+
+### 31. Creator: film with an unknown genre is refused
+# Expect: HTTP 400
+POST {{base_url}}/films HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "title": "Bad genre",
+  "genre": "Nope",
+  "ai_tool": "Mixed",
+  "prompt_credit": "p",
+  "is_ai_generated": true
+}
+
+### 32. Creator: create film (pending)
+# Expect: HTTP 201
+#   check: starts pending
+# @name new_film
+POST {{base_url}}/films HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "title": "Sprint film {{run_id}}",
+  "genre": "Drama",
+  "ai_tool": "Mixed",
+  "prompt_credit": "prompt credit",
+  "is_ai_generated": true
+}
+
+### 33. Upload: other creator cannot add an episode to a pending film (hidden, 404)
+# Expect: HTTP 404
+POST {{base_url}}/films/{{film_id}}/episodes HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+Content-Type: multipart/form-data; boundary=----ShortReelBoundary
+
+------ShortReelBoundary
+Content-Disposition: form-data; name="video"; filename="demo_demo_clip_01.mp4"
+Content-Type: video/mp4
+
+< ../backend/uploads/demo_demo_clip_01.mp4
+------ShortReelBoundary
+Content-Disposition: form-data; name="price_coins"
+
+0
+------ShortReelBoundary--
+
+### 34. Upload: not a video (wrong type)
+# Expect: HTTP 400
+POST {{base_url}}/films/{{film_id}}/episodes HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: multipart/form-data; boundary=----ShortReelBoundary
+
+------ShortReelBoundary
+Content-Disposition: form-data; name="video"; filename="not-a-video.txt"
+Content-Type: text/plain
+
+< ./postman/fixtures/not-a-video.txt
+------ShortReelBoundary
+Content-Disposition: form-data; name="price_coins"
+
+0
+------ShortReelBoundary--
+
+### 35. Upload: MP4 header only, no video track
+# Expect: HTTP 400
+#   check: says why
+POST {{base_url}}/films/{{film_id}}/episodes HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: multipart/form-data; boundary=----ShortReelBoundary
+
+------ShortReelBoundary
+Content-Disposition: form-data; name="video"; filename="header-only.mp4"
+Content-Type: video/mp4
+
+< ./postman/fixtures/header-only.mp4
+------ShortReelBoundary
+Content-Disposition: form-data; name="price_coins"
+
+0
+------ShortReelBoundary--
+
+### 36. Upload: price above 500 is refused
+# Expect: HTTP 400
+POST {{base_url}}/films/{{film_id}}/episodes HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: multipart/form-data; boundary=----ShortReelBoundary
+
+------ShortReelBoundary
+Content-Disposition: form-data; name="video"; filename="demo_demo_clip_01.mp4"
+Content-Type: video/mp4
+
+< ../backend/uploads/demo_demo_clip_01.mp4
+------ShortReelBoundary
+Content-Disposition: form-data; name="price_coins"
+
+501
+------ShortReelBoundary--
+
+### 37. Upload: episode 1, free (multipart)
+# Expect: HTTP 201
+#   check: free
+# @name up_free
+POST {{base_url}}/films/{{film_id}}/episodes HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: multipart/form-data; boundary=----ShortReelBoundary
+
+------ShortReelBoundary
+Content-Disposition: form-data; name="video"; filename="demo_demo_clip_01.mp4"
+Content-Type: video/mp4
+
+< ../backend/uploads/demo_demo_clip_01.mp4
+------ShortReelBoundary
+Content-Disposition: form-data; name="price_coins"
+
+0
+------ShortReelBoundary
+Content-Disposition: form-data; name="episode_no"
+
+1
+------ShortReelBoundary--
+
+### 38. Upload: episode 2, 30 coins (multipart)
+# Expect: HTTP 201
+#   check: priced
+# @name up_paid
+POST {{base_url}}/films/{{film_id}}/episodes HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: multipart/form-data; boundary=----ShortReelBoundary
+
+------ShortReelBoundary
+Content-Disposition: form-data; name="video"; filename="demo_demo_clip_01.mp4"
+Content-Type: video/mp4
+
+< ../backend/uploads/demo_demo_clip_01.mp4
+------ShortReelBoundary
+Content-Disposition: form-data; name="price_coins"
+
+30
+------ShortReelBoundary
+Content-Disposition: form-data; name="episode_no"
+
+2
+------ShortReelBoundary--
+
+### 39. Review visibility: guest cannot see a pending film
+# Expect: HTTP 404
+GET {{base_url}}/films/{{film_id}} HTTP/1.1
+
+### 40. Review visibility: pending film is not in the feed
+# Expect: HTTP 200
+#   check: not listed
+GET {{base_url}}/films?q=Sprint%20film%20{{run_id}} HTTP/1.1
+
+### 41. Review visibility: guest cannot stream a pending film
+# Expect: HTTP 404
+GET {{base_url}}/episodes/{{new_free_episode_id}}/stream HTTP/1.1
+
+### 42. Review visibility: owner can see it
+# Expect: HTTP 200
+#   check: two episodes
+GET {{base_url}}/films/{{film_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 43. Review: viewer cannot approve
+# Expect: HTTP 403
+POST {{base_url}}/admin/films/{{film_id}}/review HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+
+### 44. Review: admin sees the film in the queue
+# Expect: HTTP 200
+#   check: queued
+GET {{base_url}}/admin/reviews HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 45. Review: rejecting needs a note
+# Expect: HTTP 400
+POST {{base_url}}/admin/films/{{film_id}}/review HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "status": "rejected"
+}
+
+### 46. Review: a pending film cannot be taken down
+# Expect: HTTP 409
+POST {{base_url}}/admin/films/{{film_id}}/review HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "status": "taken_down",
+  "note": "x"
+}
+
+### 47. Review: admin approves
+# Expect: HTTP 200
+#   check: approved
+POST {{base_url}}/admin/films/{{film_id}}/review HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+
+### 48. Review visibility: guest now sees the film
+# Expect: HTTP 200
+GET {{base_url}}/films/{{film_id}} HTTP/1.1
+
+### 49. Ownership: other creator cannot edit the film
+# Expect: HTTP 403
+PUT {{base_url}}/films/{{film_id}} HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+Content-Type: application/json
+
+{
+  "title": "Hijack",
+  "genre": "Drama",
+  "ai_tool": "Mixed"
+}
+
+### 50. Ownership: other creator cannot delete the film
+# Expect: HTTP 403
+DELETE {{base_url}}/films/{{film_id}} HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+
+###############################################################
+# 4 WALLET AND UNLOCK
+###############################################################
+
+### 51. Guest sees the new free episode, paid one is locked for a viewer
+# Expect: HTTP 200
+#   check: locked, no link
+GET {{base_url}}/episodes/{{new_paid_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 52. Unlock with no coins is refused (402)
+# Expect: HTTP 402
+#   check: code
+POST {{base_url}}/episodes/{{new_paid_episode_id}}/unlock HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 53. Wallet: balance is still 0 after the refusal
+# Expect: HTTP 200
+#   check: 0 coins
+GET {{base_url}}/wallet HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 54. Top-up: the client cannot choose the amount
+# Expect: HTTP 400
+POST {{base_url}}/wallet/topup HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "coins": 99999
+}
+
+### 55. Top-up: demo +100 (simulated)
+# Expect: HTTP 201
+#   check: 100 coins, simulated
+POST {{base_url}}/wallet/topup HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "demo": true
+}
+
+### 56. Unlock: first time charges the server price
+# Expect: HTTP 200
+#   check: charged 30, balance 70
+POST {{base_url}}/episodes/{{new_paid_episode_id}}/unlock HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 57. Unlock: repeating does not charge again
+# Expect: HTTP 200
+#   check: charged 0, balance still 70
+POST {{base_url}}/episodes/{{new_paid_episode_id}}/unlock HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 58. Wallet: balance read from the server
+# Expect: HTTP 200
+#   check: 70 coins
+GET {{base_url}}/wallet HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 59. Wallet: ledger lists the top-up and one unlock
+# Expect: HTTP 200
+#   check: two rows, newest first, with a paging flag
+GET {{base_url}}/wallet/transactions?limit=50 HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 60. Wallet: unlocked list reads the rights themselves
+# Expect: HTTP 200
+#   check: one purchase
+GET {{base_url}}/wallet/unlocked HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 61. Unlocked episode now has a playback link
+# Expect: HTTP 200
+#   check: unlocked with link
+GET {{base_url}}/episodes/{{new_paid_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 62. Another viewer is still locked out
+# Expect: HTTP 403
+GET {{base_url}}/episodes/{{new_paid_episode_id}}/stream HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+
+### 63. A film with paid unlocks cannot be deleted
+# Expect: HTTP 409
+DELETE {{base_url}}/films/{{film_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 64. A paid-for episode cannot be deleted
+# Expect: HTTP 409
+DELETE {{base_url}}/episodes/{{new_paid_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+###############################################################
+# 5 SUBSCRIPTION
+###############################################################
+
+### 65. Subscription: none yet
+# Expect: HTTP 200
+#   check: inactive
+GET {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 66. Subscription: subscribe (simulated)
+# Expect: HTTP 201
+#   check: active with inclusive dates
+# @name sub1
+POST {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 67. Subscription: renew twice, plans never overlap
+# Expect: HTTP 201
+# @name sub2
+POST {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 68. Subscription: third purchase starts after the second ends
+# Expect: HTTP 201
+#   check: paid through moved further and 3 plans remain
+#   compare: paid_through is later than the paid_through of the previous request
+POST {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 69. Subscription: the latest plan is read back
+# Expect: HTTP 200
+#   check: active, paid through is after the first end date
+#   compare: paid_through is later than end_date of the first subscription
+GET {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 70. Subscription: cancel keeps access until the end
+# Expect: HTTP 200
+#   check: still active, flagged cancelled
+DELETE {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 71. Subscription: another user has nothing to cancel
+# Expect: HTTP 404
+DELETE {{base_url}}/subscription HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+
+###############################################################
+# 6 REVENUE AND SHARE SETTING
+###############################################################
+
+### 72. Creator earnings match the stored 70/30 split
+# Expect: HTTP 200
+#   check: 30 coins spent, creator earned 21, in coins
+GET {{base_url}}/creator/earnings HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 73. Admin sales: coins and simulated dollars stay separate
+# Expect: HTTP 200
+#   check: coin totals add up
+GET {{base_url}}/admin/sales HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 74. Share setting: read
+# Expect: HTTP 200
+#   check: a percentage
+GET {{base_url}}/admin/settings/revenue-share HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 75. Share setting: out of range is refused
+# Expect: HTTP 400
+PUT {{base_url}}/admin/settings/revenue-share HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "admin_share_percent": 101
+}
+
+### 76. Share setting: admin changes it to 50
+# Expect: HTTP 200
+PUT {{base_url}}/admin/settings/revenue-share HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "admin_share_percent": 50
+}
+
+### 77. Share setting: earnings recorded earlier do not change
+# Expect: HTTP 200
+#   check: still 21
+GET {{base_url}}/creator/earnings HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 78. Share setting: put it back to 30
+# Expect: HTTP 200
+PUT {{base_url}}/admin/settings/revenue-share HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "admin_share_percent": 30
+}
+
+### 79. Role change: admin promotes the creator
+# Expect: HTTP 200
+PUT {{base_url}}/admin/users/{{creator_id}}/role HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "role": "admin"
+}
+
+### 80. Role change: past earnings do not change
+# Expect: HTTP 200
+#   check: still 21 after becoming admin
+GET {{base_url}}/creator/earnings HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 81. Role change: demote again
+# Expect: HTTP 200
+PUT {{base_url}}/admin/users/{{creator_id}}/role HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "role": "creator"
+}
+
+### 82. Admin cannot change their own role
+# Expect: HTTP 409
+PUT {{base_url}}/admin/users/{{admin_id}}/role HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "role": "viewer"
+}
+
+###############################################################
+# 7 PROFILE, SOCIAL AND THE OTHER ENDPOINTS
+###############################################################
+
+### 83. Profile: update display name and bio
+# Expect: HTTP 200
+#   check: saved
+PUT {{base_url}}/auth/me HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "display_name": "Collection viewer",
+  "bio": "hello"
+}
+
+### 84. Profile: display name is required
+# Expect: HTTP 400
+PUT {{base_url}}/auth/me HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "bio": "x"
+}
+
+### 85. Creator: lists their own films with every status
+# Expect: HTTP 200
+#   check: includes the uploaded film
+GET {{base_url}}/creator/films HTTP/1.1
+Authorization: Bearer {{token_creator}}
+
+### 86. Episode: owner changes the price of an episode
+# Expect: HTTP 200
+#   check: now paid
+PUT {{base_url}}/episodes/{{new_free_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "price_coins": 5
+}
+
+### 87. Episode: another creator cannot change it
+# Expect: HTTP 403
+PUT {{base_url}}/episodes/{{new_free_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+Content-Type: application/json
+
+{
+  "price_coins": 1
+}
+
+### 88. Episode: a price above 500 is refused
+# Expect: HTTP 400
+PUT {{base_url}}/episodes/{{new_free_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "price_coins": 501
+}
+
+### 89. Episode: owner puts it back to free
+# Expect: HTTP 200
+PUT {{base_url}}/episodes/{{new_free_episode_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "is_free": true
+}
+
+### 90. Like: viewer likes the film
+# Expect: HTTP 200
+#   check: liked
+POST {{base_url}}/films/{{film_id}}/like HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 91. Like: guest cannot like
+# Expect: HTTP 401
+POST {{base_url}}/films/{{film_id}}/like HTTP/1.1
+
+### 92. Like: viewer removes the like
+# Expect: HTTP 200
+DELETE {{base_url}}/films/{{film_id}}/like HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 93. Watchlist: save the film
+# Expect: HTTP 200
+POST {{base_url}}/films/{{film_id}}/watchlist HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 94. Watchlist: the saved list holds it
+# Expect: HTTP 200
+#   check: contains the film
+GET {{base_url}}/watchlist HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 95. Watchlist: remove it
+# Expect: HTTP 200
+DELETE {{base_url}}/films/{{film_id}}/watchlist HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 96. Comments: guest can read
+# Expect: HTTP 200
+GET {{base_url}}/films/{{film_id}}/comments HTTP/1.1
+
+### 97. Comments: guest cannot write
+# Expect: HTTP 401
+POST {{base_url}}/films/{{film_id}}/comments HTTP/1.1
+Content-Type: application/json
+
+{
+  "body": "hi"
+}
+
+### 98. Comments: empty comment is refused
+# Expect: HTTP 400
+POST {{base_url}}/films/{{film_id}}/comments HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "body": ""
+}
+
+### 99. Comments: viewer writes one
+# Expect: HTTP 201
+# @name new_comment
+POST {{base_url}}/films/{{film_id}}/comments HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "body": "Nice film"
+}
+
+### 100. Comments: someone else cannot delete it
+# Expect: HTTP 403
+DELETE {{base_url}}/comments/{{comment_id}} HTTP/1.1
+Authorization: Bearer {{token_other_creator}}
+
+### 101. Comments: the author deletes it
+# Expect: HTTP 204
+DELETE {{base_url}}/comments/{{comment_id}} HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 102. Follow: viewer follows the creator
+# Expect: HTTP 200
+POST {{base_url}}/creators/{{creator_id}}/follow HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 103. Follow: unfollow
+# Expect: HTTP 200
+DELETE {{base_url}}/creators/{{creator_id}}/follow HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 104. Report: viewer reports the film
+# Expect: HTTP 201
+# @name new_report
+POST {{base_url}}/films/{{film_id}}/reports HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+Content-Type: application/json
+
+{
+  "reason": "Collection test report"
+}
+
+### 105. Admin: the report is listed
+# Expect: HTTP 200
+#   check: listed
+GET {{base_url}}/admin/reports HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 106. Admin: resolve the report
+# Expect: HTTP 200
+POST {{base_url}}/admin/reports/{{report_id}}/resolve HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 107. Admin: viewer cannot resolve reports
+# Expect: HTTP 403
+POST {{base_url}}/admin/reports/{{report_id}}/resolve HTTP/1.1
+Authorization: Bearer {{token_viewer}}
+
+### 108. Admin: user list
+# Expect: HTTP 200
+#   check: users
+GET {{base_url}}/admin/users HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 109. Admin: live films
+# Expect: HTTP 200
+GET {{base_url}}/admin/films?status=approved HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 110. Admin: an unknown status filter is refused
+# Expect: HTTP 400
+GET {{base_url}}/admin/films?status=nope HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 111. Film: owner edits prices and details in one request (goes back to review)
+# Expect: HTTP 200
+PUT {{base_url}}/films/{{film_id}} HTTP/1.1
+Authorization: Bearer {{token_creator}}
+Content-Type: application/json
+
+{
+  "title": "Sprint film {{run_id}}",
+  "genre": "Drama",
+  "ai_tool": "Mixed",
+  "prompt_credit": "prompt credit",
+  "episode_prices": [
+    {
+      "id": "{{new_free_episode_id}}",
+      "price_coins": 0
+    }
+  ]
+}
+
+### 112. Film: an owner edit puts it back in the review queue
+# Expect: HTTP 200
+#   check: queued again
+GET {{base_url}}/admin/reviews HTTP/1.1
+Authorization: Bearer {{token_admin}}
+
+### 113. Film: admin approves it again
+# Expect: HTTP 200
+POST {{base_url}}/admin/films/{{film_id}}/review HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+
+###############################################################
+# 8 TAKE DOWN
+###############################################################
+
+### 114. Admin takes the film down
+# Expect: HTTP 200
+POST {{base_url}}/admin/films/{{film_id}}/review HTTP/1.1
+Authorization: Bearer {{token_admin}}
+Content-Type: application/json
+
+{
+  "status": "taken_down",
+  "note": "Sprint 1-2 collection clean-up"
+}
+
+### 115. Guest can no longer see it
+# Expect: HTTP 404
+GET {{base_url}}/films/{{film_id}} HTTP/1.1
+
+### 116. Even an unlocked viewer can no longer stream it
+# Expect: HTTP 404
+GET {{base_url}}/episodes/{{new_paid_episode_id}}/stream HTTP/1.1
+Authorization: Bearer {{token_viewer}}

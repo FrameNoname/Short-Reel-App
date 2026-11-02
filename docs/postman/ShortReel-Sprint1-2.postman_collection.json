@@ -1,0 +1,4521 @@
+{
+  "info": {
+    "name": "ShortReel Sprint 1-2",
+    "description": "Positive and negative requests for every Sprint 1-2 feature. Run the folders in order against a throw-away database (see docs/postman/README.md). Uses the seed admin account, so never point it at real data.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1 Guest and public",
+      "description": "No token: what a guest can and cannot see.",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Health check: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "",
+                  "var body = pm.response.json();",
+                  "pm.test(\"API and database are up\", function () { pm.expect(body.status).to.eql(\"ok\"); pm.expect(body.db).to.eql(\"up\"); });",
+                  "pm.environment.set(\"run_id\", Date.now().toString(36));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest: feed lists approved films only",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest: feed lists approved films only: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "",
+                  "var films = pm.response.json().films;",
+                  "pm.test(\"feed has films\", function () { pm.expect(films.length).to.above(0); });",
+                  "pm.test(\"every film is approved\", function () { pm.expect(films.filter(function (f) { return f.status !== \"approved\"; }).length).to.eql(0); });",
+                  "pm.environment.set(\"seed_film_id\", String(films[0].id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films?page_size=100",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films?page_size=100"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest: film detail shows episodes with access labels",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest: film detail shows episodes with access labels: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "",
+                  "var eps = pm.response.json().episodes;",
+                  "var free = eps.filter(function (e) { return e.is_free; })[0];",
+                  "var paid = eps.filter(function (e) { return !e.is_free; })[0];",
+                  "pm.test(\"a free and a paid episode exist\", function () { pm.expect(!!free && !!paid).to.eql(true); });",
+                  "pm.test(\"free episode is labelled free, paid one login_required\", function () { pm.expect(free.access).to.eql(\"free\"); pm.expect(paid.access).to.eql(\"login_required\"); });",
+                  "pm.environment.set(\"free_episode_id\", String(free.id));",
+                  "pm.environment.set(\"paid_episode_id\", String(paid.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films/{{seed_film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{seed_film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest: free episode gives a playback link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest: free episode gives a playback link: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "",
+                  "var body = pm.response.json();",
+                  "pm.test(\"stream_url is a short-lived link\", function () { pm.expect(typeof body.stream_url).to.eql(\"string\"); pm.expect(body.stream_url).to.include(\"/stream?t=\"); });",
+                  "pm.environment.set(\"free_stream_url\", body.stream_url);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{free_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{free_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest: paid episode has no playback link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest: paid episode has no playback link: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "",
+                  "var body = pm.response.json();",
+                  "pm.test(\"stream_url is null and access is login_required\", function () { pm.expect(body.stream_url).to.eql(null); pm.expect(body.episode.access).to.eql(\"login_required\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{paid_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{paid_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest: paid episode stream is denied",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest: paid episode stream is denied: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });",
+                  "pm.test(\"error code\", function () { pm.expect(pm.response.json().error.code).to.eql(\"UNAUTHENTICATED\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{paid_episode_id}}/stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{paid_episode_id}}",
+                "stream"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest: unlock needs a login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest: unlock needs a login: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{paid_episode_id}}/unlock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{paid_episode_id}}",
+                "unlock"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public: lookups",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Public: lookups: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"genres and tools\", function () { var b = pm.response.json(); pm.expect(b.genres.length).to.above(0); pm.expect(b.ai_tools.length).to.above(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/lookups",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "lookups"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Public: coin packs are labelled simulated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Public: coin packs are labelled simulated: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"simulated\", function () { var b = pm.response.json(); pm.expect(b.simulated_payment).to.eql(true); pm.expect(b.coin_packs.length).to.above(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/coin-packs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "coin-packs"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 Auth and roles",
+      "description": "Register, login, tokens and role checks.",
+      "item": [
+        {
+          "name": "Register viewer: valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register viewer: valid: status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "",
+                  "var b = pm.response.json();",
+                  "pm.test(\"token and viewer role, no password in the answer\", function () { pm.expect(typeof b.token).to.eql(\"string\"); pm.expect(b.user.role).to.eql(\"viewer\"); pm.expect(b.user.password).to.eql(undefined); pm.expect(b.user.coin_balance).to.eql(0); });",
+                  "pm.environment.set(\"token_viewer\", b.token); pm.environment.set(\"viewer_id\", String(b.user.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_{{run_id}}\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"viewer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register viewer: duplicate username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register viewer: duplicate username: status is 409\", function () { pm.expect(pm.response.code).to.eql(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_{{run_id}}\",\n  \"password\": \"Sprint12pw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register: password too short",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register: password too short: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"short_{{run_id}}\",\n  \"password\": \"a1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register: password without a number",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register: password without a number: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nonum_{{run_id}}\",\n  \"password\": \"onlyletters\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register: missing username",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register: missing username: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"Sprint12pw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register: admin role is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register: admin role is refused: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"sneaky_{{run_id}}\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register creator: valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register creator: valid: status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "var b = pm.response.json(); pm.environment.set(\"token_creator\", b.token); pm.environment.set(\"creator_id\", String(b.user.id)); pm.test(\"creator role\", function () { pm.expect(b.user.role).to.eql(\"creator\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"creator_{{run_id}}\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"creator\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register second creator (for ownership checks)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Register second creator (for ownership checks): status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "pm.environment.set(\"token_other_creator\", pm.response.json().token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"other_{{run_id}}\",\n  \"password\": \"Sprint12pw\",\n  \"role\": \"creator\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login: valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login: valid: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"token returned\", function () { pm.expect(typeof pm.response.json().token).to.eql(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_{{run_id}}\",\n  \"password\": \"Sprint12pw\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login: wrong password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login: wrong password: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"viewer_{{run_id}}\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login: unknown user gives the same message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login: unknown user gives the same message: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });",
+                  "pm.test(\"same message as a wrong password\", function () { pm.expect(pm.response.json().error.message).to.eql(\"Username or password is wrong\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"nobody_{{run_id}}\",\n  \"password\": \"whatever1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login admin (seed account)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login admin (seed account): status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.environment.set(\"token_admin\", b.token); pm.environment.set(\"admin_id\", String(b.user.id)); pm.test(\"admin role\", function () { pm.expect(b.user.role).to.eql(\"admin\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Token missing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token missing: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Token expired or invalid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token expired or invalid: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_expired}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Me: valid token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Me: valid token: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"own account\", function () { pm.expect(pm.response.json().user.id).to.eql(Number(pm.environment.get(\"viewer_id\"))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role: viewer cannot create a film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role: viewer cannot create a film: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"x\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"prompt_credit\": \"p\",\n  \"is_ai_generated\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role: viewer cannot open the admin queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role: viewer cannot open the admin queue: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reviews"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role: creator cannot open the admin queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role: creator cannot open the admin queue: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reviews"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role: creator cannot change the revenue share",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role: creator cannot change the revenue share: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admin_share_percent\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/settings/revenue-share",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "revenue-share"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role: viewer has no creator earnings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role: viewer has no creator earnings: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creator/earnings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creator",
+                "earnings"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 Upload and review",
+      "description": "Creator uploads a film, admin approves it, visibility follows the status.",
+      "item": [
+        {
+          "name": "Creator: film without the AI label is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Creator: film without the AI label is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"No label\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"prompt_credit\": \"p\",\n  \"is_ai_generated\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Creator: film with an unknown genre is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Creator: film with an unknown genre is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad genre\",\n  \"genre\": \"Nope\",\n  \"ai_tool\": \"Mixed\",\n  \"prompt_credit\": \"p\",\n  \"is_ai_generated\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Creator: create film (pending)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Creator: create film (pending): status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "var f = pm.response.json().film; pm.test(\"starts pending\", function () { pm.expect(f.status).to.eql(\"pending\"); }); pm.environment.set(\"film_id\", String(f.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sprint film {{run_id}}\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"prompt_credit\": \"prompt credit\",\n  \"is_ai_generated\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload: other creator cannot add an episode to a pending film (hidden, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Upload: other creator cannot add an episode to a pending film (hidden, 404): status is 404\", function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "{{sample_video_path}}"
+                },
+                {
+                  "key": "price_coins",
+                  "value": "0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/episodes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "episodes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload: not a video (wrong type)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Upload: not a video (wrong type): status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "{{text_file_path}}"
+                },
+                {
+                  "key": "price_coins",
+                  "value": "0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/episodes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "episodes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload: MP4 header only, no video track",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Upload: MP4 header only, no video track: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });",
+                  "pm.test(\"says why\", function () { pm.expect(pm.response.json().error.message).to.include(\"not a playable MP4\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "{{header_only_path}}"
+                },
+                {
+                  "key": "price_coins",
+                  "value": "0",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/episodes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "episodes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload: price above 500 is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Upload: price above 500 is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "{{sample_video_path}}"
+                },
+                {
+                  "key": "price_coins",
+                  "value": "501",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/episodes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "episodes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload: episode 1, free (multipart)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Upload: episode 1, free (multipart): status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "var e = pm.response.json().episode; pm.test(\"free\", function () { pm.expect(e.is_free).to.eql(true); }); pm.environment.set(\"new_free_episode_id\", String(e.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "{{sample_video_path}}"
+                },
+                {
+                  "key": "price_coins",
+                  "value": "0",
+                  "type": "text"
+                },
+                {
+                  "key": "episode_no",
+                  "value": "1",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/episodes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "episodes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload: episode 2, 30 coins (multipart)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Upload: episode 2, 30 coins (multipart): status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "var e = pm.response.json().episode; pm.test(\"priced\", function () { pm.expect(e.price_coins).to.eql(30); }); pm.environment.set(\"new_paid_episode_id\", String(e.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "video",
+                  "type": "file",
+                  "src": "{{sample_video_path}}"
+                },
+                {
+                  "key": "price_coins",
+                  "value": "30",
+                  "type": "text"
+                },
+                {
+                  "key": "episode_no",
+                  "value": "2",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/episodes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "episodes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review visibility: guest cannot see a pending film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review visibility: guest cannot see a pending film: status is 404\", function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review visibility: pending film is not in the feed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review visibility: pending film is not in the feed: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"not listed\", function () { pm.expect(pm.response.json().films.length).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films?q=Sprint%20film%20{{run_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films?q=Sprint%20film%20{{run_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review visibility: guest cannot stream a pending film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review visibility: guest cannot stream a pending film: status is 404\", function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_free_episode_id}}/stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_free_episode_id}}",
+                "stream"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review visibility: owner can see it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review visibility: owner can see it: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"two episodes\", function () { pm.expect(pm.response.json().episodes.length).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review: viewer cannot approve",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review: viewer cannot approve: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/films/{{film_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films",
+                "{{film_id}}",
+                "review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review: admin sees the film in the queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review: admin sees the film in the queue: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"queued\", function () { pm.expect(pm.response.json().films.filter(function (f) { return String(f.id) === pm.environment.get(\"film_id\"); }).length).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reviews"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review: rejecting needs a note",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review: rejecting needs a note: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"rejected\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/films/{{film_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films",
+                "{{film_id}}",
+                "review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review: a pending film cannot be taken down",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review: a pending film cannot be taken down: status is 409\", function () { pm.expect(pm.response.code).to.eql(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"taken_down\",\n  \"note\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/films/{{film_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films",
+                "{{film_id}}",
+                "review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review: admin approves",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review: admin approves: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"approved\", function () { pm.expect(pm.response.json().film.status).to.eql(\"approved\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/films/{{film_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films",
+                "{{film_id}}",
+                "review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Review visibility: guest now sees the film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Review visibility: guest now sees the film: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ownership: other creator cannot edit the film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Ownership: other creator cannot edit the film: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hijack\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Ownership: other creator cannot delete the film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Ownership: other creator cannot delete the film: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 Wallet and unlock",
+      "description": "Balance, ledger, atomic unlock and repeated unlock.",
+      "item": [
+        {
+          "name": "Guest sees the new free episode, paid one is locked for a viewer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest sees the new free episode, paid one is locked for a viewer: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"locked, no link\", function () { pm.expect(b.episode.access).to.eql(\"locked\"); pm.expect(b.stream_url).to.eql(null); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock with no coins is refused (402)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Unlock with no coins is refused (402): status is 402\", function () { pm.expect(pm.response.code).to.eql(402); });",
+                  "pm.test(\"code\", function () { pm.expect(pm.response.json().error.code).to.eql(\"INSUFFICIENT_COINS\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}/unlock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}",
+                "unlock"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Wallet: balance is still 0 after the refusal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Wallet: balance is still 0 after the refusal: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"0 coins\", function () { pm.expect(pm.response.json().coin_balance).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top-up: the client cannot choose the amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Top-up: the client cannot choose the amount: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"coins\": 99999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/wallet/topup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet",
+                "topup"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top-up: demo +100 (simulated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Top-up: demo +100 (simulated): status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "var b = pm.response.json(); pm.test(\"100 coins, simulated\", function () { pm.expect(b.coins_added).to.eql(100); pm.expect(b.balance).to.eql(100); pm.expect(b.simulated_payment).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"demo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/wallet/topup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet",
+                "topup"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock: first time charges the server price",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Unlock: first time charges the server price: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"charged 30, balance 70\", function () { pm.expect(b.charged).to.eql(30); pm.expect(b.balance).to.eql(70); pm.expect(b.already_unlocked).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}/unlock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}",
+                "unlock"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlock: repeating does not charge again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Unlock: repeating does not charge again: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"charged 0, balance still 70\", function () { pm.expect(b.charged).to.eql(0); pm.expect(b.balance).to.eql(70); pm.expect(b.already_unlocked).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}/unlock",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}",
+                "unlock"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Wallet: balance read from the server",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Wallet: balance read from the server: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"70 coins\", function () { pm.expect(pm.response.json().coin_balance).to.eql(70); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Wallet: ledger lists the top-up and one unlock",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Wallet: ledger lists the top-up and one unlock: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "",
+                  "var b = pm.response.json();",
+                  "pm.test(\"two rows, newest first, with a paging flag\", function () { pm.expect(b.transactions.length).to.eql(2); pm.expect(b.transactions[0].type).to.eql(\"unlock\"); pm.expect(b.transactions[0].amount).to.eql(-30); pm.expect(b.has_more).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet/transactions?limit=50",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet",
+                "transactions?limit=50"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Wallet: unlocked list reads the rights themselves",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Wallet: unlocked list reads the rights themselves: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"one purchase\", function () { var u = pm.response.json().unlocked; pm.expect(u.length).to.eql(1); pm.expect(String(u[0].episode_id)).to.eql(pm.environment.get(\"new_paid_episode_id\")); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/wallet/unlocked",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "wallet",
+                "unlocked"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlocked episode now has a playback link",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Unlocked episode now has a playback link: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"unlocked with link\", function () { pm.expect(b.episode.access).to.eql(\"unlocked\"); pm.expect(typeof b.stream_url).to.eql(\"string\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Another viewer is still locked out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Another viewer is still locked out: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}/stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}",
+                "stream"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A film with paid unlocks cannot be deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A film with paid unlocks cannot be deleted: status is 409\", function () { pm.expect(pm.response.code).to.eql(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "A paid-for episode cannot be deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"A paid-for episode cannot be deleted: status is 409\", function () { pm.expect(pm.response.code).to.eql(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 Subscription",
+      "description": "Plus: active, renewal without overlapping dates, cancel keeps access.",
+      "item": [
+        {
+          "name": "Subscription: none yet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: none yet: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"inactive\", function () { var b = pm.response.json(); pm.expect(b.active).to.eql(false); pm.expect(b.subscription).to.eql(null); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscription: subscribe (simulated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: subscribe (simulated): status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "var b = pm.response.json(); pm.test(\"active with inclusive dates\", function () { pm.expect(b.active).to.eql(true); pm.expect(b.simulated_payment).to.eql(true); pm.expect(b.subscription.end_date > b.subscription.start_date).to.eql(true); }); pm.environment.set(\"sub1_end\", b.subscription.end_date); pm.environment.set(\"sub1_start\", b.subscription.start_date);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscription: renew twice, plans never overlap",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: renew twice, plans never overlap: status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "pm.environment.set(\"sub_paid_through_after_2\", pm.response.json().paid_through);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscription: third purchase starts after the second ends",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: third purchase starts after the second ends: status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "",
+                  "var b = pm.response.json();",
+                  "pm.test(\"paid through moved further and 3 plans remain\", function () { pm.expect(b.paid_through > pm.environment.get(\"sub_paid_through_after_2\")).to.eql(true); pm.expect(b.plans_remaining).to.eql(3); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscription: the latest plan is read back",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: the latest plan is read back: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"active, paid through is after the first end date\", function () { pm.expect(b.active).to.eql(true); pm.expect(b.paid_through > pm.environment.get(\"sub1_end\")).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscription: cancel keeps access until the end",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: cancel keeps access until the end: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"still active, flagged cancelled\", function () { pm.expect(b.active).to.eql(true); pm.expect(b.subscription.is_cancelled).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Subscription: another user has nothing to cancel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Subscription: another user has nothing to cancel: status is 404\", function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/subscription",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "subscription"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 Revenue and share setting",
+      "description": "Creator earnings, admin sales and the revenue-share setting.",
+      "item": [
+        {
+          "name": "Creator earnings match the stored 70/30 split",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Creator earnings match the stored 70/30 split: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"30 coins spent, creator earned 21, in coins\", function () { pm.expect(b.unit).to.eql(\"coins\"); pm.expect(b.coins_spent_by_viewers).to.eql(30); pm.expect(b.coins_earned).to.eql(21); pm.expect(b.unlock_count).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creator/earnings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creator",
+                "earnings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin sales: coins and simulated dollars stay separate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin sales: coins and simulated dollars stay separate: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "var b = pm.response.json(); pm.test(\"coin totals add up\", function () { pm.expect(b.coins.creator_share + b.coins.admin_share).to.eql(b.coins.coins_spent); pm.expect(b.coins.unlock_count > 0).to.eql(true); pm.expect(typeof b.simulated_payments).to.eql(\"object\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/sales",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "sales"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Share setting: read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Share setting: read: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"a percentage\", function () { var p = pm.response.json().admin_share_percent; pm.expect(p >= 0 && p <= 100).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settings/revenue-share",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "revenue-share"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Share setting: out of range is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Share setting: out of range is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admin_share_percent\": 101\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/settings/revenue-share",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "revenue-share"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Share setting: admin changes it to 50",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Share setting: admin changes it to 50: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admin_share_percent\": 50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/settings/revenue-share",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "revenue-share"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Share setting: earnings recorded earlier do not change",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Share setting: earnings recorded earlier do not change: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"still 21\", function () { pm.expect(pm.response.json().coins_earned).to.eql(21); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creator/earnings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creator",
+                "earnings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Share setting: put it back to 30",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Share setting: put it back to 30: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admin_share_percent\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/settings/revenue-share",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settings",
+                "revenue-share"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role change: admin promotes the creator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role change: admin promotes the creator: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{creator_id}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{creator_id}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role change: past earnings do not change",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role change: past earnings do not change: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"still 21 after becoming admin\", function () { pm.expect(pm.response.json().coins_earned).to.eql(21); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creator/earnings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creator",
+                "earnings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Role change: demote again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Role change: demote again: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"creator\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{creator_id}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{creator_id}}",
+                "role"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin cannot change their own role",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin cannot change their own role: status is 409\", function () { pm.expect(pm.response.code).to.eql(409); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"viewer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/{{admin_id}}/role",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{admin_id}}",
+                "role"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 Profile, social and the other endpoints",
+      "description": "Profile, creator lists, episode edit, like, watchlist, comments, follow, report, admin lists.",
+      "item": [
+        {
+          "name": "Profile: update display name and bio",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Profile: update display name and bio: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"saved\", function () { pm.expect(pm.response.json().user.display_name).to.eql(\"Collection viewer\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Collection viewer\",\n  \"bio\": \"hello\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Profile: display name is required",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Profile: display name is required: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"x\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Creator: lists their own films with every status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Creator: lists their own films with every status: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"includes the uploaded film\", function () { pm.expect(pm.response.json().films.filter(function (f) { return String(f.id) === pm.environment.get(\"film_id\"); }).length).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creator/films",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creator",
+                "films"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Episode: owner changes the price of an episode",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Episode: owner changes the price of an episode: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"now paid\", function () { var e = pm.response.json().episode; pm.expect(e.price_coins).to.eql(5); pm.expect(e.is_free).to.eql(false); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price_coins\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_free_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_free_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Episode: another creator cannot change it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Episode: another creator cannot change it: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price_coins\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_free_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_free_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Episode: a price above 500 is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Episode: a price above 500 is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price_coins\": 501\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_free_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_free_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Episode: owner puts it back to free",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Episode: owner puts it back to free: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_free\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_free_episode_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_free_episode_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Like: viewer likes the film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Like: viewer likes the film: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"liked\", function () { pm.expect(pm.response.json().liked).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/like",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "like"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Like: guest cannot like",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Like: guest cannot like: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/like",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "like"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Like: viewer removes the like",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Like: viewer removes the like: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/like",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "like"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Watchlist: save the film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Watchlist: save the film: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/watchlist",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Watchlist: the saved list holds it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Watchlist: the saved list holds it: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"contains the film\", function () { pm.expect(pm.response.json().film_ids.map(String).indexOf(pm.environment.get(\"film_id\")) >= 0).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/watchlist",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Watchlist: remove it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Watchlist: remove it: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/watchlist",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "watchlist"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comments: guest can read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Comments: guest can read: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "comments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comments: guest cannot write",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Comments: guest cannot write: status is 401\", function () { pm.expect(pm.response.code).to.eql(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"hi\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "comments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comments: empty comment is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Comments: empty comment is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "comments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comments: viewer writes one",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Comments: viewer writes one: status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "pm.environment.set(\"comment_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Nice film\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/comments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "comments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comments: someone else cannot delete it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Comments: someone else cannot delete it: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_other_creator}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/comments/{{comment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "comments",
+                "{{comment_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comments: the author deletes it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Comments: the author deletes it: status is 204\", function () { pm.expect(pm.response.code).to.eql(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/comments/{{comment_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "comments",
+                "{{comment_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow: viewer follows the creator",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Follow: viewer follows the creator: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators/{{creator_id}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators",
+                "{{creator_id}}",
+                "follow"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Follow: unfollow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Follow: unfollow: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/creators/{{creator_id}}/follow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "creators",
+                "{{creator_id}}",
+                "follow"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Report: viewer reports the film",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Report: viewer reports the film: status is 201\", function () { pm.expect(pm.response.code).to.eql(201); });",
+                  "pm.environment.set(\"report_id\", String(pm.response.json().id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Collection test report\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}/reports",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}",
+                "reports"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: the report is listed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin: the report is listed: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"listed\", function () { pm.expect(pm.response.json().reports.filter(function (r) { return String(r.id) === pm.environment.get(\"report_id\"); }).length).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reports",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reports"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: resolve the report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin: resolve the report: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reports/{{report_id}}/resolve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "{{report_id}}",
+                "resolve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: viewer cannot resolve reports",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin: viewer cannot resolve reports: status is 403\", function () { pm.expect(pm.response.code).to.eql(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reports/{{report_id}}/resolve",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reports",
+                "{{report_id}}",
+                "resolve"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: user list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin: user list: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"users\", function () { pm.expect(pm.response.json().users.length).to.above(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: live films",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin: live films: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/films?status=approved",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films?status=approved"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin: an unknown status filter is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin: an unknown status filter is refused: status is 400\", function () { pm.expect(pm.response.code).to.eql(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/films?status=nope",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films?status=nope"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Film: owner edits prices and details in one request (goes back to review)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Film: owner edits prices and details in one request (goes back to review): status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_creator}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Sprint film {{run_id}}\",\n  \"genre\": \"Drama\",\n  \"ai_tool\": \"Mixed\",\n  \"prompt_credit\": \"prompt credit\",\n  \"episode_prices\": [\n    {\n      \"id\": \"{{new_free_episode_id}}\",\n      \"price_coins\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Film: an owner edit puts it back in the review queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Film: an owner edit puts it back in the review queue: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                  "pm.test(\"queued again\", function () { pm.expect(pm.response.json().films.filter(function (f) { return String(f.id) === pm.environment.get(\"film_id\"); }).length).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/reviews",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "reviews"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Film: admin approves it again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Film: admin approves it again: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/films/{{film_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films",
+                "{{film_id}}",
+                "review"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 Take down",
+      "description": "A taken-down film disappears from every public path.",
+      "item": [
+        {
+          "name": "Admin takes the film down",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Admin takes the film down: status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"taken_down\",\n  \"note\": \"Sprint 1-2 collection clean-up\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/films/{{film_id}}/review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "films",
+                "{{film_id}}",
+                "review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guest can no longer see it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Guest can no longer see it: status is 404\", function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/films/{{film_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "films",
+                "{{film_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Even an unlocked viewer can no longer stream it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Even an unlocked viewer can no longer stream it: status is 404\", function () { pm.expect(pm.response.code).to.eql(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_viewer}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/episodes/{{new_paid_episode_id}}/stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "episodes",
+                "{{new_paid_episode_id}}",
+                "stream"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

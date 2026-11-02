@@ -6,6 +6,8 @@
 - `mobile/`: แอป Flutter แบบ MVC (`models/ views/ controllers/` + `data/` repository)
 - `docs/api.md`: รายการ endpoint, กติกาสิทธิ์/unlock/ส่วนแบ่ง
 - `docs/acceptance-checklist.md`: เทียบเอกสารข้อกำหนดกับของที่มีจริงทีละข้อ (ทำแล้ว / ยังเป็น mock / ยังไม่ทำ)
+- `docs/sprint-1-2-checklist.md` และ `docs/sprint-1-2-results.md`: สถานะ Sprint 1–2 รายข้อ พร้อมคำสั่งและผลการทดสอบจริง
+- `docs/er-diagram.md`: ER diagram (Mermaid) และกติกายอดเหรียญ/ส่วนแบ่ง/subscription · `docs/screens-index.md`: ดัชนีหน้าจอ · `docs/postman/`: Postman collection + วิธีรัน
 
 การจ่ายเงินทั้งหมด **จำลอง** (ปุ่ม demo +100 เหรียญ, coin pack, Plus) ไม่มี payment gateway และไม่มีเงินจริง
 
@@ -26,11 +28,7 @@
 
   > ไฟล์นี้มี `DROP DATABASE IF EXISTS` การ import ซ้ำจะล้างข้อมูลเดิมทั้งหมด
 
-- **มีฐานข้อมูล `shortreel` อยู่แล้ว (เก็บข้อมูลเดิม):** รัน migration แบบเพิ่มคอลัมน์อย่างเดียว ไม่ลบอะไร และรันซ้ำได้
-
-  ```bash
-  mysql -uroot shortreel < backend/db/migrations/001_core_flow.sql
-  ```
+- **ฐานเดิมที่ยังไม่มีคอลัมน์ล่าสุด:** ไม่มี migration แล้ว ต้อง import `shortreel.sql` ใหม่ (ข้อมูลเดิมหาย) หรือเพิ่มคอลัมน์เองให้ตรงกับไฟล์นี้ (เช่น `unlocked_episodes.owner_is_admin`)
 
 ### 2. Backend
 
@@ -41,7 +39,7 @@ cp .env.example .env
 npm run dev
 ```
 
-แก้ `JWT_SECRET` ใน `.env` ก่อนรัน แล้วเช็กที่ `http://localhost:3000/api/health` ต้องได้ `{"status":"ok","db":"up"}`
+แก้ `JWT_SECRET` ใน `.env` ก่อนรัน แล้วเช็กที่ `http://localhost:3000/api/health` ต้องได้ `{"status":"ok","db":"up"}` (ตั้ง `DB_NAME`, `PORT`, `UPLOAD_DIR` ใน `.env` ได้ เช่นเมื่อรันกับฐานทดสอบ)
 
 ### 3. คลิปเดโม (10–20 คลิป)
 
@@ -76,7 +74,7 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 
 สมัครใหม่ได้เป็น Viewer หรือ Creator เท่านั้น. Admin เพิ่มได้ทาง `PUT /api/admin/users/:id/role` โดย admin
 
-แอปมีแถบเลื่อนเหนือชื่อหนัง ลากเพื่อ seek ได้ การลองเล่นและ seek ทำบนเว็บ (Chromium) เท่านั้น ยังไม่ได้ลองบน Android/iOS
+แอปมีแถบเลื่อนเหนือชื่อหนัง ลากเพื่อ seek ได้ การลองเล่นและ seek ทำบนเว็บ (Chromium) เท่านั้น ยังไม่ได้ลองบน Android
 
 ### ตัวเสริม Series Jeen (ไม่บังคับ)
 
@@ -88,7 +86,7 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 npm test --prefix backend
 ```
 
-integration test ของ backend ต้องมี MariaDB เปิดอยู่ แต่ละไฟล์สร้างฐานข้อมูลของตัวเอง `shortreel_<ชื่อ>_test` จาก `db/shortreel.sql` แล้วลบทิ้ง และ **ไม่แตะฐานข้อมูล `shortreel`** (ตัวช่วยปฏิเสธชื่อที่ไม่ลงท้าย `_test`). ตั้งค่าเชื่อมต่อด้วย `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER`, `TEST_DB_PASSWORD` ถ้าไม่ใช่ค่าเริ่มต้นของ XAMPP
+integration test ของ backend (179 test) ต้องมี MariaDB เปิดอยู่ แต่ละไฟล์สร้างฐานข้อมูลของตัวเอง `shortreel_<ชื่อ>_test` จาก `db/shortreel.sql` แล้วลบทิ้ง และ **ไม่แตะฐานข้อมูล `shortreel`** (ตัวช่วยปฏิเสธชื่อที่ไม่ลงท้าย `_test`). ตั้งค่าเชื่อมต่อด้วย `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER`, `TEST_DB_PASSWORD` ถ้าไม่ใช่ค่าเริ่มต้นของ XAMPP
 
 ```bash
 cd mobile
@@ -111,8 +109,8 @@ flutter test
 | ส่วนแบ่งรายได้ (บันทึก ณ ตอนปลดล็อก, ปัดเศษรวมตรง, Creator dashboard, Admin sales แยกเหรียญ/ดอลลาร์จำลอง) | ทำแล้ว |
 | Search/filter genre, length, AI tool; Profile | ทำแล้ว |
 | Like, บันทึก, ติดตาม, คอมเมนต์ (เรียบ), report | ทำแล้ว |
-| การตอบกลับซ้อน / like คอมเมนต์ / continue watching | **ยังเป็น local** (ไม่มีใน backend) |
-| ยอดวิวและกราฟรายวัน, การแจ้งเตือน, forgot password | **ยังไม่ทำ** |
+| การตอบกลับซ้อน / like คอมเมนต์ | **ยังเป็น local** (ไม่มีใน backend) |
+| ยอดวิว, กราฟรายวัน, การแจ้งเตือน, forgot password, continue watching | **ถอดออกจากแอปแล้ว** (ไม่มีตารางใน DB) |
 | ตัวเสริม Series Jeen | ทำงานแยก ไม่กระทบ flow หลัก; บั๊กเดิมของ catalog/player ยังไม่ได้ตรวจ |
 | คลิปเดโมของทีม 10–20 คลิป | **ยังไม่มี** มีสคริปต์นำเข้า และตอนนี้ฐานข้อมูลพัฒนาชี้ไปที่คลิปที่สร้างเอง 12 คลิป (+1 คลิปยาวสำหรับลอง seek) เป็นชุดชั่วคราว ให้ทีมแทนที่ด้วยคลิปที่มีสิทธิ์ใช้ |
 
