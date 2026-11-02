@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/feed_controller.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/widgets/ai_label_badge.dart';
 import 'package:shortreel/widgets/common.dart';
 

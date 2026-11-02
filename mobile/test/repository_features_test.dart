@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/auth_controller.dart';
 import 'package:shortreel/controllers/wallet_controller.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/services/api_client.dart';
 
 void main() {

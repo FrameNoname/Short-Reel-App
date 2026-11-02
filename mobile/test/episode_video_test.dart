@@ -8,7 +8,7 @@ import 'package:shortreel/controllers/auth_controller.dart';
 import 'package:shortreel/controllers/feed_controller.dart';
 import 'package:shortreel/controllers/settings_controller.dart';
 import 'package:shortreel/data/app_repository.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/models/episode.dart';
 import 'package:shortreel/models/film.dart';
 import 'package:shortreel/views/feed/episode_video.dart';

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/services/video_picker.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/main.dart';
 import 'package:shortreel/models/user.dart';
 import 'package:shortreel/views/app_shell.dart';

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/catalog_controller.dart';
 import 'package:shortreel/data/film_filter.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/main.dart';
 import 'package:shortreel/models/catalog.dart';
 import 'package:shortreel/services/api_client.dart';

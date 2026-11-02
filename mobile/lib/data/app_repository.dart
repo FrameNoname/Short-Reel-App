@@ -135,8 +135,7 @@ class EpisodePricing {
   bool get hasMixedPrices => maxPriceCoins != priceCoins;
 }
 
-/// Everything the screens need. [MockRepository] answers from demo data; an
-/// API-backed version can replace it once the backend endpoints are ready.
+/// Everything the screens need. [ApiRepository] answers from the REST API.
 abstract class AppRepository {
   /// The public profile behind a channel, or null when the id is unknown.
   User? userById(int id);

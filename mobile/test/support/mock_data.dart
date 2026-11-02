@@ -1,6 +1,6 @@
-import '../models/coin_pack.dart';
-import '../models/film.dart';
-import '../models/user.dart';
+import 'package:shortreel/models/coin_pack.dart';
+import 'package:shortreel/models/film.dart';
+import 'package:shortreel/models/user.dart';
 
 // Demo data based on backend/db/shortreel.sql. Quiet Orbit and Night Tram are
 // extra films that fill the review screens shown in the UI design.
@@ -57,22 +57,6 @@ const mockUsers = [
     role: UserRole.viewer,
     coinBalance: 80,
   ),
-];
-
-const mockGenres = [
-  'Drama',
-  'Sci-Fi',
-  'Romance',
-  'Thriller',
-  'Fantasy',
-  'Mystery',
-];
-
-const mockAiTools = [
-  'Text-to-video',
-  'Image-to-video',
-  'Video-to-video',
-  'Mixed',
 ];
 
 const mockCoinPacks = [
