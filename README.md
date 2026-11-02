@@ -92,8 +92,6 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 
 ตรวจโค้ด Flutter ได้ด้วย `cd mobile && flutter analyze`
 
-ทดสอบ API ด้วยมือ: ใช้ collection "ShortReel ทดสอบเอง (ไม่มีโค้ด)" ใน Postman กับ server ทดสอบพอร์ต 3100 (วิธีเปิดฐานและ server ชั่วคราวอยู่ใน [`docs/postman/README.md`](docs/postman/README.md))
-
 ### ทำถึงขั้นไหนแล้ว
 
 รายละเอียดทีละข้อกำหนดอยู่ใน [`docs/acceptance-checklist.md`](docs/acceptance-checklist.md) สรุปสั้น ๆ:
@@ -203,8 +201,6 @@ The automated backend and Flutter test suites were removed to be rewritten; the 
 - Flutter: `mobile/test/*_test.dart`, run with `cd mobile && flutter test`.
 
 Lint the Flutter code with `cd mobile && flutter analyze`.
-
-Manual API testing: use the "ShortReel ทดสอบเอง (ไม่มีโค้ด)" collection in Postman against the test server on port 3100 (how to start the temporary database and server is in [`docs/postman/README.md`](docs/postman/README.md)).
 
 ### Project status
 
