@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/feed_controller.dart';
 import 'package:shortreel/controllers/film_search_controller.dart';
 import 'package:shortreel/data/film_filter.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/models/film.dart';
 import 'package:shortreel/services/video_picker.dart';
 import 'package:shortreel/services/api_client.dart';

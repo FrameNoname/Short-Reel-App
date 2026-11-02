@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/upload_controller.dart';
 import '../../data/app_repository.dart';
-import '../../data/mock_data.dart';
+import '../../data/lookups.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../services/errors.dart';
@@ -27,8 +27,8 @@ class UploadView extends StatefulWidget {
 class _UploadViewState extends State<UploadView> {
   late final _title = TextEditingController(text: widget.film?.title);
   late final _prompt = TextEditingController(text: widget.film?.promptCredit);
-  late String _genre = widget.film?.genreName ?? mockGenres.first;
-  late String _tool = widget.film?.aiToolName ?? mockAiTools.first;
+  late String _genre = widget.film?.genreName ?? genreNames.first;
+  late String _tool = widget.film?.aiToolName ?? aiToolNames.first;
   late List<bool> _episodeFree = [];
   late List<TextEditingController> _priceFields = [];
 
@@ -288,7 +288,7 @@ class _UploadViewState extends State<UploadView> {
             initialValue: _genre,
             dropdownColor: AppColors.surfaceHigh,
             items: [
-              for (final genre in mockGenres)
+              for (final genre in genreNames)
                 DropdownMenuItem(value: genre, child: Text(genre)),
             ],
             onChanged: (value) => setState(() => _genre = value!),
@@ -299,7 +299,7 @@ class _UploadViewState extends State<UploadView> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final tool in mockAiTools)
+              for (final tool in aiToolNames)
                 _ToolChip(
                   label: tool,
                   selected: tool == _tool,

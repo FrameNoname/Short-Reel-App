@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/feed_controller.dart';
 import '../../controllers/settings_controller.dart';
-import '../../data/mock_data.dart';
+import '../../data/lookups.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/text.dart';
 
@@ -207,7 +207,7 @@ class _GenrePicker extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        for (final genre in mockGenres)
+        for (final genre in genreNames)
           Semantics(
             button: true,
             selected: selected.contains(genre),

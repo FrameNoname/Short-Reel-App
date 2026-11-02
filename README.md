@@ -114,4 +114,4 @@ flutter test
 | ตัวเสริม Series Jeen | ทำงานแยก ไม่กระทบ flow หลัก; บั๊กเดิมของ catalog/player ยังไม่ได้ตรวจ |
 | คลิปเดโมของทีม 10–20 คลิป | **ยังไม่มี** มีสคริปต์นำเข้า และตอนนี้ฐานข้อมูลพัฒนาชี้ไปที่คลิปที่สร้างเอง 12 คลิป (+1 คลิปยาวสำหรับลอง seek) เป็นชุดชั่วคราว ให้ทีมแทนที่ด้วยคลิปที่มีสิทธิ์ใช้ |
 
-`MockRepository` ยังอยู่ใน `mobile/lib/data/` ใช้ใน widget test เท่านั้น. `main.dart` ใช้ `ApiRepository`
+`MockRepository` ย้ายไปอยู่ `mobile/test/support/` ใช้ใน widget test เท่านั้น. `main.dart` ใช้ `ApiRepository`

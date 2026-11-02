@@ -1,17 +1,18 @@
-import '../models/coin_pack.dart';
-import '../models/episode.dart';
-import '../models/catalog.dart';
-import '../models/film.dart';
-import '../models/subscription.dart';
-import '../models/transaction.dart';
-import '../models/user.dart';
-import '../services/api_client.dart';
-import '../services/catalog_service.dart';
-import 'app_repository.dart';
-import 'film_filter.dart';
+import 'package:shortreel/models/coin_pack.dart';
+import 'package:shortreel/models/episode.dart';
+import 'package:shortreel/models/catalog.dart';
+import 'package:shortreel/models/film.dart';
+import 'package:shortreel/models/subscription.dart';
+import 'package:shortreel/models/transaction.dart';
+import 'package:shortreel/models/user.dart';
+import 'package:shortreel/services/api_client.dart';
+import 'package:shortreel/services/catalog_service.dart';
+import 'package:shortreel/data/app_repository.dart';
+import 'package:shortreel/data/film_filter.dart';
+import 'package:shortreel/data/lookups.dart';
 import 'mock_data.dart';
 
-/// In-memory backend for the UI demo. Data resets when the app restarts.
+/// In-memory repository for tests. It answers from the demo data in mock_data.dart.
 class MockRepository implements AppRepository {
   MockRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     for (final film in _films.values) {
@@ -712,8 +713,8 @@ class MockRepository implements AppRepository {
       title: title,
       synopsis: null,
       posterUrl: null,
-      genreId: mockGenres.indexOf(genre) + 1,
-      aiToolId: mockAiTools.indexOf(aiTool) + 1,
+      genreId: genreNames.indexOf(genre) + 1,
+      aiToolId: aiToolNames.indexOf(aiTool) + 1,
       promptCredit: promptCredit,
       isAiGenerated: true,
       status: 'pending',
@@ -749,9 +750,9 @@ class MockRepository implements AppRepository {
     final resubmitted = film.status == 'rejected';
     _films[filmId] = film.copyWith(
       title: title,
-      genreId: mockGenres.indexOf(genre) + 1,
+      genreId: genreNames.indexOf(genre) + 1,
       genreName: genre,
-      aiToolId: mockAiTools.indexOf(aiTool) + 1,
+      aiToolId: aiToolNames.indexOf(aiTool) + 1,
       aiToolName: aiTool,
       promptCredit: promptCredit,
       status: resubmitted ? 'pending' : null,

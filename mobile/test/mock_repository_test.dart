@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/data/app_repository.dart';
 import 'package:shortreel/data/film_filter.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/models/user.dart';
 import 'package:shortreel/services/api_client.dart';
 

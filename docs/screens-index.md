@@ -2,7 +2,7 @@
 
 ภาพในโฟลเดอร์ [`docs/ui-screens/`](ui-screens/) เป็นภาพหน้าจอของแอปจริง (ไม่ใช่แบบวาดใหม่) ใช้เป็นหลักฐานของ Sprint 1 (แบบ/โครง Flutter) และ Sprint 2 (หน้าจอที่ทำงานกับ API)
 
-โครงสร้าง MVC: `mobile/lib/models/` · `views/` (หน้าจอ) · `controllers/` (`ChangeNotifier` + Provider) · `data/` (repository: `ApiRepository` ใช้จริง, `MockRepository` ใช้ใน test) · `theme/app_theme.dart` (สี/ฟอนต์เดียวทั้งแอป) · `widgets/` (ปุ่ม การ์ด Loading/Error/Empty ที่ใช้ร่วมกัน) · `views/app_shell.dart` (แท็บล่างตาม role: `tabsFor(role)`)
+โครงสร้าง MVC: `mobile/lib/models/` · `views/` (หน้าจอ) · `controllers/` (`ChangeNotifier` + Provider) · `data/` (repository: `ApiRepository` ใช้จริง, `MockRepository` อยู่ใน `mobile/test/support/` ใช้ใน test) · `theme/app_theme.dart` (สี/ฟอนต์เดียวทั้งแอป) · `widgets/` (ปุ่ม การ์ด Loading/Error/Empty ที่ใช้ร่วมกัน) · `views/app_shell.dart` (แท็บล่างตาม role: `tabsFor(role)`)
 
 | หน้าจอในแผน | ไฟล์ view | ภาพ | Guest | Viewer | Creator | Admin | ต่อ API |
 |---|---|---|---|---|---|---|---|

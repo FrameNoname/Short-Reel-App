@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shortreel/data/mock_repository.dart';
+import 'support/mock_repository.dart';
 import 'package:shortreel/main.dart';
 import 'package:shortreel/views/auth/login_view.dart';
 import 'package:shortreel/views/onboarding/onboarding_view.dart';
