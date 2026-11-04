@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
 import '../models/film.dart';
-import '../models/user.dart';
 import '../services/api_client.dart' show isStaleSession;
 import '../services/errors.dart';
 
@@ -13,7 +12,6 @@ class FilmSearchController extends ChangeNotifier {
 
   String query = '';
   List<Film> results = const [];
-  List<User> creators = const [];
 
   /// Words the person searched for, the latest first.
   List<String> recent = const [];
@@ -38,7 +36,6 @@ class FilmSearchController extends ChangeNotifier {
       final found = await repository.films(value);
       if (request != _request) return;
       results = found;
-      creators = repository.searchCreators(value);
     } on Object catch (e) {
       if (request != _request || isStaleSession(e)) return;
       results = const [];

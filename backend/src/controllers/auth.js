@@ -5,7 +5,6 @@ const { text } = require('../utils/validate');
 const users = require('../models/auth');
 
 const USERNAME = /^[A-Za-z0-9_.]{3,30}$/;
-const SELF_REGISTER_ROLES = new Set(['viewer', 'creator']);
 
 // Verified against when the username does not exist, so a wrong username and a
 // wrong password take the same time.
@@ -58,10 +57,11 @@ exports.register = async (req, res) => {
     throw new ApiError(400, 'VALIDATION_ERROR', 'username may use letters, numbers, "_" and "."');
   }
   const password = rawPassword(req.body, { strong: true });
+  // Everyone signs up as a viewer. Admin accounts are never created from the
+  // outside; an admin promotes users.
   const role = req.body?.role ?? 'viewer';
-  // Admin accounts are never created from the outside; an admin promotes users.
   if (role === 'admin') throw new ApiError(403, 'FORBIDDEN', 'Admin accounts cannot be self-registered');
-  if (!SELF_REGISTER_ROLES.has(role)) throw new ApiError(400, 'VALIDATION_ERROR', 'role is not valid');
+  if (role !== 'viewer') throw new ApiError(400, 'VALIDATION_ERROR', 'role is not valid');
   const displayName = text(req.body, 'display_name', { max: 50, optional: true }) ?? username;
 
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });

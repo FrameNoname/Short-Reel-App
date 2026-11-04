@@ -9,7 +9,6 @@ import 'controllers/feed_controller.dart';
 import 'controllers/film_search_controller.dart';
 import 'controllers/profile_controller.dart';
 import 'controllers/settings_controller.dart';
-import 'controllers/upload_controller.dart';
 import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
 import 'data/api_repository.dart';
@@ -17,7 +16,6 @@ import 'l10n/app_language.dart';
 import 'services/api_client.dart';
 import 'services/catalog_service.dart';
 import 'services/token_store.dart';
-import 'services/video_picker.dart';
 import 'theme/app_theme.dart';
 import 'views/app_shell.dart';
 import 'views/auth/login_view.dart';
@@ -47,7 +45,6 @@ class ShortReelApp extends StatelessWidget {
     this.catalog,
     this.api,
     this.restoreSession = false,
-    this.pickVideos = pickVideosFromDevice,
   });
 
   final AppRepository repository;
@@ -60,9 +57,6 @@ class ShortReelApp extends StatelessWidget {
 
   /// Signs in again from the token kept on the device when the app starts.
   final bool restoreSession;
-
-  /// Opens the video picker on the Upload screen; tests pass a fake.
-  final VideoPicker pickVideos;
 
   /// Lets a logout or an expired session close every screen pushed on top of
   /// the root, so none of them is left showing (or reading) the old account.
@@ -96,9 +90,6 @@ class ShortReelApp extends StatelessWidget {
               WalletController(repository, context.read<AuthController>()),
         ),
         ChangeNotifierProvider(create: (_) => ProfileController(repository)),
-        ChangeNotifierProvider(
-          create: (_) => UploadController(repository, pickVideos: pickVideos),
-        ),
         ChangeNotifierProvider(
           create: (context) {
             final admin = AdminController(repository);

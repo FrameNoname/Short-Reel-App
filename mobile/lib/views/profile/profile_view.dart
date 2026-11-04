@@ -16,8 +16,6 @@ import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
 import '../search/search_view.dart';
-import 'creator_dashboard_view.dart';
-import 'creator_profile_view.dart';
 import 'edit_profile_view.dart';
 import 'settings_view.dart';
 
@@ -48,25 +46,17 @@ class ProfileView extends StatelessWidget {
       );
     }
     final repository = context.watch<ProfileController>().repository;
-    final following = repository.followingOf(user.id);
-    final isCreator = user.role != UserRole.viewer;
     return OnActivated(
       run: () => context.read<ProfileController>().load(user.id),
-      child: _scaffold(context, user, repository, following, isCreator),
+      child: _scaffold(context, user, repository),
     );
   }
 
-  Widget _scaffold(
-    BuildContext context,
-    User user,
-    AppRepository repository,
-    List<User> following,
-    bool isCreator,
-  ) {
+  Widget _scaffold(BuildContext context, User user, AppRepository repository) {
     return Scaffold(
       body: SafeArea(
         child: DefaultTabController(
-          length: 3,
+          length: 2,
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -173,20 +163,6 @@ class ProfileView extends StatelessWidget {
                   children: [
                     Expanded(
                       child: StatTile(
-                        value: '${following.length}',
-                        label: 'Following',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: StatTile(
-                        value: '${repository.followerCount(user.id)}',
-                        label: 'Followers',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: StatTile(
                         value: '${user.coinBalance}',
                         label: 'Coins',
                         valueColor: AppColors.gold,
@@ -194,54 +170,11 @@ class ProfileView extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (isCreator) ...[
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () => _open(context, const CreatorDashboardView()),
-                    child: AppCard(
-                      color: AppColors.primarySoft,
-                      borderColor: const Color(0x667C5CFF),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.bar_chart, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Creator studio',
-                                  style: TextStyle(fontWeight: FontWeight.w700),
-                                ),
-                                Text(
-                                  'Earnings and review status',
-                                  style: TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 8),
                 TabBar(
                   tabs: [
                     Tab(text: context.tr('Watchlist')),
                     Tab(text: context.tr('Unlocked')),
-                    Tab(text: context.tr('Following')),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -256,31 +189,6 @@ class ProfileView extends StatelessWidget {
                         films: repository.unlockedFilmsOf(user.id),
                         emptyMessage: 'Unlocked films appear here.',
                       ),
-                      following.isEmpty
-                          ? const EmptyView(
-                              message: 'Creators you follow appear here.',
-                            )
-                          : ListView(
-                              children: [
-                                for (final creator in following)
-                                  ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: CircleAvatar(
-                                      backgroundColor: AppColors.surfaceHigh,
-                                      child: Text(
-                                        creator.username[0].toUpperCase(),
-                                      ),
-                                    ),
-                                    onTap: () =>
-                                        openCreatorProfile(context, creator.id),
-                                    title: ChannelName(
-                                      creator.displayName ?? creator.username,
-                                      verified: creator.isVerified,
-                                    ),
-                                    subtitle: Text('@${creator.username}'),
-                                  ),
-                              ],
-                            ),
                     ],
                   ),
                 ),

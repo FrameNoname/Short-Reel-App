@@ -1,11 +1,10 @@
 const ApiError = require('../utils/ApiError');
-const { pathId, text, int, bad } = require('../utils/validate');
+const { pathId, text, bad } = require('../utils/validate');
 const admin = require('../models/admin');
 const films = require('../models/films');
-const wallet = require('../models/wallet');
 
 const STATUSES = ['pending', 'approved', 'rejected', 'taken_down'];
-const ROLES = ['viewer', 'creator', 'admin'];
+const ROLES = ['viewer', 'admin'];
 
 async function filmsWithStatus(pool, status) {
   const rows = await films.search(pool, { status, sort: 'latest', limit: 100, offset: 0 });
@@ -33,21 +32,7 @@ exports.reviewFilm = async (req, res) => {
 };
 
 exports.sales = async (req, res) => {
-  const pool = req.app.locals.pool;
-  res.json({
-    admin_share_percent: await wallet.adminSharePercent(pool),
-    ...(await admin.sales(pool)),
-  });
-};
-
-exports.getRevenueShare = async (req, res) => {
-  res.json({ admin_share_percent: await wallet.adminSharePercent(req.app.locals.pool) });
-};
-
-exports.setRevenueShare = async (req, res) => {
-  const percent = int(req.body, 'admin_share_percent', { min: 0, max: 100 });
-  await admin.setSharePercent(req.app.locals.pool, percent);
-  res.json({ admin_share_percent: percent, applies_to: 'unlocks made from now on' });
+  res.json(await admin.sales(req.app.locals.pool));
 };
 
 exports.listUsers = async (req, res) => {

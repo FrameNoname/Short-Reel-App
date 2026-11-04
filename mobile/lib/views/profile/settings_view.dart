@@ -49,7 +49,7 @@ class SettingsView extends StatelessWidget {
             _Row(
               icon: Icons.login_rounded,
               title: 'Log in',
-              subtitle: 'Save films, unlock episodes and follow channels',
+              subtitle: 'Save films and unlock episodes',
               onTap: () => _open(context, const LoginView()),
             )
           else ...[

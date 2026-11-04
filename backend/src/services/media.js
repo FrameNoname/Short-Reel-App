@@ -8,10 +8,6 @@ function resolveInside(uploadDir, videoPath) {
   return file.startsWith(root + path.sep) ? file : null;
 }
 
-async function discard(file) {
-  if (file) await fs.unlink(file.path ?? file).catch(() => {});
-}
-
 // Sample-entry codes of the video codecs a browser <video> can play from MP4.
 const VIDEO_CODECS = new Set(['avc1', 'avc3', 'hvc1', 'hev1', 'av01', 'vp09', 'mp4v']);
 
@@ -127,4 +123,4 @@ async function mp4DurationSec(filePath) {
   }
 }
 
-module.exports = { resolveInside, discard, inspectMp4, looksLikeMp4, mp4DurationSec };
+module.exports = { resolveInside, inspectMp4, looksLikeMp4, mp4DurationSec };

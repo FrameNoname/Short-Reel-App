@@ -64,9 +64,10 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> register(String username, String password, UserRole role) async {
+  /// Signs up a new viewer account.
+  Future<void> register(String username, String password) async {
     final epoch = ++_epoch;
-    final user = await _repository.register(username, password, role);
+    final user = await _repository.register(username, password);
     if (epoch != _epoch) return;
     _user = user;
     notifyListeners();

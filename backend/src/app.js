@@ -1,3 +1,4 @@
+const path = require('node:path');
 const cors = require('cors');
 const express = require('express');
 const ApiError = require('./utils/ApiError');
@@ -6,12 +7,13 @@ const authRoutes = require('./routes/auth');
 const filmRoutes = require('./routes/films');
 const episodeRoutes = require('./routes/episodes');
 const { walletRouter, coinPacksRouter } = require('./routes/wallet');
-const creatorRoutes = require('./routes/creator');
 const adminRoutes = require('./routes/admin');
 const socialRoutes = require('./routes/social');
 const catalogRoutes = require('./routes/catalog');
 const films = require('./controllers/films');
-const { UPLOAD_DIR } = require('./middleware/upload');
+
+// Where the episode videos live (filled by scripts/import-demo-clips.js).
+const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 
 // The Flutter web dev server runs on localhost; the mobile app does not need CORS.
 const LOCAL_WEB_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
@@ -21,7 +23,6 @@ function createApp({
   jwtSecret,
   jwtExpiresIn = '7d',
   uploadDir = UPLOAD_DIR,
-  maxUploadBytes,
   catalog,
   catalogAllowGuest = false,
 }) {
@@ -30,7 +31,6 @@ function createApp({
   app.locals.jwtSecret = jwtSecret;
   app.locals.jwtExpiresIn = jwtExpiresIn;
   app.locals.uploadDir = uploadDir;
-  app.locals.maxUploadBytes = maxUploadBytes;
   app.locals.catalog = catalog;
   app.locals.catalogAllowGuest = catalogAllowGuest;
 
@@ -53,7 +53,6 @@ function createApp({
   app.use('/api/episodes', episodeRoutes);
   app.use('/api/wallet', walletRouter);
   app.use('/api/coin-packs', coinPacksRouter);
-  app.use('/api/creator', creatorRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api', socialRoutes);
 

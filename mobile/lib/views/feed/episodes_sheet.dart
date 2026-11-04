@@ -52,7 +52,7 @@ class EpisodesSheet extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              '${episodes.length} episodes · @${film.creatorName}',
+              '${episodes.length} episodes',
               style: const TextStyle(color: AppColors.muted, fontSize: 13),
             ),
             const SizedBox(height: 14),

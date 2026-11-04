@@ -6,19 +6,19 @@
 
 ## ภาษาไทย
 
-ShortReel เป็นแอปดูหนังสั้น AI แบบเลื่อนแนวตั้ง ดูทีละตอน ตอนแรก ๆ ดูฟรี ตอนที่เหลือปลดล็อกด้วยเหรียญ ครีเอเตอร์อัปโหลดหนังของตัวเองได้ และได้ส่วนแบ่งเมื่อมีคนปลดล็อก (Group 7, Project 2)
+ShortReel เป็นแอปดูหนังสั้น AI แบบเลื่อนแนวตั้ง ดูทีละตอน ตอนแรก ๆ ดูฟรี ตอนที่เหลือปลดล็อกด้วยเหรียญ ผู้ใช้มี 2 แบบคือ Viewer (คนดู) และ Admin (ผู้ดูแลแคตตาล็อก) (Group 7, Project 2)
 
 **Flutter → REST API (Node.js/Express) → MySQL/MariaDB**
 
 ### ฟีเจอร์
 
-- **ฟีด:** เลื่อนดูหนังแนวตั้ง แยกแท็บ "สำหรับคุณ" กับ "กำลังติดตาม" ปรับความเร็ววิดีโอได้ และลากแถบเลื่อนเพื่อ seek
+- **ฟีด:** เลื่อนดูหนังแนวตั้ง ปรับความเร็ววิดีโอได้ และลากแถบเลื่อนเพื่อ seek
 - **ตอนและเหรียญ:** ตอนฟรีดูได้โดยไม่ต้องล็อกอิน ตอนที่ล็อกไว้ใช้เหรียญปลดล็อก
 - **กระเป๋าเงิน:** เติมเหรียญด้วย coin pack หรือปุ่มเดโม +100 ดูประวัติธุรกรรมได้
-- **โซเชียล:** กดถูกใจ บันทึกหนังไว้ดูทีหลัง ติดตามครีเอเตอร์ และคอมเมนต์
-- **ค้นหา:** ค้นจากชื่อหนังหรือชื่อครีเอเตอร์
-- **ครีเอเตอร์:** สร้าง แก้ไข และลบหนัง อัปโหลดวิดีโอทีละตอน ตั้งราคาแต่ละตอน ต้องระบุ AI tool และดูรายได้
-- **แอดมิน:** ตรวจหนังได้ 4 แบบ (รอตรวจ, อนุมัติ, ไม่อนุมัติ, ถอดออก) จัดการ role ผู้ใช้ ตั้งส่วนแบ่งรายได้ และดูยอดขาย
+- **โซเชียล:** กดถูกใจ บันทึกหนังไว้ดูทีหลัง และคอมเมนต์
+- **ค้นหา:** ค้นจากชื่อหนัง
+- **โปรไฟล์:** ดูเหรียญ รายการหนังที่บันทึกไว้ และหนังที่ปลดล็อกแล้ว
+- **แอดมิน:** ตรวจหนังได้ 4 แบบ (รอตรวจ, อนุมัติ, ไม่อนุมัติ, ถอดออก) จัดการ role ผู้ใช้ และดูยอดขาย เหรียญที่ใช้ปลดล็อกเป็นของแอดมินทั้งหมด
 - **Series Jeen:** แท็บแคตตาล็อกรวมซีรีส์จาก FreeReels, Melolo และแพลตฟอร์มอื่น ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย
 
 แอปแสดงผลเป็นภาษาไทย การจ่ายเงินทั้งหมดเป็นแบบ **จำลอง** ไม่มี payment gateway และไม่ใช้เงินจริง
@@ -27,7 +27,7 @@ ShortReel เป็นแอปดูหนังสั้น AI แบบเล
 
 ```
 backend/            REST API (Express 5)
-  db/shortreel.sql  สคีมาและข้อมูลตัวอย่าง (13 ตาราง)
+  db/shortreel.sql  สคีมาและข้อมูลตัวอย่าง (12 ตาราง)
   src/routes/       เส้นทาง API
   src/controllers/  ตรวจ input และตอบกลับ
   src/models/       คำสั่ง SQL
@@ -93,7 +93,7 @@ node backend/scripts/import-demo-clips.js <โฟลเดอร์คลิป>
 node backend/scripts/import-demo-clips.js <โฟลเดอร์คลิป>
 ```
 
-`--dry-run` ใช้ดูก่อนว่าคลิปไหนจะไปอยู่ตอนไหน สคริปต์จะคัดลอกคลิปเข้า `backend/uploads/` และอัปเดตเฉพาะหนังตัวอย่าง (id 1–5) ถ้าคลิปมีไม่ถึง 40 ไฟล์จะวนใช้ซ้ำ หนังที่อัปโหลดผ่านแอปไม่โดนแก้
+`--dry-run` ใช้ดูก่อนว่าคลิปไหนจะไปอยู่ตอนไหน สคริปต์จะคัดลอกคลิปเข้า `backend/uploads/` และอัปเดตเฉพาะหนังตัวอย่าง (id 1–5) ถ้าคลิปมีไม่ถึง 40 ไฟล์จะวนใช้ซ้ำ
 
 #### 4. แอป
 
@@ -114,11 +114,10 @@ flutter run -d edge --web-port 8080 --dart-define=API_BASE_URL=http://localhost:
 | Username | Password | Role |
 |---|---|---|
 | `admin` | `1111` | Admin |
-| `kestrel_studio` | `2222` | Creator เจ้าของ "Salt & Signal" |
-| `mira.lens` | `4444` | Creator มี 142 เหรียญ |
+| `mira.lens` | `4444` | Viewer มี 142 เหรียญ และปลดล็อกไว้บางตอน |
 | `viewer01` | `6666` | Viewer มี 80 เหรียญ |
 
-สมัครสมาชิกใหม่ได้เฉพาะ Viewer หรือ Creator ถ้าต้องการ Admin ให้ admin เปลี่ยน role ให้ผ่าน `PUT /api/admin/users/:id/role`
+สมัครสมาชิกใหม่ได้เป็น Viewer เท่านั้น ถ้าต้องการ Admin ให้ admin เปลี่ยน role ให้ผ่าน `PUT /api/admin/users/:id/role`
 
 ### API
 
@@ -128,12 +127,11 @@ flutter run -d edge --web-port 8080 --dart-define=API_BASE_URL=http://localhost:
 |---|---|
 | ระบบ | `GET /health`, `GET /lookups` (genre และ AI tool) |
 | บัญชี | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET/PUT /auth/me` |
-| หนัง | `GET /films?q=`, `GET /films/:id`, `POST /films`, `PUT/DELETE /films/:id`, `POST /films/:id/episodes` |
-| ตอน | `GET/PUT/DELETE /episodes/:id`, `GET /episodes/:id/stream`, `POST /episodes/:id/unlock` |
+| หนัง | `GET /films?q=`, `GET /films/:id` |
+| ตอน | `GET /episodes/:id`, `GET /episodes/:id/stream`, `POST /episodes/:id/unlock` |
 | กระเป๋าเงิน | `GET /wallet`, `GET /wallet/transactions`, `GET /wallet/unlocked`, `POST /wallet/topup`, `GET /coin-packs` |
-| โซเชียล | `POST/DELETE /films/:id/like`, `GET /watchlist`, `POST/DELETE /films/:id/watchlist`, `GET/POST /films/:id/comments`, `DELETE /comments/:id`, `POST/DELETE /creators/:id/follow` |
-| ครีเอเตอร์ | `GET /creator/films`, `GET /creator/earnings` |
-| แอดมิน | `GET /admin/reviews`, `GET /admin/films`, `POST /admin/films/:id/review`, `GET /admin/sales`, `GET/PUT /admin/settings/revenue-share`, `GET /admin/users`, `PUT /admin/users/:id/role` |
+| โซเชียล | `POST/DELETE /films/:id/like`, `GET /watchlist`, `POST/DELETE /films/:id/watchlist`, `GET/POST /films/:id/comments`, `DELETE /comments/:id` |
+| แอดมิน | `GET /admin/reviews`, `GET /admin/films`, `POST /admin/films/:id/review`, `GET /admin/sales`, `GET /admin/users`, `PUT /admin/users/:id/role` |
 | Series Jeen | `GET /catalog/platforms`, `GET /catalog/platforms/:platformId/dramas`, `GET /catalog/dramas/:dramaId`, `GET /catalog/dramas/:dramaId/episodes` |
 
 ### ตรวจโค้ดและ test
@@ -150,26 +148,22 @@ cd mobile && flutter test
 
 ## English
 
-ShortReel is a vertical-feed app for AI short films, watched one episode at a time. Early episodes are free, and the rest are unlocked with coins. Creators upload their own films and earn a share of each unlock. (Group 7, Project 2)
+ShortReel is a vertical-feed app for AI short films, watched one episode at a time. Early episodes are free, and the rest are unlocked with coins. There are two kinds of user: Viewers, who watch, and the Admin, who runs the catalogue. (Group 7, Project 2)
 
 **Flutter → REST API (Node.js/Express) → MySQL/MariaDB**
 
 ### Features
 
-- **Feed:** vertical swipe feed with "For you" and "Following" tabs, playback speed control, and a draggable seek bar.
+- **Feed:** vertical swipe feed with playback speed control and a draggable seek bar.
 - **Episodes and coins:** free episodes play without logging in. Locked episodes are unlocked with coins.
 - **Wallet:** top up with coin packs or the demo +100 button, and view transaction history.
-- **Social:** like, save to a watchlist, follow creators, and comment.
-- **Search:** by film title or creator name.
-- **Creator tools:**
-  - Create, edit and delete films.
-  - Upload videos episode by episode and set a price per episode.
-  - An AI tool is required for every film.
-  - View earnings.
+- **Social:** like, save to a watchlist, and comment.
+- **Search:** by film title.
+- **Profile:** your coins, saved films and unlocked films.
 - **Admin:**
-  - Review films: approve, reject or take them down. New films wait in pending.
+  - Review films: approve, reject or take them down.
   - Manage user roles.
-  - Set the revenue share and view sales.
+  - View sales. Every coin spent on an unlock goes to the admin.
 - **Series Jeen:** a catalog tab with series from FreeReels, Melolo and other platforms. These series are also added to the end of the feed.
 
 The app is shown in Thai. All payments are **simulated**: there is no payment gateway and no real money.
@@ -178,7 +172,7 @@ The app is shown in Thai. All payments are **simulated**: there is no payment ga
 
 ```
 backend/            REST API (Express 5)
-  db/shortreel.sql  schema and sample data (13 tables)
+  db/shortreel.sql  schema and sample data (12 tables)
   src/routes/       API routes
   src/controllers/  input checks and responses
   src/models/       SQL queries
@@ -247,7 +241,6 @@ node backend/scripts/import-demo-clips.js <clips-folder>
 - `--dry-run` shows which clip goes to which episode, without changing anything.
 - The script copies the clips into `backend/uploads/` and updates the sample films only (ids 1–5).
 - With fewer than 40 clips, it reuses them in a loop.
-- Films uploaded through the app are left alone.
 
 #### 4. App
 
@@ -268,11 +261,10 @@ Set `SERIESJEEN_API_KEY` in `backend/.env`. The catalog tab then loads series on
 | Username | Password | Role |
 |---|---|---|
 | `admin` | `1111` | Admin |
-| `kestrel_studio` | `2222` | Creator who owns "Salt & Signal" |
-| `mira.lens` | `4444` | Creator with 142 coins |
+| `mira.lens` | `4444` | Viewer with 142 coins and a few unlocked episodes |
 | `viewer01` | `6666` | Viewer with 80 coins |
 
-New sign-ups can only be Viewer or Creator. To make someone an Admin, an admin changes their role through `PUT /api/admin/users/:id/role`.
+New sign-ups are always Viewers. To make someone an Admin, an admin changes their role through `PUT /api/admin/users/:id/role`.
 
 ### API
 
@@ -282,12 +274,11 @@ All routes start with `/api`.
 |---|---|
 | System | `GET /health`, `GET /lookups` (genres and AI tools) |
 | Accounts | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET/PUT /auth/me` |
-| Films | `GET /films?q=`, `GET /films/:id`, `POST /films`, `PUT/DELETE /films/:id`, `POST /films/:id/episodes` |
-| Episodes | `GET/PUT/DELETE /episodes/:id`, `GET /episodes/:id/stream`, `POST /episodes/:id/unlock` |
+| Films | `GET /films?q=`, `GET /films/:id` |
+| Episodes | `GET /episodes/:id`, `GET /episodes/:id/stream`, `POST /episodes/:id/unlock` |
 | Wallet | `GET /wallet`, `GET /wallet/transactions`, `GET /wallet/unlocked`, `POST /wallet/topup`, `GET /coin-packs` |
-| Social | `POST/DELETE /films/:id/like`, `GET /watchlist`, `POST/DELETE /films/:id/watchlist`, `GET/POST /films/:id/comments`, `DELETE /comments/:id`, `POST/DELETE /creators/:id/follow` |
-| Creator | `GET /creator/films`, `GET /creator/earnings` |
-| Admin | `GET /admin/reviews`, `GET /admin/films`, `POST /admin/films/:id/review`, `GET /admin/sales`, `GET/PUT /admin/settings/revenue-share`, `GET /admin/users`, `PUT /admin/users/:id/role` |
+| Social | `POST/DELETE /films/:id/like`, `GET /watchlist`, `POST/DELETE /films/:id/watchlist`, `GET/POST /films/:id/comments`, `DELETE /comments/:id` |
+| Admin | `GET /admin/reviews`, `GET /admin/films`, `POST /admin/films/:id/review`, `GET /admin/sales`, `GET /admin/users`, `PUT /admin/users/:id/role` |
 | Series Jeen | `GET /catalog/platforms`, `GET /catalog/platforms/:platformId/dramas`, `GET /catalog/dramas/:dramaId`, `GET /catalog/dramas/:dramaId/episodes` |
 
 ### Lint and tests

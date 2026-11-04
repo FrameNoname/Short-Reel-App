@@ -12,10 +12,13 @@ async function viewerContext(db, user) {
   return { user, unlocked: await unlockedIds(db, user.id) };
 }
 
+const isAdmin = (user) => Boolean(user && user.role === 'admin');
+
 // 'owner' | 'free' | 'unlocked' | 'locked' | 'login_required'
-function accessOf(ctx, film, episode) {
+// The admin runs the catalogue, so every episode is open to them.
+function accessOf(ctx, episode) {
   const { user } = ctx;
-  if (user && (user.role === 'admin' || user.id === film.creator_id)) return 'owner';
+  if (isAdmin(user)) return 'owner';
   if (episode.is_free) return 'free';
   if (!user) return 'login_required';
   if (ctx.unlocked.has(episode.id)) return 'unlocked';
@@ -24,9 +27,7 @@ function accessOf(ctx, film, episode) {
 
 const canPlay = (access) => access !== 'locked' && access !== 'login_required';
 
-// A film that is not approved exists only for its owner and the admin.
-const canSeeFilm = (film, user) =>
-  film.status === 'approved' ||
-  Boolean(user && (user.role === 'admin' || user.id === film.creator_id));
+// A film that is not approved exists only for the admin.
+const canSeeFilm = (film, user) => film.status === 'approved' || isAdmin(user);
 
-module.exports = { viewerContext, accessOf, canPlay, canSeeFilm };
+module.exports = { viewerContext, accessOf, canPlay, canSeeFilm, isAdmin };

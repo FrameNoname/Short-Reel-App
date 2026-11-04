@@ -7,8 +7,7 @@
 --
 -- Passwords are argon2id hashes (varchar(97)), same as the Node.js
 -- 'argon2' package defaults (m=65536, t=3, p=4).
--- Demo logins: admin/1111  kestrel_studio/2222  noor.frames/3333
---              mira.lens/4444  tidewater_ai/5555  viewer01/6666
+-- Demo logins: admin/1111  mira.lens/4444  viewer01/6666
 -- =====================================================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -21,7 +20,7 @@ CREATE DATABASE `shortreel` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_genera
 USE `shortreel`;
 
 -- --------------------------------------------------------
--- users : 3 roles (viewer / creator / admin)
+-- users : 2 roles (viewer / admin). The admin runs the catalogue.
 -- --------------------------------------------------------
 CREATE TABLE `users` (
   `id`           smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -30,7 +29,7 @@ CREATE TABLE `users` (
   `display_name` varchar(50)  DEFAULT NULL,
   `avatar_url`   varchar(255) DEFAULT NULL,
   `bio`          varchar(160) DEFAULT NULL,
-  `role`         enum('viewer','creator','admin') NOT NULL DEFAULT 'viewer',
+  `role`         enum('viewer','admin') NOT NULL DEFAULT 'viewer',
   `coin_balance` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `created_at`   datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
@@ -55,11 +54,10 @@ CREATE TABLE `ai_tools` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- films : upload metadata + AI label + review status
+-- films : catalogue entries + AI label + review status
 -- --------------------------------------------------------
 CREATE TABLE `films` (
   `id`              smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `creator_id`      smallint(5) UNSIGNED NOT NULL,     -- creator or admin
   `title`           varchar(100) NOT NULL,
   `synopsis`        varchar(500) DEFAULT NULL,
   `poster_url`      varchar(255) DEFAULT NULL,
@@ -73,24 +71,22 @@ CREATE TABLE `films` (
   `reviewed_at`     datetime DEFAULT NULL,
   `created_at`      datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  KEY `creator_id` (`creator_id`),
   KEY `status` (`status`),
-  CONSTRAINT `films_creator_fk` FOREIGN KEY (`creator_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `films_genre_fk`   FOREIGN KEY (`genre_id`)   REFERENCES `genres` (`id`),
   CONSTRAINT `films_tool_fk`    FOREIGN KEY (`ai_tool_id`) REFERENCES `ai_tools` (`id`),
   CONSTRAINT `films_review_fk`  FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- episodes : each one free or coin-priced (set by owner)
+-- episodes : each one free or coin-priced
 -- --------------------------------------------------------
 CREATE TABLE `episodes` (
   `id`               smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
   `film_id`          smallint(5) UNSIGNED NOT NULL,
   `episode_no`       tinyint(3) UNSIGNED NOT NULL,
   `title`            varchar(100) DEFAULT NULL,
-  `video_path`       varchar(255) NOT NULL,          -- file saved by Multer
-  `duration_sec`     smallint(5) UNSIGNED NOT NULL DEFAULT 0,  -- for length filter
+  `video_path`       varchar(255) NOT NULL,          -- file in backend/uploads
+  `duration_sec`     smallint(5) UNSIGNED NOT NULL DEFAULT 0,
   `is_free`          tinyint(1) NOT NULL DEFAULT 0,
   `price_coins`      smallint(5) UNSIGNED NOT NULL DEFAULT 0,  -- 0 when free
   PRIMARY KEY (`id`),
@@ -128,16 +124,13 @@ CREATE TABLE `coin_transactions` (
 
 -- --------------------------------------------------------
 -- unlocked_episodes : UNIQUE(user, episode) => a repeated
--- unlock request can never charge twice. Shares are recorded here.
+-- unlock request can never charge twice. Every coin goes to the admin.
 -- --------------------------------------------------------
 CREATE TABLE `unlocked_episodes` (
   `id`            int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id`       smallint(5) UNSIGNED NOT NULL,
   `episode_id`    smallint(5) UNSIGNED NOT NULL,
   `coins_spent`   smallint(5) UNSIGNED NOT NULL,
-  `creator_share` smallint(5) UNSIGNED NOT NULL,    -- coins to the film owner
-  `admin_share`   smallint(5) UNSIGNED NOT NULL,    -- coins to the admin
-  `owner_is_admin` tinyint(1) DEFAULT NULL,         -- snapshot: was the film owner an admin at purchase
   `created_at`    datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_episode` (`user_id`,`episode_id`),
@@ -146,7 +139,7 @@ CREATE TABLE `unlocked_episodes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- settings : admin revenue share %
+-- settings : demo top-up amount
 -- --------------------------------------------------------
 CREATE TABLE `settings` (
   `name`  varchar(30) NOT NULL,
@@ -155,7 +148,7 @@ CREATE TABLE `settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- social : likes, watchlist, comments, follows
+-- social : likes, watchlist, comments
 -- --------------------------------------------------------
 CREATE TABLE `likes` (
   `user_id` smallint(5) UNSIGNED NOT NULL,
@@ -185,24 +178,13 @@ CREATE TABLE `comments` (
   CONSTRAINT `cm_film_fk` FOREIGN KEY (`film_id`) REFERENCES `films` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE TABLE `follows` (
-  `follower_id` smallint(5) UNSIGNED NOT NULL,
-  `creator_id`  smallint(5) UNSIGNED NOT NULL,
-  PRIMARY KEY (`follower_id`,`creator_id`),
-  CONSTRAINT `fo_follower_fk` FOREIGN KEY (`follower_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fo_creator_fk`  FOREIGN KEY (`creator_id`)  REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 -- =====================================================================
 -- SEED DATA
 -- =====================================================================
 INSERT INTO `users` (`id`, `username`, `password`, `display_name`, `role`, `coin_balance`) VALUES
-(1, 'admin',          '$argon2id$v=19$m=65536,t=3,p=4$9pmc3spVQZG016dQKTRntw$XKQ+orkoyF6DEOk8/nqGYg7Sr2j3GjjvUtcHHqC0ZYI', 'ShortReel Admin', 'admin',   0),
-(2, 'kestrel_studio', '$argon2id$v=19$m=65536,t=3,p=4$jzJs1Xp7qh8vkN6r+swKqA$dJXHT6XjmrzPxgBJsQeAEBkp/z1LUDAODD7/4FonOpE', 'Kestrel Studio',  'creator', 0),
-(3, 'noor.frames',    '$argon2id$v=19$m=65536,t=3,p=4$1HH4UWeqK71Uhnd9QK1rEg$y6o0QllHUym4+S0sa+U8lamzvQcrW/E5bSbK9NvoMTo', 'Noor Frames',     'creator', 0),
-(4, 'mira.lens',      '$argon2id$v=19$m=65536,t=3,p=4$BP3TMGUVI0TOrmnjw8qY0g$FA5g7vcEbwBQyUWk5l91fwGKWnt5EjaGxYGwd+qflRM', 'Mira Lens',       'creator', 142),
-(5, 'tidewater_ai',   '$argon2id$v=19$m=65536,t=3,p=4$gZfcN275USi4ZsZxLDfiRQ$DYWuGEL/kEheF/IDTIDEb4oUBCeLOcawhJEBjuCZsJY', 'Tidewater AI',    'creator', 0),
-(6, 'viewer01',       '$argon2id$v=19$m=65536,t=3,p=4$8oRBgmUK816hddiqLabRCA$1kq+0u9LGwgZjEXEg1xkqS9Ivj4vkm4zmrKTHcm4kBQ', 'Demo Viewer',     'viewer',  80);
+(1, 'admin',     '$argon2id$v=19$m=65536,t=3,p=4$9pmc3spVQZG016dQKTRntw$XKQ+orkoyF6DEOk8/nqGYg7Sr2j3GjjvUtcHHqC0ZYI', 'ShortReel Admin', 'admin',  0),
+(2, 'mira.lens', '$argon2id$v=19$m=65536,t=3,p=4$BP3TMGUVI0TOrmnjw8qY0g$FA5g7vcEbwBQyUWk5l91fwGKWnt5EjaGxYGwd+qflRM', 'Mira Lens',       'viewer', 142),
+(3, 'viewer01',  '$argon2id$v=19$m=65536,t=3,p=4$8oRBgmUK816hddiqLabRCA$1kq+0u9LGwgZjEXEg1xkqS9Ivj4vkm4zmrKTHcm4kBQ', 'Demo Viewer',     'viewer', 80);
 
 INSERT INTO `genres` (`id`, `name`) VALUES
 (1, 'Drama'), (2, 'Sci-Fi'), (3, 'Romance'), (4, 'Thriller'), (5, 'Fantasy'), (6, 'Mystery');
@@ -210,12 +192,12 @@ INSERT INTO `genres` (`id`, `name`) VALUES
 INSERT INTO `ai_tools` (`id`, `name`) VALUES
 (1, 'Text-to-video'), (2, 'Image-to-video'), (3, 'Video-to-video'), (4, 'Mixed');
 
-INSERT INTO `films` (`id`, `creator_id`, `title`, `synopsis`, `genre_id`, `ai_tool_id`, `prompt_credit`, `status`, `reviewed_by`, `reviewed_at`) VALUES
-(1, 2, 'Salt & Signal',   'A lighthouse keeper decodes messages from the sea.', 6, 1, 'Prompt: stormy lighthouse, 35mm film look', 'approved', 1, NOW()),
-(2, 3, 'Paper Moons',     'Two strangers trade letters across a folded city.',  3, 2, 'Prompt: paper-cut city at night',           'approved', 1, NOW()),
-(3, 4, 'Ember Protocol',  'An android firefighter questions her last command.', 2, 1, 'Prompt: android firefighter, cinematic',    'approved', 1, NOW()),
-(4, 5, 'Glass Harbour',   'A port town where every reflection remembers.',      5, 3, 'Prompt: glass harbour, dreamlike',          'pending',  NULL, NULL),
-(5, 1, 'ShortReel Intro', 'Admin-owned showcase film.',                         1, 4, 'Prompt: montage of AI film styles',         'approved', 1, NOW());
+INSERT INTO `films` (`id`, `title`, `synopsis`, `genre_id`, `ai_tool_id`, `prompt_credit`, `status`, `reviewed_by`, `reviewed_at`) VALUES
+(1, 'Salt & Signal',   'A lighthouse keeper decodes messages from the sea.', 6, 1, 'Prompt: stormy lighthouse, 35mm film look', 'approved', 1, NOW()),
+(2, 'Paper Moons',     'Two strangers trade letters across a folded city.',  3, 2, 'Prompt: paper-cut city at night',           'approved', 1, NOW()),
+(3, 'Ember Protocol',  'An android firefighter questions her last command.', 2, 1, 'Prompt: android firefighter, cinematic',    'approved', 1, NOW()),
+(4, 'Glass Harbour',   'A port town where every reflection remembers.',      5, 3, 'Prompt: glass harbour, dreamlike',          'pending',  NULL, NULL),
+(5, 'ShortReel Intro', 'A short tour of AI film styles.',                    1, 4, 'Prompt: montage of AI film styles',         'approved', 1, NOW());
 
 -- 8 episodes per film: ep 1-2 free, ep 3-8 = 20 coins
 INSERT INTO `episodes` (`film_id`, `episode_no`, `title`, `video_path`, `duration_sec`, `is_free`, `price_coins`)
@@ -233,37 +215,33 @@ INSERT INTO `coin_packs` (`id`, `name`, `coins`, `price_usd`) VALUES
 (1, 'Starter', 60, 0.99), (2, 'Popular', 330, 4.99), (3, 'Best value', 750, 9.99);
 
 INSERT INTO `settings` (`name`, `value`) VALUES
-('admin_share_percent', '30'),
 ('demo_topup_coins', '100');
 
--- unlocks (70/30 split for creator films, 100% admin for admin film)
-INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `creator_share`, `admin_share`)
-SELECT 1, 4, id, 20, 14, 6 FROM `episodes` WHERE film_id = 1 AND episode_no = 3;
-INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `creator_share`, `admin_share`)
-SELECT 2, 4, id, 20, 14, 6 FROM `episodes` WHERE film_id = 1 AND episode_no = 4;
-INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `creator_share`, `admin_share`)
-SELECT 3, 6, id, 20, 14, 6 FROM `episodes` WHERE film_id = 3 AND episode_no = 3;
-INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `creator_share`, `admin_share`)
-SELECT 4, 4, id, 20, 0, 20 FROM `episodes` WHERE film_id = 5 AND episode_no = 3;
-UPDATE `unlocked_episodes` ue JOIN `episodes` e ON e.id = ue.episode_id JOIN `films` f ON f.id = e.film_id
-  JOIN `users` u ON u.id = f.creator_id SET ue.owner_is_admin = (u.role = 'admin');
+-- unlocks (user 2 = mira.lens, user 3 = viewer01)
+INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`)
+SELECT 1, 2, id, 20 FROM `episodes` WHERE film_id = 1 AND episode_no = 3;
+INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`)
+SELECT 2, 2, id, 20 FROM `episodes` WHERE film_id = 1 AND episode_no = 4;
+INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`)
+SELECT 3, 3, id, 20 FROM `episodes` WHERE film_id = 3 AND episode_no = 3;
+INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`)
+SELECT 4, 2, id, 20 FROM `episodes` WHERE film_id = 5 AND episode_no = 3;
 
 -- wallet history (adds up to the balances above)
 INSERT INTO `coin_transactions` (`user_id`, `type`, `amount`, `balance_after`, `price_usd`, `coin_pack_id`, `episode_id`) VALUES
-(4, 'topup',  100, 100, 0.00, NULL, NULL),
-(4, 'topup',   60, 160, 0.99, 1,    NULL),
-(4, 'topup',   42, 202, 0.00, NULL, NULL),
-(4, 'unlock', -20, 182, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 1)),
-(4, 'unlock', -20, 162, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 2)),
-(4, 'unlock', -20, 142, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 4)),
-(6, 'topup',  100, 100, 0.00, NULL, NULL),
-(6, 'unlock', -20,  80, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 3));
+(2, 'topup',  100, 100, 0.00, NULL, NULL),
+(2, 'topup',   60, 160, 0.99, 1,    NULL),
+(2, 'topup',   42, 202, 0.00, NULL, NULL),
+(2, 'unlock', -20, 182, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 1)),
+(2, 'unlock', -20, 162, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 2)),
+(2, 'unlock', -20, 142, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 4)),
+(3, 'topup',  100, 100, 0.00, NULL, NULL),
+(3, 'unlock', -20,  80, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 3));
 
-INSERT INTO `likes` VALUES (4, 1), (6, 3);
-INSERT INTO `watchlist` VALUES (4, 2), (4, 3), (6, 1);
-INSERT INTO `follows` VALUES (4, 2), (4, 3), (6, 4);
+INSERT INTO `likes` VALUES (2, 1), (3, 3);
+INSERT INTO `watchlist` VALUES (2, 2), (2, 3), (3, 1);
 INSERT INTO `comments` (`user_id`, `film_id`, `body`) VALUES
-(6, 1, 'The ending of episode 2 was great!'),
-(4, 2, 'Love the paper-cut style.');
+(3, 1, 'The ending of episode 2 was great!'),
+(2, 2, 'Love the paper-cut style.');
 
 COMMIT;

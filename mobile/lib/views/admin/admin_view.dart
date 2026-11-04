@@ -53,9 +53,6 @@ class AdminView extends StatefulWidget {
 class _AdminViewState extends State<AdminView> {
   _Section _section = _Section.queue;
 
-  /// The share while the slider is being dragged; saved when the finger lifts.
-  double? _draggedCreatorShare;
-
   bool _wasActive = false;
 
   /// Reads the queue again each time this tab comes to the front.
@@ -77,7 +74,6 @@ class _AdminViewState extends State<AdminView> {
     final sales = admin.sales;
     final queue = admin.queue;
     final live = admin.liveFilms;
-    final adminShare = admin.adminSharePercent;
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -151,58 +147,12 @@ class _AdminViewState extends State<AdminView> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: StatTile(
-                    value: '${sales.adminCoins} coins',
-                    label: 'Admin share of ${sales.coinsSpent} spent',
+                    value: '${sales.coinsSpent} coins',
+                    label: 'Coins spent on ${sales.unlockCount} unlocks',
                     valueColor: AppColors.gold,
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 10),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Revenue share',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          'Creator ${100 - adminShare}% · Admin $adminShare%',
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Slider(
-                    value:
-                        _draggedCreatorShare ?? (100 - adminShare).toDouble(),
-                    max: 100,
-                    divisions: 20,
-                    label:
-                        'Creator ${(_draggedCreatorShare ?? (100 - adminShare)).round()}%',
-                    onChanged: (value) =>
-                        setState(() => _draggedCreatorShare = value),
-                    onChangeEnd: (value) async {
-                      setState(() => _draggedCreatorShare = null);
-                      await _guard(
-                        context,
-                        () => admin.setAdminShare(100 - value.round()),
-                      );
-                    },
-                  ),
-                  const Text(
-                    'Applies to new unlocks. Admin-owned films always pay 100% to admin.',
-                    style: TextStyle(color: AppColors.muted, fontSize: 12),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 14),
             Row(
@@ -317,7 +267,7 @@ class _FilmSummary extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                '@${film.creatorName} · ${film.genreName} · ${film.aiToolName}',
+                '${film.genreName} · ${film.aiToolName}',
                 style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
               if (detail != null)
@@ -366,7 +316,7 @@ class _ReviewCardState extends State<_ReviewCard> {
     final reason = await showReasonDialog(
       context,
       title: 'Reject this film?',
-      hint: 'Tell the creator what to fix',
+      hint: 'Write the reason',
       confirmLabel: 'Reject',
     );
     if (reason != null && mounted) {

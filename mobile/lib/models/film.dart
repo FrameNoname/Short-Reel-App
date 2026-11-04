@@ -1,7 +1,6 @@
 class Film {
   const Film({
     required this.id,
-    required this.creatorId,
     required this.title,
     required this.synopsis,
     required this.posterUrl,
@@ -10,7 +9,6 @@ class Film {
     required this.promptCredit,
     required this.isAiGenerated,
     required this.status,
-    this.creatorName = '',
     this.genreName = '',
     this.aiToolName = '',
     this.reviewNote,
@@ -23,7 +21,6 @@ class Film {
   });
 
   final int id;
-  final int creatorId;
   final String title;
   final String? synopsis;
   final String? posterUrl;
@@ -32,7 +29,6 @@ class Film {
   final String? promptCredit;
   final bool isAiGenerated;
   final String status;
-  final String creatorName;
   final String genreName;
   final String aiToolName;
   final String? reviewNote;
@@ -51,7 +47,6 @@ class Film {
 
   factory Film.fromJson(Map<String, dynamic> json) => Film(
     id: json['id'] as int,
-    creatorId: json['creator_id'] as int,
     title: json['title'] as String,
     synopsis: json['synopsis'] as String?,
     posterUrl: json['poster_url'] as String?,
@@ -62,7 +57,6 @@ class Film {
     isAiGenerated:
         json['is_ai_generated'] == 1 || json['is_ai_generated'] == true,
     status: json['status'] as String,
-    creatorName: (json['creator'] as Map?)?['name'] as String? ?? '',
     genreName: json['genre'] as String? ?? '',
     aiToolName: json['ai_tool'] as String? ?? '',
     reviewNote: json['review_note'] as String?,
@@ -87,7 +81,6 @@ class Film {
   }) {
     return Film(
       id: id,
-      creatorId: creatorId,
       title: title ?? this.title,
       synopsis: synopsis,
       posterUrl: posterUrl,
@@ -96,7 +89,6 @@ class Film {
       promptCredit: promptCredit ?? this.promptCredit,
       isAiGenerated: isAiGenerated,
       status: status ?? this.status,
-      creatorName: creatorName,
       genreName: genreName ?? this.genreName,
       aiToolName: aiToolName ?? this.aiToolName,
       reviewNote: clearReviewNote ? null : reviewNote ?? this.reviewNote,

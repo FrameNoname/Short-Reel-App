@@ -55,27 +55,16 @@ exports.removeComment = async (pool, user, commentId) => {
   await pool.query('DELETE FROM comments WHERE id = ?', [commentId]);
 };
 
-exports.setFollow = (pool, followerId, creatorId, on) =>
-  pool.query(
-    on
-      ? 'INSERT IGNORE INTO follows (follower_id, creator_id) VALUES (?, ?)'
-      : 'DELETE FROM follows WHERE follower_id = ? AND creator_id = ?',
-    [followerId, creatorId],
-  );
-
-// Which of these films the viewer liked or saved, and which creators they follow.
+// Which of these films the viewer liked or saved.
 exports.flags = async (pool, userId, films) => {
-  if (films.length === 0) return { liked: new Set(), saved: new Set(), following: new Set() };
+  if (films.length === 0) return { liked: new Set(), saved: new Set() };
   const ids = films.map((f) => f.id);
-  const creatorIds = [...new Set(films.map((f) => f.creator_id))];
-  const [[liked], [saved], [following]] = await Promise.all([
+  const [[liked], [saved]] = await Promise.all([
     pool.query('SELECT film_id FROM likes WHERE user_id = ? AND film_id IN (?)', [userId, ids]),
     pool.query('SELECT film_id FROM watchlist WHERE user_id = ? AND film_id IN (?)', [userId, ids]),
-    pool.query('SELECT creator_id FROM follows WHERE follower_id = ? AND creator_id IN (?)', [userId, creatorIds]),
   ]);
   return {
     liked: new Set(liked.map((r) => r.film_id)),
     saved: new Set(saved.map((r) => r.film_id)),
-    following: new Set(following.map((r) => r.creator_id)),
   };
 };

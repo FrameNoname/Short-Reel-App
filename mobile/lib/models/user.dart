@@ -1,4 +1,4 @@
-enum UserRole { guest, viewer, creator, admin }
+enum UserRole { guest, viewer, admin }
 
 class User {
   const User({

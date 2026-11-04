@@ -1,5 +1,3 @@
-import 'package:dio/dio.dart';
-
 import '../models/catalog.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
@@ -13,9 +11,8 @@ import 'app_repository.dart';
 
 /// The real thing: every core call goes to the REST API and MySQL behind it.
 ///
-/// Small caches (films, channels, like/save/follow flags) let the screens read
-/// synchronously what the last request returned. Not wired to the backend yet,
-/// and kept only on the device for the session: comment likes.
+/// Small caches (films, like and save flags) let the screens read
+/// synchronously what the last request returned.
 class ApiRepository implements AppRepository {
   ApiRepository({
     required ApiClient client,
@@ -27,10 +24,6 @@ class ApiRepository implements AppRepository {
   /// Catalog series get ids from here up, so they never collide with real ids.
   static const catalogFilmIdBase = 100000000;
 
-  /// The channel external catalog series are shown under. It is not a real
-  /// account, is not verified and is never labelled as AI.
-  static const catalogChannelId = -1;
-
   static const _typicalEpisodePrice = 20;
 
   final ApiClient _api;
@@ -41,11 +34,8 @@ class ApiRepository implements AppRepository {
   int _demoCoins = 100;
 
   final Map<int, Film> _films = {};
-  final Map<int, User> _users = {};
-  final Map<int, int> _followers = {};
   final Set<int> _liked = {};
   final Set<int> _saved = {};
-  final Set<int> _following = {};
   final Set<int> _unlockedFilmIds = {};
   final Map<int, int> _episodeFilm = {};
   List<int> _watchlistIds = const [];
@@ -59,7 +49,6 @@ class ApiRepository implements AppRepository {
   User _userFrom(Map<String, dynamic> json) {
     final user = User.fromJson(json);
     _me = user;
-    _users[user.id] = user;
     return user;
   }
 
@@ -77,15 +66,11 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  Future<User> register(String username, String password, UserRole role) async {
+  Future<User> register(String username, String password) async {
     final json =
         await _api.post(
               '/auth/register',
-              data: {
-                'username': username,
-                'password': password,
-                'role': role == UserRole.creator ? 'creator' : 'viewer',
-              },
+              data: {'username': username, 'password': password},
             )
             as Map<String, dynamic>;
     await _tokens.write(json['token'] as String);
@@ -125,7 +110,6 @@ class ApiRepository implements AppRepository {
     _me = null;
     _liked.clear();
     _saved.clear();
-    _following.clear();
     _unlockedFilmIds.clear();
     _watchlistIds = const [];
     _comments.clear();
@@ -146,27 +130,13 @@ class ApiRepository implements AppRepository {
     return _userFrom(json['user'] as Map<String, dynamic>);
   }
 
-  // ---- films and channels -----------------------------------------------
+  // ---- films ------------------------------------------------------------
 
   Film _remember(Map<String, dynamic> json) {
     final film = Film.fromJson(json);
     _films[film.id] = film;
-    final creator = json['creator'] as Map<String, dynamic>?;
-    if (creator != null && !_users.containsKey(film.creatorId)) {
-      _users[film.creatorId] = User(
-        id: film.creatorId,
-        username: creator['username'] as String,
-        displayName: creator['name'] as String?,
-        role: UserRole.values.byName(creator['role'] as String),
-        coinBalance: 0,
-      );
-    }
-    if (creator?['follower_count'] is int) {
-      _followers[film.creatorId] = creator!['follower_count'] as int;
-    }
     if (json['liked'] == true) _liked.add(film.id);
     if (json['saved'] == true) _saved.add(film.id);
-    if (json['following_creator'] == true) _following.add(film.creatorId);
     return film;
   }
 
@@ -177,9 +147,7 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<List<Film>> films([String query = '']) async {
-    final core = await _allPages('/films', {
-      if (query.isNotEmpty) 'q': query,
-    });
+    final core = await _allPages('/films', {if (query.isNotEmpty) 'q': query});
     // The catalog is an extra: it follows the app's own films and a failure
     // there never touches them.
     final extra = await _matchingCatalogFilms(query);
@@ -215,36 +183,7 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  Future<List<Film>> followingFilms(int userId) async {
-    final all = await films();
-    return all.where((f) => _following.contains(f.creatorId)).toList();
-  }
-
-  @override
   Film? filmById(int id) => _films[id];
-
-  @override
-  User? userById(int id) => _users[id];
-
-  @override
-  List<User> searchCreators(String query) {
-    final text = query.trim().toLowerCase();
-    if (text.isEmpty) return const [];
-    return [
-      for (final user in _users.values)
-        if (user.role != UserRole.viewer &&
-            ((user.displayName ?? '').toLowerCase().contains(text) ||
-                user.username.toLowerCase().contains(text)))
-          user,
-    ];
-  }
-
-  @override
-  Future<List<Film>> filmsOf(int creatorId) async {
-    final isOwn = creatorId == _me?.id;
-    if (!isOwn) return _allPages('/films', {'creator_id': creatorId});
-    return _rememberAll(await _api.get('/creator/films'));
-  }
 
   @override
   Future<List<Episode>> episodes(int filmId) async {
@@ -356,130 +295,6 @@ class ApiRepository implements AppRepository {
   @override
   int get demoTopUpCoins => _demoCoins;
 
-  // ---- creator: upload, edit, delete, earnings --------------------------
-
-  @override
-  Future<Film> upload({
-    required int creatorId,
-    required String title,
-    required String genre,
-    required String aiTool,
-    required String promptCredit,
-    required List<EpisodeDraft> episodes,
-  }) async {
-    final created =
-        await _api.post(
-              '/films',
-              data: {
-                'title': title,
-                'genre': genre,
-                'ai_tool': aiTool,
-                'prompt_credit': promptCredit,
-                'is_ai_generated': true,
-              },
-            )
-            as Map<String, dynamic>;
-    final film = _remember(created['film'] as Map<String, dynamic>);
-    try {
-      for (var i = 0; i < episodes.length; i++) {
-        final draft = episodes[i];
-        await _api.post(
-          '/films/${film.id}/episodes',
-          data: FormData.fromMap({
-            'episode_no': i + 1,
-            'title': 'Episode ${i + 1}',
-            'price_coins': draft.priceCoins,
-            'video': MultipartFile.fromBytes(
-              draft.bytes!,
-              filename: draft.fileName,
-              contentType: DioMediaType('video', 'mp4'),
-            ),
-          }),
-        );
-      }
-    } on Object {
-      // Do not leave a half-uploaded film waiting for review.
-      await _api.delete('/films/${film.id}').catchError((Object _) => null);
-      _films.remove(film.id);
-      rethrow;
-    }
-    return film;
-  }
-
-  @override
-  Future<void> updateFilm(
-    int filmId, {
-    required String title,
-    required String genre,
-    required String aiTool,
-    required String promptCredit,
-    Map<int, int> episodePrices = const {},
-  }) async {
-    await _api.put(
-      '/films/$filmId',
-      data: {
-        'title': title,
-        'genre': genre,
-        'ai_tool': aiTool,
-        'prompt_credit': promptCredit,
-        if (episodePrices.isNotEmpty)
-          'episode_prices': [
-            for (final e in episodePrices.entries)
-              {'id': e.key, 'price_coins': e.value},
-          ],
-        // Kept as it was, because an update replaces every field.
-        if (_films[filmId]?.synopsis != null)
-          'synopsis': _films[filmId]!.synopsis,
-      },
-    );
-  }
-
-  @override
-  Future<void> deleteFilm(int filmId) async {
-    await _api.delete('/films/$filmId');
-    _films.remove(filmId);
-  }
-
-  @override
-  Future<void> setEpisodePrices(Map<int, int> pricesByEpisodeId) async {
-    for (final entry in pricesByEpisodeId.entries) {
-      await _api.put(
-        '/episodes/${entry.key}',
-        data: {'price_coins': entry.value},
-      );
-    }
-  }
-
-  @override
-  Future<EpisodePricing> pricingOf(int filmId) async {
-    final list = await episodes(filmId);
-    final paid = list.where((e) => !e.isFree).toList();
-    final prices = paid.map((e) => e.priceCoins);
-    return EpisodePricing(
-      freeCount: list.length - paid.length,
-      paidCount: paid.length,
-      priceCoins: paid.isEmpty ? 0 : prices.reduce((a, b) => a < b ? a : b),
-      maxPriceCoins: paid.isEmpty ? 0 : prices.reduce((a, b) => a > b ? a : b),
-    );
-  }
-
-  @override
-  Future<Earnings> earningsOf(int creatorId) async {
-    final json = await _api.get('/creator/earnings') as Map<String, dynamic>;
-    final own = await filmsOf(creatorId);
-    return Earnings(
-      coins: json['coins_earned'] as int,
-      unlocks: json['unlock_count'] as int,
-      likes: own.fold(0, (sum, f) => sum + f.likeCount),
-      adminSharePercent: json['admin_share_percent'] as int?,
-      coinsByFilm: {
-        for (final f in json['films'] as List)
-          (f as Map<String, dynamic>)['film_id'] as int:
-              f['coins_earned'] as int,
-      },
-    );
-  }
-
   // ---- admin ------------------------------------------------------------
 
   @override
@@ -509,29 +324,12 @@ class ApiRepository implements AppRepository {
     return AdminSales(
       // Simulated dollars only; coins stay in their own fields.
       totalUsd: dollars('coin_topups'),
-      adminCoins: coins['admin_share'] as int,
       coinsSpent: coins['coins_spent'] as int,
-      creatorCoins: coins['creator_share'] as int,
       unlockCount: coins['unlock_count'] as int,
     );
   }
 
-  @override
-  Future<int> adminSharePercent() async {
-    final json =
-        await _api.get('/admin/settings/revenue-share') as Map<String, dynamic>;
-    return json['admin_share_percent'] as int;
-  }
-
-  @override
-  Future<void> setAdminSharePercent(int percent) async {
-    await _api.put(
-      '/admin/settings/revenue-share',
-      data: {'admin_share_percent': percent},
-    );
-  }
-
-  // ---- like, save, follow, comments -----------------------------------
+  // ---- like, save, comments ---------------------------------------------
 
   bool _isCatalog(int filmId) => filmId >= catalogFilmIdBase;
 
@@ -540,9 +338,6 @@ class ApiRepository implements AppRepository {
 
   @override
   bool isSaved(int userId, int filmId) => _saved.contains(filmId);
-
-  @override
-  bool isFollowing(int userId, int creatorId) => _following.contains(creatorId);
 
   @override
   Future<void> toggleLike(int userId, int filmId) async {
@@ -579,24 +374,6 @@ class ApiRepository implements AppRepository {
         ? [filmId, ..._watchlistIds.where((id) => id != filmId)]
         : [..._watchlistIds.where((id) => id != filmId)];
   }
-
-  @override
-  Future<void> toggleFollow(int userId, int creatorId) async {
-    if (creatorId == catalogChannelId) return;
-    final on = !_following.contains(creatorId);
-    on
-        ? await _api.post('/creators/$creatorId/follow')
-        : await _api.delete('/creators/$creatorId/follow');
-    if (on) {
-      _following.add(creatorId);
-    } else {
-      _following.remove(creatorId);
-    }
-    _followers[creatorId] = (_followers[creatorId] ?? 0) + (on ? 1 : -1);
-  }
-
-  @override
-  int followerCount(int userId) => _followers[userId] ?? 0;
 
   @override
   List<FilmComment> commentsOf(int filmId) => _comments[filmId] ?? const [];
@@ -650,7 +427,6 @@ class ApiRepository implements AppRepository {
     }
   }
 
-  // Local to the session; the backend has no comment likes.
   // ---- library lists ----------------------------------------------------
 
   @override
@@ -688,13 +464,6 @@ class ApiRepository implements AppRepository {
     for (final id in _unlockedFilmIds) ?_films[id],
   ];
 
-  @override
-  List<User> followingOf(int userId) => userId == _me?.id
-      // Only the signed-in person's follows are known. Another person's list
-      // is not available from the API, so none is shown rather than these.
-      ? [for (final id in _following) ?_users[id]]
-      : const [];
-
   // ---- optional Series Jeen catalog -------------------------------------
 
   static const _catalogPlatforms = 3;
@@ -728,7 +497,6 @@ class ApiRepository implements AppRepository {
     final id = catalogFilmIdBase + drama.id;
     return _films[id] ??= Film(
       id: id,
-      creatorId: catalogChannelId,
       title: drama.title,
       synopsis: drama.description,
       posterUrl: drama.posterUrl,
@@ -738,7 +506,6 @@ class ApiRepository implements AppRepository {
       // Nothing confirms how these were made, so they carry no AI label.
       isAiGenerated: false,
       status: 'approved',
-      creatorName: 'Series Jeen',
       genreName: drama.genres.isEmpty ? '' : drama.genres.first,
       genreTags: drama.genres,
       episodeCount: drama.episodeCount,

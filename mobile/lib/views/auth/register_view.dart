@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../l10n/app_language.dart';
-import '../../models/user.dart';
 import '../../services/api_client.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
@@ -22,7 +21,6 @@ class _RegisterViewState extends State<RegisterView> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
-  UserRole _role = UserRole.viewer;
   String? _usernameError;
   bool _passwordInvalid = false;
   bool _confirmInvalid = false;
@@ -59,7 +57,7 @@ class _RegisterViewState extends State<RegisterView> {
     final auth = context.read<AuthController>();
     setState(() => _busy = true);
     try {
-      await auth.register(_username.text, _password.text, _role);
+      await auth.register(_username.text, _password.text);
       if (mounted) Navigator.of(context).popUntil((r) => r.isFirst);
     } on ApiException catch (e) {
       if (mounted) setState(() => _usernameError = e.message);
@@ -85,35 +83,10 @@ class _RegisterViewState extends State<RegisterView> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Watch, unlock and upload AI short films.',
+              'Watch and unlock AI short films.',
               style: TextStyle(color: AppColors.muted),
             ),
             const SizedBox(height: 18),
-            const FieldLabel('I want to'),
-            Row(
-              children: [
-                Expanded(
-                  child: _RoleCard(
-                    icon: Icons.play_circle_outline,
-                    title: 'Watch',
-                    subtitle: 'Viewer',
-                    selected: _role == UserRole.viewer,
-                    onTap: () => setState(() => _role = UserRole.viewer),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _RoleCard(
-                    icon: Icons.upload_outlined,
-                    title: 'Create',
-                    subtitle: 'Creator',
-                    selected: _role == UserRole.creator,
-                    onTap: () => setState(() => _role = UserRole.creator),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
             const FieldLabel('Username'),
             TextField(
               key: const Key('register-username'),
@@ -214,46 +187,3 @@ final _invalidBorder = OutlineInputBorder(
   borderRadius: BorderRadius.circular(14),
   borderSide: const BorderSide(color: AppColors.danger),
 );
-
-class _RoleCard extends StatelessWidget {
-  const _RoleCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AppCard(
-          color: selected ? AppColors.primarySoft : AppColors.surface,
-          borderColor: selected ? AppColors.primary : AppColors.border,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 20),
-              const SizedBox(height: 8),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text(
-                subtitle,
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

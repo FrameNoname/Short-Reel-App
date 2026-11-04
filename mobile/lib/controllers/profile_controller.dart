@@ -7,7 +7,7 @@ class ProfileController extends ChangeNotifier {
 
   final AppRepository repository;
 
-  /// Loads the saved, unlocked and followed lists the profile shows.
+  /// Loads the saved and unlocked lists the profile shows.
   Future<void> load(int userId) async {
     try {
       await repository.refreshLibrary(userId);
