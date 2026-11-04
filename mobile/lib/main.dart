@@ -22,7 +22,6 @@ import 'theme/app_theme.dart';
 import 'views/app_shell.dart';
 import 'views/auth/login_view.dart';
 import 'widgets/loading_view.dart';
-import 'views/onboarding/onboarding_view.dart';
 
 void main() {
   final tokens = SecureTokenStore();
@@ -36,7 +35,6 @@ void main() {
       repository: repository,
       catalog: catalog,
       api: api,
-      showOnboarding: true,
       restoreSession: true,
     ),
   );
@@ -46,7 +44,6 @@ class ShortReelApp extends StatelessWidget {
   const ShortReelApp({
     super.key,
     required this.repository,
-    this.showOnboarding = false,
     this.catalog,
     this.api,
     this.restoreSession = false,
@@ -57,9 +54,6 @@ class ShortReelApp extends StatelessWidget {
 
   /// Reads the Series Jeen catalog; null when the catalog is turned off.
   final CatalogService? catalog;
-
-  /// Shows the first-run slides before the login screen.
-  final bool showOnboarding;
 
   /// Logs the person out when the server rejects their token.
   final ApiClient? api;
@@ -112,9 +106,7 @@ class ShortReelApp extends StatelessWidget {
             return admin;
           },
         ),
-        ChangeNotifierProvider(
-          create: (_) => SettingsController(onboarded: !showOnboarding),
-        ),
+        ChangeNotifierProvider(create: (_) => SettingsController()),
         if (catalog != null)
           ChangeNotifierProvider(create: (_) => CatalogController(catalog!)),
       ],
@@ -124,7 +116,8 @@ class ShortReelApp extends StatelessWidget {
         navigatorKey: navigatorKey,
         theme: AppTheme.dark,
         builder: (context, child) => LanguageScope(
-          language: context.watch<SettingsController>().language,
+          // The app is shown in Thai only.
+          language: AppLanguage.thai,
           child: _PhoneFrame(child: child!),
         ),
         home: const _Root(),
@@ -138,9 +131,6 @@ class _Root extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!context.watch<SettingsController>().onboarded) {
-      return const OnboardingView();
-    }
     final auth = context.watch<AuthController>();
     if (auth.isRestoring) {
       return const Scaffold(body: LoadingView());

@@ -1,4 +1,4 @@
-enum EpisodeAccess { free, unlocked, plus, locked }
+enum EpisodeAccess { free, unlocked, locked }
 
 class Episode {
   const Episode({
@@ -50,7 +50,6 @@ class Episode {
   static EpisodeAccess? _accessFromApi(String? value) => switch (value) {
     'free' => EpisodeAccess.free,
     'owner' || 'unlocked' => EpisodeAccess.unlocked,
-    'subscription' => EpisodeAccess.plus,
     'locked' || 'login_required' => EpisodeAccess.locked,
     _ => null,
   };

@@ -6,7 +6,6 @@ const authRoutes = require('./routes/auth');
 const filmRoutes = require('./routes/films');
 const episodeRoutes = require('./routes/episodes');
 const { walletRouter, coinPacksRouter } = require('./routes/wallet');
-const subscriptionRoutes = require('./routes/subscriptions');
 const creatorRoutes = require('./routes/creator');
 const adminRoutes = require('./routes/admin');
 const socialRoutes = require('./routes/social');
@@ -54,7 +53,6 @@ function createApp({
   app.use('/api/episodes', episodeRoutes);
   app.use('/api/wallet', walletRouter);
   app.use('/api/coin-packs', coinPacksRouter);
-  app.use('/api/subscription', subscriptionRoutes);
   app.use('/api/creator', creatorRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api', socialRoutes);

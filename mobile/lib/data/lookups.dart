@@ -1,4 +1,4 @@
-// Names the Upload and Onboarding screens offer. They match the genres and AI
+// Names the Upload screen offers. They match the genres and AI
 // tools seeded in backend/db/shortreel.sql.
 
 const genreNames = [

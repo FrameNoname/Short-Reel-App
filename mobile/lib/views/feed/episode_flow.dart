@@ -9,7 +9,6 @@ import '../../models/episode.dart';
 import '../../models/film.dart';
 import '../../services/errors.dart';
 import '../../widgets/dialogs.dart';
-import '../wallet/plus_view.dart';
 import '../wallet/top_up_view.dart';
 import 'episodes_sheet.dart';
 import 'login_gate_view.dart';
@@ -75,10 +74,6 @@ Future<void> _open(
   switch (choice) {
     case UnlockChoice.unlock:
       await _unlock(context, film, episode, episodes);
-    case UnlockChoice.plus:
-      await Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const PlusView()));
     case null:
       break;
   }

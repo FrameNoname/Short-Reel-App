@@ -3,18 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/wallet_controller.dart';
-import '../../models/subscription.dart';
 import '../../models/transaction.dart';
 import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
-import '../../widgets/dialogs.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/login_prompt.dart';
 import '../../widgets/tab_active.dart';
 import '../../widgets/text.dart';
 import '../auth/login_view.dart';
-import 'plus_view.dart';
 import 'top_up_view.dart';
 
 class WalletView extends StatefulWidget {
@@ -60,29 +57,6 @@ class _WalletViewState extends State<WalletView> {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => view));
   }
 
-  Future<void> _cancelPlan() async {
-    final wallet = context.read<WalletController>();
-    final end = shortDate(wallet.subscription!.lastDay);
-    final confirmed = await showConfirmDialog(
-      context,
-      title: 'Cancel Plus?',
-      message:
-          'You keep every episode until $end. After that, coins apply again.',
-      confirmLabel: 'Cancel plan',
-      cancelLabel: 'Keep Plus',
-    );
-    if (!confirmed) return;
-    try {
-      await wallet.cancelPlan();
-    } on Object catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage(e))));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = context.watch<AuthController>().isLoggedIn;
@@ -95,7 +69,6 @@ class _WalletViewState extends State<WalletView> {
     final wallet = context.watch<WalletController>();
     final history = wallet.transactions;
     final shown = history.where(_filter.matches).toList();
-    final subscription = wallet.subscription;
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -164,13 +137,7 @@ class _WalletViewState extends State<WalletView> {
               style: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
             const SizedBox(height: 14),
-            _PlusCard(
-              subscription: subscription,
-              planPrice: wallet.planPrice,
-              onGet: () => _open(const PlusView()),
-              onCancel: _cancelPlan,
-            ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 4),
             Row(
               children: [
                 const Text(
@@ -292,122 +259,6 @@ class BalanceCard extends StatelessWidget {
 
 String _enoughFor(int episodes) =>
     'Enough for $episodes ${episodes == 1 ? 'episode' : 'episodes'}';
-
-class _PlusCard extends StatelessWidget {
-  const _PlusCard({
-    required this.subscription,
-    required this.planPrice,
-    required this.onGet,
-    required this.onCancel,
-  });
-
-  final Subscription? subscription;
-  final String planPrice;
-  final VoidCallback onGet;
-  final VoidCallback onCancel;
-
-  @override
-  Widget build(BuildContext context) {
-    final plan = subscription;
-    final daysLeft = plan?.daysLeft ?? 0;
-    final total = plan == null
-        ? 1
-        : plan.lastDay.difference(plan.startDate).inDays + 1;
-    return GestureDetector(
-      onTap: plan == null ? onGet : null,
-      child: AppCard(
-        color: AppColors.primarySoft,
-        borderColor: const Color(0x667C5CFF),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.star, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Plus',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Text(
-                        'Every episode, no coins.\n$planPrice a month',
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (plan != null)
-                  StatusText(plan.isCancelled ? 'Cancelled' : 'Active')
-                else
-                  const Icon(Icons.chevron_right, color: AppColors.muted),
-              ],
-            ),
-            if (plan != null) ...[
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: total <= 0
-                      ? 1
-                      : (1 - daysLeft / total).clamp(0.0, 1.0),
-                  minHeight: 6,
-                  backgroundColor: AppColors.border,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Started ${shortDate(plan.startDate)}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  Flexible(
-                    child: Text(
-                      plan.isCancelled
-                          ? 'Ends ${shortDate(plan.lastDay)}'
-                          : '$daysLeft ${daysLeft == 1 ? 'day' : 'days'} left, paid through ${shortDate(plan.lastDay)}',
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-              if (!plan.isCancelled)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: onCancel,
-                    child: const Text(
-                      'Cancel Plus',
-                      style: TextStyle(color: AppColors.link),
-                    ),
-                  ),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class StatusText extends StatelessWidget {
   const StatusText(this.text, {super.key});

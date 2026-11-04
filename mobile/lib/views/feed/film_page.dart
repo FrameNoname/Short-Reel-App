@@ -19,8 +19,7 @@ import 'comments_sheet.dart';
 import 'episode_video.dart';
 import 'episode_flow.dart';
 import 'rail_icons.dart';
-import 'report_sheet.dart';
-import 'share_sheet.dart';
+import 'speed_sheet.dart';
 
 const _textShadow = [Shadow(blurRadius: 6, color: Color(0xAA000000))];
 
@@ -92,19 +91,9 @@ class _FilmPageState extends State<FilmPage> {
     });
   }
 
-  Future<void> _openMore(BuildContext context) async {
-    final choice = await showShareSheet(context, film: film, speed: _speed);
-    if (!context.mounted) return;
-    switch (choice) {
-      case SpeedChoice(:final speed):
-        setState(() => _speed = speed);
-      case ShareFilmChoice():
-        await copyFilmDetails(context, film);
-      case ReportChoice():
-        _whenLoggedIn(context, (id) => showReportSheet(context, film, id));
-      case null:
-        break;
-    }
+  Future<void> _pickSpeed(BuildContext context) async {
+    final speed = await showSpeedSheet(context, speed: _speed);
+    if (speed != null && context.mounted) setState(() => _speed = speed);
   }
 
   @override
@@ -335,10 +324,10 @@ class _FilmPageState extends State<FilmPage> {
                   ),
                 ),
                 _ActionButton(
-                  customIcon: (c) => ShareIcon(color: c),
-                  label: 'Share',
-                  semanticLabel: 'Share, speed and report',
-                  onTap: () => _openMore(context),
+                  icon: Icons.speed_rounded,
+                  label: 'Speed',
+                  semanticLabel: 'Playback speed',
+                  onTap: () => _pickSpeed(context),
                 ),
                 _ActionButton(
                   icon: Icons.playlist_play_rounded,

@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const ApiError = require('../utils/ApiError');
 const { text } = require('../utils/validate');
 const users = require('../models/auth');
-const { hasActiveSubscription } = require('../models/access');
 
 const USERNAME = /^[A-Za-z0-9_.]{3,30}$/;
 const SELF_REGISTER_ROLES = new Set(['viewer', 'creator']);
@@ -13,7 +12,7 @@ const SELF_REGISTER_ROLES = new Set(['viewer', 'creator']);
 let dummyHash;
 const getDummyHash = () => (dummyHash ??= argon2.hash('not-a-real-password'));
 
-function publicUser(user, subscribed) {
+function publicUser(user) {
   return {
     id: user.id,
     username: user.username,
@@ -22,7 +21,6 @@ function publicUser(user, subscribed) {
     bio: user.bio,
     role: user.role,
     coin_balance: user.coin_balance,
-    has_active_subscription: subscribed,
     created_at: user.created_at,
   };
 }
@@ -88,7 +86,7 @@ exports.login = async (req, res) => {
   if (!user || !valid) throw new ApiError(401, 'UNAUTHENTICATED', 'Username or password is wrong');
   res.json({
     token: signToken(req, user),
-    user: publicUser(user, await hasActiveSubscription(pool, user.id)),
+    user: publicUser(user),
   });
 };
 
@@ -98,7 +96,7 @@ exports.logout = (req, res) => res.json({ status: 'ok' });
 exports.me = async (req, res) => {
   const pool = req.app.locals.pool;
   const user = await users.findById(pool, req.user.id);
-  res.json({ user: publicUser(user, await hasActiveSubscription(pool, user.id)) });
+  res.json({ user: publicUser(user) });
 };
 
 exports.updateMe = async (req, res) => {
@@ -107,5 +105,5 @@ exports.updateMe = async (req, res) => {
   const bio = text(req.body, 'bio', { max: 160, optional: true }) ?? null;
   await users.updateProfile(pool, req.user.id, { displayName, bio });
   const user = await users.findById(pool, req.user.id);
-  res.json({ user: publicUser(user, await hasActiveSubscription(pool, user.id)) });
+  res.json({ user: publicUser(user) });
 };

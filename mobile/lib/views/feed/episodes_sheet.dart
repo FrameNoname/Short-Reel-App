@@ -10,7 +10,6 @@ import '../../theme/app_theme.dart';
 import '../../widgets/ai_label_badge.dart';
 import '../../widgets/common.dart';
 import '../../widgets/text.dart';
-import '../wallet/plus_view.dart';
 
 class EpisodesSheet extends StatelessWidget {
   const EpisodesSheet({super.key, required this.film, required this.episodes});
@@ -87,58 +86,6 @@ class EpisodesSheet extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const PlusView()),
-                );
-              },
-              child: AppCard(
-                color: AppColors.primarySoft,
-                borderColor: const Color(0x667C5CFF),
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        'Plus',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Watch every episode',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            'Plus · ${wallet.planPrice} / month, no coins needed',
-                            style: const TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, color: AppColors.muted),
-                  ],
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -167,7 +114,6 @@ class _EpisodeTile extends StatelessWidget {
         : switch (access) {
             EpisodeAccess.free => ('Free', AppColors.green),
             EpisodeAccess.unlocked => ('Unlocked', AppColors.link),
-            EpisodeAccess.plus => ('Plus', AppColors.link),
             EpisodeAccess.locked => (
               '${episode.priceCoins} coins',
               AppColors.gold,

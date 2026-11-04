@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
 import '../models/coin_pack.dart';
-import '../models/subscription.dart';
 import '../models/transaction.dart';
 import '../models/user.dart';
 import '../services/api_client.dart' show isStaleSession;
@@ -19,7 +18,6 @@ class WalletController extends ChangeNotifier {
 
   List<Transaction> transactions = const [];
   List<CoinPack> coinPacks = const [];
-  Subscription? subscription;
   bool isLoading = false;
   String? error;
   int? _loadedFor;
@@ -34,9 +32,6 @@ class WalletController extends ChangeNotifier {
 
   int get demoTopUpCoins => repository.demoTopUpCoins;
 
-  String get planPrice =>
-      '\$${repository.subscriptionPriceUsd.toStringAsFixed(2)}';
-
   /// Another person logged in (or out): drop what belonged to the last one.
   void _followLogin() {
     if (_auth.user?.id == _loadedFor) return;
@@ -47,13 +42,12 @@ class WalletController extends ChangeNotifier {
     _request++;
     isLoading = false;
     transactions = const [];
-    subscription = null;
     error = null;
     _loadedFor = null;
     notifyListeners();
   }
 
-  /// Reads the balance history, the packs and the plan from the backend.
+  /// Reads the balance history and the packs from the backend.
   Future<void> load() async {
     if (!_auth.isLoggedIn) return;
     final id = _userId;
@@ -65,7 +59,6 @@ class WalletController extends ChangeNotifier {
       final results = await Future.wait<Object?>([
         repository.transactionsOf(id),
         repository.coinPacks(),
-        repository.subscriptionOf(id),
         // The balance is read from the server too: it may have changed from
         // another device since this person logged in.
         repository.refreshBalance(id),
@@ -74,11 +67,10 @@ class WalletController extends ChangeNotifier {
       if (request != _request || _auth.user?.id != id) return;
       transactions = results[0]! as List<Transaction>;
       coinPacks = results[1]! as List<CoinPack>;
-      subscription = results[2] as Subscription?;
       // Before the balance is applied: that notifies auth, and a listener that
       // sees an unloaded user would reset what was just read.
       _loadedFor = id;
-      _auth.updateUser(results[3]! as User);
+      _auth.updateUser(results[2]! as User);
     } on Object catch (e) {
       if (request != _request || isStaleSession(e)) return;
       error = errorMessage(e);
@@ -110,10 +102,6 @@ class WalletController extends ChangeNotifier {
   Future<void> unlock(int episodeId) => _act(
     (id) async => _auth.updateUser(await repository.unlock(id, episodeId)),
   );
-
-  Future<void> cancelPlan() => _act((id) => repository.cancelSubscription(id));
-
-  Future<void> subscribe() async => _act((id) => repository.subscribe(id));
 
   @override
   void dispose() {

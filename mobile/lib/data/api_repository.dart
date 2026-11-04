@@ -4,7 +4,6 @@ import '../models/catalog.dart';
 import '../models/coin_pack.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
-import '../models/subscription.dart';
 import '../models/transaction.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
@@ -40,7 +39,6 @@ class ApiRepository implements AppRepository {
   final String _origin;
 
   User? _me;
-  double _planPrice = 6.99;
   int _demoCoins = 100;
 
   final Map<int, Film> _films = {};
@@ -53,7 +51,6 @@ class ApiRepository implements AppRepository {
   final Map<int, int> _episodeFilm = {};
   List<int> _watchlistIds = const [];
   final Map<int, List<FilmComment>> _comments = {};
-  final Set<(int, int)> _commentLikes = {};
 
   List<Film> _catalogFilms = const [];
   Future<void>? _catalogLoading;
@@ -304,7 +301,7 @@ class ApiRepository implements AppRepository {
     );
   }
 
-  // ---- wallet, unlock and subscription ----------------------------------
+  // ---- wallet and unlock ------------------------------------------------
 
   User _withBalance(int balance) {
     final user = _me!.copyWith(coinBalance: balance);
@@ -365,7 +362,6 @@ class ApiRepository implements AppRepository {
   Future<List<CoinPack>> coinPacks() async {
     final json = await _api.get('/coin-packs') as Map<String, dynamic>;
     _demoCoins = json['demo_topup_coins'] as int;
-    _planPrice = (json['subscription_price_usd'] as num).toDouble();
     return [
       for (final p in json['coin_packs'] as List)
         CoinPack.fromJson(p as Map<String, dynamic>),
@@ -373,41 +369,10 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  double get subscriptionPriceUsd => _planPrice;
-
-  @override
   int get episodePriceCoins => _typicalEpisodePrice;
 
   @override
   int get demoTopUpCoins => _demoCoins;
-
-  Subscription? _subscriptionFrom(Map<String, dynamic> json) {
-    final plan = json['subscription'];
-    if (json['active'] != true || plan is! Map<String, dynamic>) return null;
-    return Subscription.fromJson(
-      plan,
-      paidThrough: json['paid_through'] as String?,
-      today: json['today'] as String?,
-    );
-  }
-
-  @override
-  Future<Subscription> subscribe(int userId) async {
-    final json = await _api.post('/subscription') as Map<String, dynamic>;
-    return _subscriptionFrom(json)!;
-  }
-
-  @override
-  Future<Subscription?> subscriptionOf(int userId) async {
-    final json = await _api.get('/subscription') as Map<String, dynamic>;
-    _planPrice = (json['price_usd'] as num).toDouble();
-    return _subscriptionFrom(json);
-  }
-
-  @override
-  Future<void> cancelSubscription(int userId) async {
-    await _api.delete('/subscription');
-  }
 
   // ---- creator: upload, edit, delete, earnings --------------------------
 
@@ -553,27 +518,6 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  Future<List<FilmReport>> openReports() async {
-    final json = await _api.get('/admin/reports') as Map<String, dynamic>;
-    return [
-      for (final r in json['reports'] as List)
-        if ((r as Map<String, dynamic>)['status'] == 'open')
-          FilmReport(
-            id: r['id'] as int,
-            filmId: r['film_id'] as int,
-            filmTitle: r['film_title'] as String,
-            reason: r['reason'] as String,
-            isOpen: true,
-          ),
-    ];
-  }
-
-  @override
-  Future<void> resolveReport(int reportId) async {
-    await _api.post('/admin/reports/$reportId/resolve');
-  }
-
-  @override
   Future<AdminSales> adminSales() async {
     final json = await _api.get('/admin/sales') as Map<String, dynamic>;
     final coins = json['coins'] as Map<String, dynamic>;
@@ -582,7 +526,7 @@ class ApiRepository implements AppRepository {
         ((usd[key] as Map<String, dynamic>)['simulated_usd'] as num).toDouble();
     return AdminSales(
       // Simulated dollars only; coins stay in their own fields.
-      totalUsd: dollars('coin_topups') + dollars('subscriptions'),
+      totalUsd: dollars('coin_topups'),
       adminCoins: coins['admin_share'] as int,
       coinsSpent: coins['coins_spent'] as int,
       creatorCoins: coins['creator_share'] as int,
@@ -605,7 +549,7 @@ class ApiRepository implements AppRepository {
     );
   }
 
-  // ---- like, save, follow, report, comments -----------------------------
+  // ---- like, save, follow, comments -----------------------------------
 
   bool _isCatalog(int filmId) => filmId >= catalogFilmIdBase;
 
@@ -673,12 +617,6 @@ class ApiRepository implements AppRepository {
   int followerCount(int userId) => _followers[userId] ?? 0;
 
   @override
-  Future<void> reportFilm(int userId, int filmId, String reason) async {
-    if (_isCatalog(filmId)) return;
-    await _api.post('/films/$filmId/reports', data: {'reason': reason});
-  }
-
-  @override
   List<FilmComment> commentsOf(int filmId) => _comments[filmId] ?? const [];
 
   @override
@@ -698,19 +636,13 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  Future<void> addComment(
-    int userId,
-    int filmId,
-    String body, {
-    int? parentId,
-  }) async {
+  Future<void> addComment(int userId, int filmId, String body) async {
     if (_isCatalog(filmId)) {
       throw const ApiException(
         code: 'NOT_SUPPORTED',
         message: 'Comments are not available for catalog series.',
       );
     }
-    // The API has flat comments; a reply is posted as a normal comment.
     await _api.post('/films/$filmId/comments', data: {'body': body});
     await loadComments(filmId);
     final film = _films[filmId];
@@ -737,20 +669,6 @@ class ApiRepository implements AppRepository {
   }
 
   // Local to the session; the backend has no comment likes.
-  @override
-  bool isCommentLiked(int userId, int commentId) =>
-      _commentLikes.contains((userId, commentId));
-
-  @override
-  int commentLikeCount(int commentId) =>
-      _commentLikes.where((like) => like.$2 == commentId).length;
-
-  @override
-  void toggleCommentLike(int userId, int commentId) {
-    final like = (userId, commentId);
-    if (!_commentLikes.remove(like)) _commentLikes.add(like);
-  }
-
   // ---- library lists ----------------------------------------------------
 
   @override

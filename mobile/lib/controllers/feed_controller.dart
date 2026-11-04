@@ -114,19 +114,9 @@ class FeedController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addComment(
-    int userId,
-    int filmId,
-    String body, {
-    int? parentId,
-  }) async {
-    await repository.addComment(userId, filmId, body, parentId: parentId);
+  Future<void> addComment(int userId, int filmId, String body) async {
+    await repository.addComment(userId, filmId, body);
     films = await _fetch(userId);
-    notifyListeners();
-  }
-
-  void toggleCommentLike(int userId, int commentId) {
-    repository.toggleCommentLike(userId, commentId);
     notifyListeners();
   }
 
@@ -135,9 +125,6 @@ class FeedController extends ChangeNotifier {
     films = await _fetch(userId);
     notifyListeners();
   }
-
-  Future<void> reportFilm(int userId, int filmId, String reason) =>
-      repository.reportFilm(userId, filmId, reason);
 
   Future<void> toggleSave(int userId, int filmId) async {
     await repository.toggleSave(userId, filmId);

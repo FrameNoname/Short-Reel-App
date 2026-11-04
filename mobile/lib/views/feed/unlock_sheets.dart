@@ -9,7 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/text.dart';
 
-enum UnlockChoice { unlock, plus }
+enum UnlockChoice { unlock }
 
 class UnlockSheet extends StatelessWidget {
   const UnlockSheet({super.key, required this.film, required this.episode});
@@ -79,13 +79,6 @@ class UnlockSheet extends StatelessWidget {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(UnlockChoice.unlock),
             child: Text('Unlock for $price coins'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(UnlockChoice.plus),
-            child: Text(
-              'Or get Plus — watch everything for ${wallet.planPrice}/mo',
-              style: const TextStyle(color: AppColors.link),
-            ),
           ),
         ],
       ),

@@ -14,7 +14,5 @@ router.get('/settings/revenue-share', admin.getRevenueShare);
 router.put('/settings/revenue-share', admin.setRevenueShare);
 router.get('/users', admin.listUsers);
 router.put('/users/:id/role', admin.setUserRole);
-router.get('/reports', admin.listReports);
-router.post('/reports/:id/resolve', admin.resolveReport);
 
 module.exports = router;

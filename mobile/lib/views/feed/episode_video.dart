@@ -53,7 +53,7 @@ class EpisodeVideo extends StatefulWidget {
 
   /// The viewer pressed the button on the "log in or unlock" prompt. The
   /// future completes when they are done there, and the episode is asked for
-  /// again, so an unlock, a Plus plan or a login takes effect at once.
+  /// again, so an unlock or a login takes effect at once.
   final Future<void> Function() onLocked;
 
   /// The gesture layer. It sits above the video, which on the web is an HTML

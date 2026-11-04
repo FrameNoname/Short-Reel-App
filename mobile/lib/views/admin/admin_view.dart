@@ -2,7 +2,6 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
 import '../../controllers/admin_controller.dart';
-import '../../data/app_repository.dart';
 import '../../models/film.dart';
 import '../../services/errors.dart';
 import '../../theme/app_theme.dart';
@@ -13,7 +12,7 @@ import '../../widgets/tab_active.dart';
 import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 
-enum _Section { queue, reports, live }
+enum _Section { queue, live }
 
 Future<void> _takeDown(BuildContext context, int filmId) async {
   final admin = context.read<AdminController>();
@@ -77,7 +76,6 @@ class _AdminViewState extends State<AdminView> {
     final admin = context.watch<AdminController>();
     final sales = admin.sales;
     final queue = admin.queue;
-    final reports = admin.reports;
     final live = admin.liveFilms;
     final adminShare = admin.adminSharePercent;
     return Scaffold(
@@ -218,13 +216,6 @@ class _AdminViewState extends State<AdminView> {
                 ),
                 Expanded(
                   child: _SectionTab(
-                    label: 'Reports (${reports.length})',
-                    selected: _section == _Section.reports,
-                    onTap: () => setState(() => _section = _Section.reports),
-                  ),
-                ),
-                Expanded(
-                  child: _SectionTab(
                     label: 'Live (${live.length})',
                     selected: _section == _Section.live,
                     onTap: () => setState(() => _section = _Section.live),
@@ -238,10 +229,6 @@ class _AdminViewState extends State<AdminView> {
                 queue.isEmpty
                     ? const [EmptyView(message: 'The review queue is empty.')]
                     : [for (final film in queue) _ReviewCard(film: film)],
-              _Section.reports =>
-                reports.isEmpty
-                    ? const [EmptyView(message: 'No open reports.')]
-                    : [for (final r in reports) _ReportCard(report: r)],
               _Section.live =>
                 live.isEmpty
                     ? const [EmptyView(message: 'No live films.')]
@@ -431,77 +418,6 @@ class _ReviewCardState extends State<_ReviewCard> {
                     ),
                     onPressed: _busy ? null : () => _reject(context),
                     child: const Text('Reject'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReportCard extends StatelessWidget {
-  const _ReportCard({required this.report});
-
-  final FilmReport report;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: AppCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              report.filmTitle,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 3),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                const Icon(
-                  Icons.flag_rounded,
-                  size: 15,
-                  color: AppColors.danger,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    report.reason,
-                    style: const TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _guard(
-                      context,
-                      () => context.read<AdminController>().resolveReport(
-                        report.id,
-                      ),
-                    ),
-                    child: const Text('Mark resolved'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                    ),
-                    onPressed: () => _takeDown(context, report.filmId),
-                    child: const Text('Take down film'),
                   ),
                 ),
               ],
