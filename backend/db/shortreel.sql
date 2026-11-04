@@ -54,7 +54,7 @@ CREATE TABLE `ai_tools` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- films : catalogue entries + AI label + review status
+-- films : catalogue entries + AI label + live / taken-down status
 -- --------------------------------------------------------
 CREATE TABLE `films` (
   `id`              smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -65,16 +65,12 @@ CREATE TABLE `films` (
   `ai_tool_id`      tinyint(3) UNSIGNED NOT NULL,
   `prompt_credit`   varchar(500) DEFAULT NULL,         -- prompt / tool credit
   `is_ai_generated` tinyint(1) NOT NULL DEFAULT 1,     -- mandatory AI label
-  `status`          enum('pending','approved','rejected','taken_down') NOT NULL DEFAULT 'pending',
-  `review_note`     varchar(255) DEFAULT NULL,
-  `reviewed_by`     smallint(5) UNSIGNED DEFAULT NULL,
-  `reviewed_at`     datetime DEFAULT NULL,
+  `status`          enum('approved','taken_down') NOT NULL DEFAULT 'approved',
   `created_at`      datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `status` (`status`),
   CONSTRAINT `films_genre_fk`   FOREIGN KEY (`genre_id`)   REFERENCES `genres` (`id`),
-  CONSTRAINT `films_tool_fk`    FOREIGN KEY (`ai_tool_id`) REFERENCES `ai_tools` (`id`),
-  CONSTRAINT `films_review_fk`  FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+  CONSTRAINT `films_tool_fk`    FOREIGN KEY (`ai_tool_id`) REFERENCES `ai_tools` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -192,12 +188,12 @@ INSERT INTO `genres` (`id`, `name`) VALUES
 INSERT INTO `ai_tools` (`id`, `name`) VALUES
 (1, 'Text-to-video'), (2, 'Image-to-video'), (3, 'Video-to-video'), (4, 'Mixed');
 
-INSERT INTO `films` (`id`, `title`, `synopsis`, `genre_id`, `ai_tool_id`, `prompt_credit`, `status`, `reviewed_by`, `reviewed_at`) VALUES
-(1, 'Salt & Signal',   'A lighthouse keeper decodes messages from the sea.', 6, 1, 'Prompt: stormy lighthouse, 35mm film look', 'approved', 1, NOW()),
-(2, 'Paper Moons',     'Two strangers trade letters across a folded city.',  3, 2, 'Prompt: paper-cut city at night',           'approved', 1, NOW()),
-(3, 'Ember Protocol',  'An android firefighter questions her last command.', 2, 1, 'Prompt: android firefighter, cinematic',    'approved', 1, NOW()),
-(4, 'Glass Harbour',   'A port town where every reflection remembers.',      5, 3, 'Prompt: glass harbour, dreamlike',          'pending',  NULL, NULL),
-(5, 'ShortReel Intro', 'A short tour of AI film styles.',                    1, 4, 'Prompt: montage of AI film styles',         'approved', 1, NOW());
+INSERT INTO `films` (`id`, `title`, `synopsis`, `genre_id`, `ai_tool_id`, `prompt_credit`, `status`) VALUES
+(1, 'Salt & Signal',   'A lighthouse keeper decodes messages from the sea.', 6, 1, 'Prompt: stormy lighthouse, 35mm film look', 'approved'),
+(2, 'Paper Moons',     'Two strangers trade letters across a folded city.',  3, 2, 'Prompt: paper-cut city at night',           'approved'),
+(3, 'Ember Protocol',  'An android firefighter questions her last command.', 2, 1, 'Prompt: android firefighter, cinematic',    'approved'),
+(4, 'Glass Harbour',   'A port town where every reflection remembers.',      5, 3, 'Prompt: glass harbour, dreamlike',          'approved'),
+(5, 'ShortReel Intro', 'A short tour of AI film styles.',                    1, 4, 'Prompt: montage of AI film styles',         'approved');
 
 -- 8 episodes per film: ep 1-2 free, ep 3-8 = 20 coins
 INSERT INTO `episodes` (`film_id`, `episode_no`, `title`, `video_path`, `duration_sec`, `is_free`, `price_coins`)

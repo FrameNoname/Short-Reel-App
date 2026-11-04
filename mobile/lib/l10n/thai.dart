@@ -207,7 +207,6 @@ const _exact = {
 
   // Upload and creator studio
   'Title': 'ชื่อเรื่อง',
-  'Prompt credit': 'เครดิตพรอมต์',
   'Coins ': 'เหรียญ',
   'coins': 'เหรียญ',
   'Save changes': 'บันทึกการเปลี่ยนแปลง',
@@ -215,23 +214,13 @@ const _exact = {
   'Unlocks': 'การปลดล็อก',
   'A price must be 0 to 500 coins.': 'ราคาต้องอยู่ระหว่าง 0 ถึง 500 เหรียญ',
   'Taken down': 'ถูกถอดออก',
-  'Pending': 'รอตรวจสอบ',
   'Approved': 'อนุมัติแล้ว',
-  'Rejected': 'ไม่อนุมัติ',
 
   // Admin
-  'Moderator': 'ผู้ดูแล',
   'Total sales (demo)': 'ยอดขายรวม (ทดลอง)',
-  'AI label': 'ป้าย AI',
-  'Approve': 'อนุมัติ',
-  'Reject': 'ไม่อนุมัติ',
-  'Reject this film?': 'ไม่อนุมัติหนังเรื่องนี้หรือไม่?',
-  'Write the reason': 'เขียนเหตุผล',
   'Take down': 'ถอดออก',
   'Take down film': 'ถอดหนังออก',
   'Take this film down?': 'ถอดหนังเรื่องนี้ออกหรือไม่?',
-  'Why is it being removed?': 'ถอดออกเพราะอะไร?',
-  'The review queue is empty.': 'คิวตรวจสอบว่างเปล่า',
   'No live films.': 'ไม่มีหนังที่เผยแพร่อยู่',
 
   // Errors and misc
@@ -307,7 +296,6 @@ final _rules = <(RegExp, String Function(Match))>[
       return _date('${m[1]} ${m[2]}');
     },
   ),
-  (RegExp(r'^Review queue \((\d+)\)$'), (m) => 'คิวตรวจสอบ (${m[1]})'),
   (RegExp(r'^Live \((\d+)\)$'), (m) => 'เผยแพร่อยู่ (${m[1]})'),
   (
     RegExp(r'^Coins spent on (\d+) unlocks?$'),
@@ -359,7 +347,6 @@ final _rules = <(RegExp, String Function(Match))>[
     (m) => 'ปลดล็อกตอนที่ ${m[1]} ของ ${m[2]}',
   ),
   (RegExp(r'^(.+) was approved$'), (m) => '${m[1]} ได้รับการอนุมัติแล้ว'),
-  (RegExp(r'^(.+) was rejected$'), (m) => '${m[1]} ไม่ได้รับการอนุมัติ'),
   (RegExp(r'^(.+) was taken down$'), (m) => '${m[1]} ถูกถอดออก'),
 ];
 

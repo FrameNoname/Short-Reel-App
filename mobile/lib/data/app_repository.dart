@@ -122,8 +122,7 @@ abstract class AppRepository {
   List<Film> watchlistOf(int userId);
   List<Film> unlockedFilmsOf(int userId);
 
-  Future<List<Film>> reviewQueue();
   Future<List<Film>> liveFilms();
-  Future<void> review(int filmId, String status, {String? note});
+  Future<void> takeDown(int filmId);
   Future<AdminSales> adminSales();
 }

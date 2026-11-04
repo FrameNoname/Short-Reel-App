@@ -9,7 +9,7 @@ exports.listByFilm = async (db, filmId) => {
   return rows;
 };
 
-// Joins the film so a caller can check its review status in the same read.
+// Joins the film so a caller can check whether it is live in the same read.
 exports.findWithFilm = async (db, id) => {
   const [rows] = await db.query(
     `SELECT ${EPISODE_COLUMNS}, f.status AS film_status, f.title AS film_title
