@@ -9,13 +9,6 @@ const media = require('../services/media');
 
 const isOwnerOrAdmin = (film, user) => user.role === 'admin' || user.id === film.creator_id;
 
-function list(value) {
-  if (value === undefined) return undefined;
-  const items = (Array.isArray(value) ? value : String(value).split(',')).map((s) => String(s).trim());
-  if (items.some((s) => !s || s.length > 30)) throw bad('filter value is not valid');
-  return items;
-}
-
 async function withViewerFlags(pool, user, rows, serialized) {
   if (!user) return serialized;
   const flags = await social.flags(pool, user.id, rows);
@@ -31,9 +24,8 @@ exports.lookups = async (req, res) => res.json(await films.lookups(req.app.local
 
 // The public feed and search. Only approved films, whatever the caller asks for.
 exports.list = async (req, res) => {
-  const { q, length, sort } = req.query;
+  const { q, sort } = req.query;
   if (q !== undefined && (typeof q !== 'string' || q.length > 100)) throw bad('q is not valid');
-  if (length !== undefined && !films.LENGTHS.includes(length)) throw bad('length is not valid');
   if (sort !== undefined && !films.SORTS.includes(sort)) throw bad('sort is not valid');
   const pageSize = req.query.page_size === undefined ? 50 : pathId(req.query.page_size, 'page_size');
   const page = req.query.page === undefined ? 1 : pathId(req.query.page, 'page');
@@ -43,9 +35,6 @@ exports.list = async (req, res) => {
     status: 'approved',
     creatorId,
     q: q?.trim() || undefined,
-    genres: list(req.query.genre),
-    aiTools: list(req.query.ai_tool),
-    length,
     sort,
     limit: pageSize + 1,
     offset: (page - 1) * pageSize,

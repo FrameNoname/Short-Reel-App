@@ -10,7 +10,6 @@ import '../services/api_client.dart';
 import '../services/catalog_service.dart';
 import '../services/token_store.dart';
 import 'app_repository.dart';
-import 'film_filter.dart';
 
 /// The real thing: every core call goes to the REST API and MySQL behind it.
 ///
@@ -176,24 +175,14 @@ class ApiRepository implements AppRepository {
       _remember(f as Map<String, dynamic>),
   ];
 
-  static const _lengthParam = {
-    LengthFilter.under5: 'under5',
-    LengthFilter.from5to15: '5to15',
-    LengthFilter.from15to30: '15to30',
-  };
-
   @override
-  Future<List<Film>> films([FilmFilter filter = const FilmFilter()]) async {
+  Future<List<Film>> films([String query = '']) async {
     final core = await _allPages('/films', {
-      if (filter.query.isNotEmpty) 'q': filter.query,
-      if (filter.genres.isNotEmpty) 'genre': filter.genres.join(','),
-      if (filter.aiTools.isNotEmpty) 'ai_tool': filter.aiTools.join(','),
-      if (_lengthParam[filter.length] != null)
-        'length': _lengthParam[filter.length],
+      if (query.isNotEmpty) 'q': query,
     });
     // The catalog is an extra: it follows the app's own films and a failure
     // there never touches them.
-    final extra = await _matchingCatalogFilms(filter);
+    final extra = await _matchingCatalogFilms(query);
     return [...core, ...extra];
   }
 
@@ -216,19 +205,12 @@ class ApiRepository implements AppRepository {
 
   static const _maxPages = 20;
 
-  Future<List<Film>> _matchingCatalogFilms(FilmFilter filter) async {
-    // The catalog has no AI tool or running time, so those filters hide it.
-    if (filter.aiTools.isNotEmpty || filter.length != LengthFilter.any) {
-      return const [];
-    }
+  Future<List<Film>> _matchingCatalogFilms(String query) async {
     await _catalogLoading;
-    final query = filter.query.toLowerCase();
+    final text = query.toLowerCase();
     return [
       for (final film in _catalogFilms)
-        if ((query.isEmpty || film.title.toLowerCase().contains(query)) &&
-            (filter.genres.isEmpty ||
-                film.genreTags.any(filter.genres.contains)))
-          film,
+        if (text.isEmpty || film.title.toLowerCase().contains(text)) film,
     ];
   }
 
@@ -778,18 +760,5 @@ class ApiRepository implements AppRepository {
           priceCoins: 0,
         ),
     ];
-  }
-
-  @override
-  List<String> catalogGenres() {
-    final counts = <String, int>{};
-    for (final film in _catalogFilms) {
-      for (final tag in film.genreTags) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
-      }
-    }
-    final names = counts.keys.toList()
-      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
-    return names.take(12).toList();
   }
 }
