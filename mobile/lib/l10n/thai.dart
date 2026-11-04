@@ -87,43 +87,29 @@ const _exact = {
   'Speed': 'ความเร็ว',
   'More': 'เพิ่มเติม',
   'Report': 'รายงาน',
-  'Reply': 'ตอบกลับ',
   'Delete': 'ลบ',
   'Saved': 'บันทึกแล้ว',
   'Playback speed': 'ความเร็วในการเล่น',
-  'Copy this film’s details': 'คัดลอกรายละเอียดหนังเรื่องนี้',
-  'Copied to clipboard.': 'คัดลอกไปยังคลิปบอร์ดแล้ว',
-  'Tell us what is wrong': 'บอกเราว่าเกิดปัญหาอะไร',
   'Comments': 'ความคิดเห็น',
   'Add a comment': 'เพิ่มความคิดเห็น',
   'No comments yet. Say something.': 'ยังไม่มีความคิดเห็น ลองพูดอะไรสักหน่อย',
   'Send comment': 'ส่งความคิดเห็น',
-  'Cancel reply': 'ยกเลิกการตอบกลับ',
   'Follow a creator to see their films here.':
       'ติดตามผู้สร้างเพื่อดูหนังของพวกเขาที่นี่',
   'Tap the + on a creator in For you to follow them.':
       'กด + ที่ผู้สร้างในหน้า สำหรับคุณ เพื่อติดตาม',
   'Find films for you': 'ค้นหาหนังสำหรับคุณ',
   'No films to show yet.': 'ยังไม่มีหนังให้แสดง',
-  'An admin reviews every report.': 'แอดมินตรวจสอบทุกรายงาน',
-  'Audio or video problem': 'ปัญหาเสียงหรือภาพ',
-  'Misleading AI label': 'ป้าย AI ทำให้เข้าใจผิด',
-  'Stolen content': 'เนื้อหาละเมิดลิขสิทธิ์',
-  'Harmful content': 'เนื้อหาอันตราย',
-  'Send report': 'ส่งรายงาน',
-  'Report sent. Thank you.': 'ส่งรายงานแล้ว ขอบคุณ',
 
   // Episodes and unlock
   'Free': 'ฟรี',
   'Paid': 'เสียเงิน',
   'Playing': 'กำลังเล่น',
   'Unlocked': 'ปลดล็อกแล้ว',
-  'Plus': 'Plus',
   'Price': 'ราคา',
   'Your balance': 'ยอดเหรียญของคุณ',
   'After unlock': 'หลังปลดล็อก',
   'Yours to rewatch anytime': 'ดูซ้ำได้ทุกเมื่อ',
-  'Watch every episode': 'ดูได้ทุกตอน',
   'Not enough coins': 'เหรียญไม่พอ',
   'Top up': 'เติมเหรียญ',
   'Open wallet': 'เปิดกระเป๋าเงิน',
@@ -191,18 +177,6 @@ const _exact = {
   'Open channel': 'เปิดช่อง',
 
   // Onboarding
-  'Skip': 'ข้าม',
-  'Next': 'ถัดไป',
-  'Get started': 'เริ่มต้นใช้งาน',
-  'Watch AI short films': 'ดูหนังสั้น AI',
-  'Swipe through vertical films made with AI, one episode at a time.':
-      'ปัดดูหนังแนวตั้งที่สร้างด้วย AI ทีละตอน',
-  'Unlock with coins or Plus': 'ปลดล็อกด้วยเหรียญหรือ Plus',
-  'Early episodes are free. Unlock the rest with coins, or get Plus to watch everything.':
-      'ตอนแรกๆ ดูฟรี ตอนที่เหลือปลดล็อกด้วยเหรียญ หรือสมัคร Plus เพื่อดูได้ทุกตอน',
-  'Pick what you like': 'เลือกสิ่งที่คุณชอบ',
-  'Choose a few genres and we will show them first.':
-      'เลือกแนวหนังที่ชอบสักหน่อย เราจะแสดงแนวนั้นก่อน',
 
   'New': 'ใหม่',
   'Earlier': 'ก่อนหน้า',
@@ -255,26 +229,6 @@ const _exact = {
   'Best value': 'คุ้มที่สุด',
   'Active': 'ใช้งานอยู่',
   'Cancelled': 'ยกเลิกแล้ว',
-  'Cancel Plus': 'ยกเลิก Plus',
-  'Cancel Plus?': 'ยกเลิก Plus หรือไม่?',
-  'Cancel plan': 'ยกเลิกแพ็กเกจ',
-  'Keep Plus': 'ใช้ Plus ต่อ',
-  'Watch every episode with Plus': 'ดูได้ทุกตอนด้วย Plus',
-  'No coins, no locks. Binge any film from the first episode to the last.':
-      'ไม่ต้องใช้เหรียญ ไม่มีล็อก ดูมาราธอนได้ตั้งแต่ตอนแรกจนตอนสุดท้าย',
-  'Every episode unlocked': 'ปลดล็อกทุกตอน',
-  'Locked episodes play right away': 'ตอนที่ล็อกไว้เล่นได้ทันที',
-  'No coins needed': 'ไม่ต้องใช้เหรียญ',
-  'Keep your coins for later': 'เก็บเหรียญไว้ใช้ภายหลัง',
-  'Support creators': 'สนับสนุนผู้สร้าง',
-  'Your plan helps fund AI filmmakers':
-      'แพ็กเกจของคุณช่วยสนับสนุนผู้สร้างหนัง AI',
-  'Plus monthly': 'Plus รายเดือน',
-  'One month from the day you start. No automatic renewal.':
-      'หนึ่งเดือนนับจากวันที่เริ่ม ไม่ต่ออายุอัตโนมัติ',
-  'Simulated in this demo': 'จำลองในเดโมนี้',
-  'Plus is not paid out to creators yet':
-      'Plus ยังไม่มีการแบ่งรายได้ให้ผู้สร้าง',
   '/mo': '/เดือน',
 
   // Upload and creator studio
@@ -335,9 +289,7 @@ const _exact = {
   'Take down film': 'ถอดหนังออก',
   'Take this film down?': 'ถอดหนังเรื่องนี้ออกหรือไม่?',
   'Why is it being removed?': 'ถอดออกเพราะอะไร?',
-  'Mark resolved': 'ทำเครื่องหมายว่าแก้แล้ว',
   'The review queue is empty.': 'คิวตรวจสอบว่างเปล่า',
-  'No open reports.': 'ไม่มีรายงานที่ค้างอยู่',
   'No live films.': 'ไม่มีหนังที่เผยแพร่อยู่',
 
   // Errors and misc

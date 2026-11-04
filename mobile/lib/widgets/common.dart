@@ -247,7 +247,6 @@ class FilmPoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final asset = film.posterAsset;
     final url = film.posterUrl;
     // Artwork that carries its own AI badge needs no title panel over it.
     final titlePanel = showBadge
@@ -263,9 +262,7 @@ class FilmPoster extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             ColoredBox(color: _tints[film.id % _tints.length]),
-            if (asset != null)
-              Image.asset(asset, fit: BoxFit.cover)
-            else if (url != null)
+            if (url != null)
               Image.network(
                 url,
                 fit: BoxFit.cover,
