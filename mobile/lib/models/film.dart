@@ -13,7 +13,6 @@ class Film {
     this.creatorName = '',
     this.genreName = '',
     this.aiToolName = '',
-    this.posterAsset,
     this.reviewNote,
     this.likeCount = 0,
     this.commentCount = 0,
@@ -36,7 +35,6 @@ class Film {
   final String creatorName;
   final String genreName;
   final String aiToolName;
-  final String? posterAsset;
   final String? reviewNote;
   final int likeCount;
   final int commentCount;
@@ -101,7 +99,6 @@ class Film {
       creatorName: creatorName,
       genreName: genreName ?? this.genreName,
       aiToolName: aiToolName ?? this.aiToolName,
-      posterAsset: posterAsset,
       reviewNote: clearReviewNote ? null : reviewNote ?? this.reviewNote,
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
