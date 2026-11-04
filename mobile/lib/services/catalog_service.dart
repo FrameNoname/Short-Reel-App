@@ -3,9 +3,6 @@ import 'package:dio/dio.dart';
 import '../models/catalog.dart';
 import 'api_client.dart';
 
-/// Turn the catalog on with --dart-define=CATALOG=true.
-const catalogEnabled = bool.fromEnvironment('CATALOG');
-
 /// Reads the Series Jeen catalog through our own backend, which holds the
 /// provider key. The app never sees that key.
 class CatalogService {

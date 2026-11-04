@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
-import '../data/film_filter.dart';
 import '../models/film.dart';
 import '../models/user.dart';
 import '../services/api_client.dart' show isStaleSession;
@@ -12,7 +11,7 @@ class FilmSearchController extends ChangeNotifier {
 
   final AppRepository repository;
 
-  FilmFilter filter = const FilmFilter();
+  String query = '';
   List<Film> results = const [];
   List<User> creators = const [];
 
@@ -21,9 +20,6 @@ class FilmSearchController extends ChangeNotifier {
 
   /// The most watched films right now.
   List<Film> trending = const [];
-
-  /// Genres from the catalog, offered next to the built-in ones.
-  List<String> get catalogGenres => repository.catalogGenres();
 
   static const _maxRecent = 8;
 
@@ -34,15 +30,15 @@ class FilmSearchController extends ChangeNotifier {
   // slow answer for an old word can never replace the answer to the current one.
   int _request = 0;
 
-  Future<void> apply(FilmFilter value) async {
+  Future<void> apply(String value) async {
     final request = ++_request;
-    filter = value;
+    query = value;
     error = null;
     try {
       final found = await repository.films(value);
       if (request != _request) return;
       results = found;
-      creators = repository.searchCreators(value.query);
+      creators = repository.searchCreators(value);
     } on Object catch (e) {
       if (request != _request || isStaleSession(e)) return;
       results = const [];
@@ -82,7 +78,4 @@ class FilmSearchController extends ChangeNotifier {
     recent = const [];
     notifyListeners();
   }
-
-  Future<int> countFor(FilmFilter value) async =>
-      (await repository.films(value)).length;
 }

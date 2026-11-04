@@ -26,10 +26,10 @@ import 'widgets/loading_view.dart';
 void main() {
   final tokens = SecureTokenStore();
   final api = ApiClient(tokens: tokens);
-  // Series Jeen is an optional extra: without it the app works as before.
-  final catalog = catalogEnabled ? CatalogService(api) : null;
-  final repository = ApiRepository(client: api, tokens: tokens);
-  if (catalog != null) repository.useCatalog(catalog);
+  // The Series Jeen catalog is always on.
+  final catalog = CatalogService(api);
+  final repository = ApiRepository(client: api, tokens: tokens)
+    ..useCatalog(catalog);
   runApp(
     ShortReelApp(
       repository: repository,

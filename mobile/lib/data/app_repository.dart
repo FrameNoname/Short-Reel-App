@@ -6,7 +6,6 @@ import '../models/episode.dart';
 import '../models/film.dart';
 import '../models/transaction.dart';
 import '../models/user.dart';
-import 'film_filter.dart';
 
 export '../models/episode.dart' show EpisodeAccess;
 
@@ -127,9 +126,6 @@ abstract class AppRepository {
   /// in the catalog can be opened like a feed film.
   Film catalogFilm(CatalogDrama drama);
 
-  /// Genres of the catalog films, the most common first, for the filters.
-  List<String> catalogGenres();
-
   /// Saves the person's channel name and bio.
   Future<User> updateProfile(
     int userId, {
@@ -156,7 +152,8 @@ abstract class AppRepository {
   /// Asks the backend whether [episodeId] may be watched and for its link.
   Future<Playback> playback(int episodeId);
 
-  Future<List<Film>> films([FilmFilter filter = const FilmFilter()]);
+  /// Approved films whose title, creator or prompt matches [query].
+  Future<List<Film>> films([String query = '']);
   Future<List<Film>> followingFilms(int userId);
   Future<List<Episode>> episodes(int filmId);
   EpisodeAccess accessOf(int? userId, Episode episode);

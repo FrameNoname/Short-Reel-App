@@ -15,25 +15,17 @@ const FILM_SELECT = `
     JOIN ai_tools t ON t.id = f.ai_tool_id
     JOIN users u ON u.id = f.creator_id`;
 
-// Total running time, matching the app's length filter.
-const LENGTH_SQL = {
-  under5: 'total_duration_sec < 300',
-  '5to15': 'total_duration_sec >= 300 AND total_duration_sec < 900',
-  '15to30': 'total_duration_sec >= 900 AND total_duration_sec <= 1800',
-};
-
 const SORT_SQL = {
   latest: 'created_at DESC, id DESC',
   popular: 'like_count DESC, id DESC',
   title: 'title ASC',
 };
 
-exports.LENGTHS = Object.keys(LENGTH_SQL);
 exports.SORTS = Object.keys(SORT_SQL);
 
 exports.search = async (
   pool,
-  { status, creatorId, q, genres, aiTools, length, sort, limit, offset },
+  { status, creatorId, q, sort, limit, offset },
 ) => {
   const where = [];
   const params = [];
@@ -49,15 +41,6 @@ exports.search = async (
     where.push('(title LIKE ? OR creator_name LIKE ?)');
     params.push(`%${q}%`, `%${q}%`);
   }
-  if (genres?.length) {
-    where.push(`genre IN (${genres.map(() => '?').join(',')})`);
-    params.push(...genres);
-  }
-  if (aiTools?.length) {
-    where.push(`ai_tool IN (${aiTools.map(() => '?').join(',')})`);
-    params.push(...aiTools);
-  }
-  if (length) where.push(LENGTH_SQL[length]);
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [rows] = await pool.query(
     `SELECT * FROM (${FILM_SELECT}) films ${clause} ORDER BY ${SORT_SQL[sort] ?? SORT_SQL.latest} LIMIT ? OFFSET ?`,

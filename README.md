@@ -77,7 +77,7 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 
 #### ตัวเสริม Series Jeen (ไม่บังคับ)
 
-ใส่ `SERIESJEEN_API_KEY` ใน `backend/.env` และรันแอปด้วย `--dart-define=CATALOG=true` จะมีแท็บ catalog และหนังภายนอกต่อท้ายฟีด ไม่ใส่ก็ใช้แอปได้ครบทุกอย่างข้างบน หนังภายนอกไม่ติดป้าย AI
+ใส่ `SERIESJEEN_API_KEY` ใน `backend/.env` แอปจะมีแท็บ catalog และหนังภายนอกต่อท้ายฟีดทุกครั้งที่รัน ถ้าไม่มี key แท็บ catalog จะโหลดไม่ขึ้น แต่ส่วนอื่นยังใช้ได้ครบ หนังภายนอกไม่ติดป้าย AI
 
 #### รัน test
 
@@ -101,7 +101,7 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 | Wallet, top-up จำลอง, unlock ใน DB transaction เดียว (ไม่หักซ้ำ, ไม่ติดลบ, ทน concurrent) | ทำแล้ว |
 | Subscription (Plus) | **ตัดออกจาก scope** (ไม่มีตารางใน DB) |
 | ส่วนแบ่งรายได้ (บันทึก ณ ตอนปลดล็อก, ปัดเศษรวมตรง, Creator dashboard, Admin sales แยกเหรียญ/ดอลลาร์จำลอง) | ทำแล้ว |
-| Search/filter genre, length, AI tool; Profile | ทำแล้ว |
+| Search ค้นหาจากชื่อหนังและครีเอเตอร์; Profile | ทำแล้ว (ตัดตัวกรอง genre/length/AI tool ออก) |
 | Like, บันทึก, ติดตาม, คอมเมนต์ (เรียบ) | ทำแล้ว |
 | Report, การตอบกลับซ้อน / like คอมเมนต์, Share, Onboarding, การสลับภาษา (แอปเป็นภาษาไทยอย่างเดียว) | **ตัดออกจาก scope** |
 | ยอดวิว, กราฟรายวัน, การแจ้งเตือน, forgot password, continue watching | **ถอดออกจากแอปแล้ว** (ไม่มีตารางใน DB) |
@@ -183,7 +183,7 @@ There is a progress bar above the film title that you can drag to seek. Playback
 
 #### Series Jeen add-on (optional)
 
-Set `SERIESJEEN_API_KEY` in `backend/.env` and run the app with `--dart-define=CATALOG=true` to get a catalog tab and external films appended to the feed. Without it, everything above still works. External films do not carry the AI label.
+Set `SERIESJEEN_API_KEY` in `backend/.env` to get a catalog tab and external films appended to the feed. It is always on. Without a key, the catalog tab cannot load, but everything above still works. External films do not carry the AI label.
 
 #### Running tests
 
@@ -207,7 +207,7 @@ Summary:
 | Wallet, simulated top-up, unlock in a single DB transaction (no double charge, no negative balance, safe under concurrency) | Done |
 | Subscription (Plus) | **Cut from scope** (no table in the DB) |
 | Revenue share (recorded at unlock time, rounding sums correctly, Creator dashboard, Admin sales split into coins / simulated dollars) | Done |
-| Search/filter by genre, length, AI tool; Profile | Done |
+| Search by film title and creator; Profile | Done (genre/length/AI tool filters cut) |
 | Like, save, follow, comments (flat) | Done |
 | Report, nested replies / comment likes, Share, Onboarding, language switch (the app is Thai only) | **Cut from scope** |
 | View counts, daily charts, notifications, forgot password, continue watching | **Removed from the app** (no DB tables) |

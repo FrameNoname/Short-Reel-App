@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/feed_controller.dart';
 import '../../controllers/film_search_controller.dart';
-import '../../data/film_filter.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../models/user.dart';
@@ -15,7 +14,6 @@ import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../player/player_view.dart';
 import '../profile/creator_profile_view.dart';
-import 'filters_view.dart';
 
 class SearchView extends StatefulWidget {
   const SearchView({super.key});
@@ -45,7 +43,7 @@ class _SearchViewState extends State<SearchView> {
       text: term,
       selection: TextSelection.collapsed(offset: term.length),
     );
-    search.apply(search.filter.copyWith(query: term));
+    search.apply(term);
     search.remember(term);
     _focus.unfocus();
   }
@@ -56,17 +54,9 @@ class _SearchViewState extends State<SearchView> {
     _focus.addListener(() => setState(() => _suggesting = _focus.hasFocus));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final search = context.read<FilmSearchController>();
-      search.apply(search.filter);
+      search.apply(search.query);
       search.loadTrending();
     });
-  }
-
-  Future<void> _openFilters() async {
-    final search = context.read<FilmSearchController>();
-    final filter = await Navigator.of(context).push<FilmFilter>(
-      MaterialPageRoute(builder: (_) => FiltersView(initial: search.filter)),
-    );
-    if (filter != null) search.apply(filter);
   }
 
   @override
@@ -94,8 +84,7 @@ class _SearchViewState extends State<SearchView> {
                       focusNode: _focus,
                       onTapOutside: (_) {},
                       textInputAction: TextInputAction.search,
-                      onChanged: (value) =>
-                          search.apply(search.filter.copyWith(query: value)),
+                      onChanged: search.apply,
                       onSubmitted: (value) {
                         search.remember(value);
                         _focus.unfocus();
@@ -116,30 +105,11 @@ class _SearchViewState extends State<SearchView> {
                                 ),
                                 onPressed: () {
                                   _query.clear();
-                                  search.apply(
-                                    search.filter.copyWith(query: ''),
-                                  );
+                                  search.apply('');
                                 },
                               ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.outlined(
-                    tooltip: context.tr('Filters'),
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(50, 50),
-                      side: BorderSide(
-                        color: search.filter.hasFilters
-                            ? AppColors.primary
-                            : AppColors.border,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    icon: const Icon(Icons.tune),
-                    onPressed: _openFilters,
                   ),
                 ],
               ),
@@ -210,7 +180,7 @@ class _SearchViewState extends State<SearchView> {
                               hasScrollBody: false,
                               child: ErrorView(
                                 message: search.error!,
-                                onRetry: () => search.apply(search.filter),
+                                onRetry: () => search.apply(search.query),
                               ),
                             )
                           else if (films.isEmpty)
