@@ -237,11 +237,11 @@ class ProfileView extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 8),
-                const TabBar(
+                TabBar(
                   tabs: [
-                    Tab(text: 'Watchlist'),
-                    Tab(text: 'Unlocked'),
-                    Tab(text: 'Following'),
+                    Tab(text: context.tr('Watchlist')),
+                    Tab(text: context.tr('Unlocked')),
+                    Tab(text: context.tr('Following')),
                   ],
                 ),
                 const SizedBox(height: 12),
