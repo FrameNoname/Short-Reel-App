@@ -31,11 +31,6 @@ exports.review = (pool, filmId, { status, note, adminId }) =>
       }
     }
     await films.setReview(conn, filmId, { status, note: status === 'approved' ? null : note, adminId });
-    if (status === 'taken_down') {
-      await conn.query("UPDATE reports SET status = 'resolved' WHERE film_id = ? AND status = 'open'", [
-        filmId,
-      ]);
-    }
   });
 
 exports.sales = async (pool) => {
@@ -47,9 +42,6 @@ exports.sales = async (pool) => {
   const [[topups]] = await pool.query(
     `SELECT COUNT(*) AS count, COALESCE(SUM(price_usd), 0) AS simulated_usd, COALESCE(SUM(amount), 0) AS coins_issued
        FROM coin_transactions WHERE type = 'topup'`,
-  );
-  const [[subs]] = await pool.query(
-    'SELECT COUNT(*) AS count, COALESCE(SUM(price_usd), 0) AS simulated_usd FROM subscriptions',
   );
   const [perFilm] = await pool.query(
     `SELECT f.id AS film_id, f.title, u.username AS owner, u.role AS owner_role, COUNT(ue.id) AS unlock_count,
@@ -78,7 +70,6 @@ exports.sales = async (pool) => {
     simulated_payments: {
       unit: 'usd (simulated, no real money)',
       coin_topups: num(topups),
-      subscriptions: num(subs),
     },
     per_film: perFilm.map(num_owner),
     recent_unlocks: recent,
@@ -110,18 +101,3 @@ exports.listUsers = async (pool) => {
 };
 
 exports.setRole = (pool, id, role) => pool.query('UPDATE users SET role = ? WHERE id = ?', [role, id]);
-
-exports.listReports = async (pool) => {
-  const [rows] = await pool.query(
-    `SELECT r.id, r.film_id, f.title AS film_title, r.reason, r.status, r.created_at,
-            u.username AS reporter
-       FROM reports r JOIN films f ON f.id = r.film_id JOIN users u ON u.id = r.reporter_id
-      ORDER BY (r.status = 'open') DESC, r.id DESC`,
-  );
-  return rows;
-};
-
-exports.resolveReport = async (pool, id) => {
-  const [result] = await pool.query("UPDATE reports SET status = 'resolved' WHERE id = ?", [id]);
-  return result.affectedRows;
-};

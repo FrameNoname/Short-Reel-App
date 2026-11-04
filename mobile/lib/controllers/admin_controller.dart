@@ -11,7 +11,6 @@ class AdminController extends ChangeNotifier {
 
   List<Film> queue = const [];
   List<Film> liveFilms = const [];
-  List<FilmReport> reports = const [];
   AdminSales sales = const AdminSales(totalUsd: 0, adminCoins: 0);
   int adminSharePercent = 30;
   bool isLoading = false;
@@ -25,15 +24,13 @@ class AdminController extends ChangeNotifier {
       final results = await Future.wait<Object>([
         repository.reviewQueue(),
         repository.liveFilms(),
-        repository.openReports(),
         repository.adminSales(),
         repository.adminSharePercent(),
       ]);
       queue = results[0] as List<Film>;
       liveFilms = results[1] as List<Film>;
-      reports = results[2] as List<FilmReport>;
-      sales = results[3] as AdminSales;
-      adminSharePercent = results[4] as int;
+      sales = results[2] as AdminSales;
+      adminSharePercent = results[3] as int;
     } on Object catch (e) {
       error = errorMessage(e);
     }
@@ -52,15 +49,9 @@ class AdminController extends ChangeNotifier {
     await load();
   }
 
-  Future<void> resolveReport(int reportId) async {
-    await repository.resolveReport(reportId);
-    await load();
-  }
-
   void reset() {
     queue = const [];
     liveFilms = const [];
-    reports = const [];
     sales = const AdminSales(totalUsd: 0, adminCoins: 0);
     error = null;
     notifyListeners();

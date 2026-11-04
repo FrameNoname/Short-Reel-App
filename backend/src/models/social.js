@@ -63,14 +63,6 @@ exports.setFollow = (pool, followerId, creatorId, on) =>
     [followerId, creatorId],
   );
 
-exports.addReport = async (pool, userId, filmId, reason) => {
-  const [result] = await pool.query(
-    'INSERT INTO reports (reporter_id, film_id, reason) VALUES (?, ?, ?)',
-    [userId, filmId, reason],
-  );
-  return result.insertId;
-};
-
 // Which of these films the viewer liked or saved, and which creators they follow.
 exports.flags = async (pool, userId, films) => {
   if (films.length === 0) return { liked: new Set(), saved: new Set(), following: new Set() };

@@ -1,5 +1,4 @@
 const wallet = require('../models/wallet');
-const subscriptions = require('../models/subscriptions');
 const { pathId, bool, bad } = require('../utils/validate');
 
 const SIMULATED = 'Simulated payment: no real money is charged.';
@@ -53,6 +52,5 @@ exports.listCoinPacks = async (req, res) => {
     simulated_payment: true,
     demo_topup_coins: Number(await wallet.setting(pool, 'demo_topup_coins', 100)),
     coin_packs: await wallet.listCoinPacks(pool),
-    subscription_price_usd: await subscriptions.price(pool),
   });
 };

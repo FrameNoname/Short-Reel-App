@@ -10,7 +10,7 @@ import '../../widgets/dialogs.dart';
 import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
-import '../feed/share_sheet.dart';
+import '../feed/speed_sheet.dart';
 import 'edit_profile_view.dart';
 
 class SettingsView extends StatelessWidget {
@@ -95,25 +95,6 @@ class SettingsView extends StatelessWidget {
               onTap: () => _open(context, const EditProfileView()),
             ),
           ],
-          const _SectionLabel('Language'),
-          Row(
-            children: [
-              for (final language in AppLanguage.values)
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: language == AppLanguage.values.last ? 0 : 8,
-                    ),
-                    child: _LanguageOption(
-                      key: Key('language-${language.name}'),
-                      label: language.label,
-                      selected: language == settings.language,
-                      onTap: () => settings.setLanguage(language),
-                    ),
-                  ),
-                ),
-            ],
-          ),
           const _SectionLabel('Playback'),
           AppCard(
             child: Column(
@@ -126,7 +107,7 @@ class SettingsView extends StatelessWidget {
                 const SizedBox(height: 2),
                 const Text(
                   'Every film starts at this speed. You can still change it '
-                  'from the Share button.',
+                  'from the Speed button.',
                   style: TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
                 const SizedBox(height: 12),
@@ -339,52 +320,6 @@ class _SpeedOption extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : AppColors.text,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LanguageOption extends StatelessWidget {
-  const _LanguageOption({
-    super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          height: 48,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
               fontWeight: FontWeight.w700,
               color: selected ? Colors.white : AppColors.text,
             ),

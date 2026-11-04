@@ -146,22 +146,6 @@ CREATE TABLE `unlocked_episodes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- subscriptions : monthly, start and end date
--- --------------------------------------------------------
-CREATE TABLE `subscriptions` (
-  `id`         smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id`    smallint(5) UNSIGNED NOT NULL,
-  `price_usd`  decimal(6,2) NOT NULL DEFAULT 6.99,
-  `start_date` date NOT NULL,
-  `end_date`   date NOT NULL,
-  `cancelled_at` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `sub_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
 -- settings : admin revenue share %
 -- --------------------------------------------------------
 CREATE TABLE `settings` (
@@ -171,7 +155,7 @@ CREATE TABLE `settings` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- social : likes, watchlist, comments, follows, reports
+-- social : likes, watchlist, comments, follows
 -- --------------------------------------------------------
 CREATE TABLE `likes` (
   `user_id` smallint(5) UNSIGNED NOT NULL,
@@ -207,18 +191,6 @@ CREATE TABLE `follows` (
   PRIMARY KEY (`follower_id`,`creator_id`),
   CONSTRAINT `fo_follower_fk` FOREIGN KEY (`follower_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fo_creator_fk`  FOREIGN KEY (`creator_id`)  REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-CREATE TABLE `reports` (
-  `id`          smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
-  `reporter_id` smallint(5) UNSIGNED NOT NULL,
-  `film_id`     smallint(5) UNSIGNED NOT NULL,
-  `reason`      varchar(255) NOT NULL,
-  `status`      enum('open','resolved') NOT NULL DEFAULT 'open',
-  `created_at`  datetime NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  CONSTRAINT `rp_user_fk` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `rp_film_fk` FOREIGN KEY (`film_id`)     REFERENCES `films` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- =====================================================================
@@ -262,8 +234,7 @@ INSERT INTO `coin_packs` (`id`, `name`, `coins`, `price_usd`) VALUES
 
 INSERT INTO `settings` (`name`, `value`) VALUES
 ('admin_share_percent', '30'),
-('demo_topup_coins', '100'),
-('subscription_price_usd', '6.99');
+('demo_topup_coins', '100');
 
 -- unlocks (70/30 split for creator films, 100% admin for admin film)
 INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`, `creator_share`, `admin_share`)
@@ -288,16 +259,11 @@ INSERT INTO `coin_transactions` (`user_id`, `type`, `amount`, `balance_after`, `
 (6, 'topup',  100, 100, 0.00, NULL, NULL),
 (6, 'unlock', -20,  80, NULL, NULL, (SELECT episode_id FROM unlocked_episodes WHERE id = 3));
 
-INSERT INTO `subscriptions` (`user_id`, `price_usd`, `start_date`, `end_date`) VALUES
-(4, 6.99, CURDATE() - INTERVAL 10 DAY, CURDATE() + INTERVAL 20 DAY);
-
 INSERT INTO `likes` VALUES (4, 1), (6, 3);
 INSERT INTO `watchlist` VALUES (4, 2), (4, 3), (6, 1);
 INSERT INTO `follows` VALUES (4, 2), (4, 3), (6, 4);
 INSERT INTO `comments` (`user_id`, `film_id`, `body`) VALUES
 (6, 1, 'The ending of episode 2 was great!'),
 (4, 2, 'Love the paper-cut style.');
-INSERT INTO `reports` (`reporter_id`, `film_id`, `reason`) VALUES
-(6, 2, 'Audio out of sync in episode 4');
 
 COMMIT;

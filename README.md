@@ -11,7 +11,7 @@
 - `backend/`: REST API, Multer upload, argon2id + JWT, ตรวจสิทธิ์ทุกคำขอ
 - `mobile/`: แอป Flutter แบบ MVC (`models/ views/ controllers/` + `data/` repository)
 
-การจ่ายเงินทั้งหมด **จำลอง** (ปุ่ม demo +100 เหรียญ, coin pack, Plus) ไม่มี payment gateway และไม่มีเงินจริง
+การจ่ายเงินทั้งหมด **จำลอง** (ปุ่ม demo +100 เหรียญ, coin pack) ไม่มี payment gateway และไม่มีเงินจริง
 
 ### วิธีใช้
 
@@ -67,7 +67,7 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 | Username | Password | หมายเหตุ |
 |---|---|---|
 | `viewer01` | `6666` | Viewer มี 80 เหรียญ ใช้ลอง flow ปลดล็อก |
-| `mira.lens` | `4444` | Creator ที่มี Plus อยู่แล้ว |
+| `mira.lens` | `4444` | Creator ที่มีเหรียญ 142 และปลดล็อกไว้บางตอน |
 | `kestrel_studio` | `2222` | Creator เจ้าของ "Salt & Signal" |
 | `admin` | `1111` | Admin |
 
@@ -99,11 +99,11 @@ Android emulator ใช้ `http://10.0.2.2:3000/api` (เป็นค่าเ�
 | CRUD หนัง/ตอน + อัปโหลด Multer, AI label บังคับ, ราคาต่อตอน, ลบไฟล์ที่ค้าง | ทำแล้ว |
 | Admin review (pending/approve/reject/take down) และหน้า Admin | ทำแล้ว |
 | Wallet, top-up จำลอง, unlock ใน DB transaction เดียว (ไม่หักซ้ำ, ไม่ติดลบ, ทน concurrent) | ทำแล้ว |
-| Subscription (วันเริ่ม/สิ้นสุด, หมดอายุ, ยกเลิก) | ทำแล้ว |
+| Subscription (Plus) | **ตัดออกจาก scope** (ไม่มีตารางใน DB) |
 | ส่วนแบ่งรายได้ (บันทึก ณ ตอนปลดล็อก, ปัดเศษรวมตรง, Creator dashboard, Admin sales แยกเหรียญ/ดอลลาร์จำลอง) | ทำแล้ว |
 | Search/filter genre, length, AI tool; Profile | ทำแล้ว |
-| Like, บันทึก, ติดตาม, คอมเมนต์ (เรียบ), report | ทำแล้ว |
-| การตอบกลับซ้อน / like คอมเมนต์ | **ยังเป็น local** (ไม่มีใน backend) |
+| Like, บันทึก, ติดตาม, คอมเมนต์ (เรียบ) | ทำแล้ว |
+| Report, การตอบกลับซ้อน / like คอมเมนต์, Share, Onboarding, การสลับภาษา (แอปเป็นภาษาไทยอย่างเดียว) | **ตัดออกจาก scope** |
 | ยอดวิว, กราฟรายวัน, การแจ้งเตือน, forgot password, continue watching | **ถอดออกจากแอปแล้ว** (ไม่มีตารางใน DB) |
 | ตัวเสริม Series Jeen | ทำงานแยก ไม่กระทบ flow หลัก; บั๊กเดิมของ catalog/player ยังไม่ได้ตรวจ |
 | คลิปเดโมของทีม 10–20 คลิป | **ยังไม่มี** มีสคริปต์นำเข้าแล้ว รอทีมเตรียมคลิปที่มีสิทธิ์ใช้ |
@@ -117,7 +117,7 @@ An AI short-film app with a vertical feed (Group 7, Project 2) · Flutter → RE
 - `backend/`: REST API, Multer uploads, argon2id + JWT, authorization checked on every request
 - `mobile/`: Flutter app using MVC (`models/ views/ controllers/` + a `data/` repository)
 
-All payments are **simulated** (the demo +100 coins button, coin packs, Plus). There is no payment gateway and no real money.
+All payments are **simulated** (the demo +100 coins button, coin packs). There is no payment gateway and no real money.
 
 ### Getting started
 
@@ -173,7 +173,7 @@ The app supports Android and web; there is no iOS folder.
 | Username | Password | Notes |
 |---|---|---|
 | `viewer01` | `6666` | Viewer with 80 coins, for trying the unlock flow |
-| `mira.lens` | `4444` | Creator who already has Plus |
+| `mira.lens` | `4444` | Creator with 142 coins and a few unlocked episodes |
 | `kestrel_studio` | `2222` | Creator who owns "Salt & Signal" |
 | `admin` | `1111` | Admin |
 
@@ -205,11 +205,11 @@ Summary:
 | Film/episode CRUD + Multer upload, required AI label, per-episode price, cleanup of orphaned files | Done |
 | Admin review (pending/approve/reject/take down) and admin screens | Done |
 | Wallet, simulated top-up, unlock in a single DB transaction (no double charge, no negative balance, safe under concurrency) | Done |
-| Subscription (start/end dates, expiry, cancel) | Done |
+| Subscription (Plus) | **Cut from scope** (no table in the DB) |
 | Revenue share (recorded at unlock time, rounding sums correctly, Creator dashboard, Admin sales split into coins / simulated dollars) | Done |
 | Search/filter by genre, length, AI tool; Profile | Done |
-| Like, save, follow, comments (flat), report | Done |
-| Nested replies / comment likes | **Local only** (not in the backend) |
+| Like, save, follow, comments (flat) | Done |
+| Report, nested replies / comment likes, Share, Onboarding, language switch (the app is Thai only) | **Cut from scope** |
 | View counts, daily charts, notifications, forgot password, continue watching | **Removed from the app** (no DB tables) |
 | Series Jeen add-on | Runs separately without affecting the main flow; existing catalog/player bugs not yet reviewed |
 | Team demo clips (10–20) | **Not yet** — the import script is ready; waiting for clips the team has rights to use |

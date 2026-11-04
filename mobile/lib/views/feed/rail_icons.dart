@@ -14,20 +14,6 @@ class CommentIcon extends StatelessWidget {
   );
 }
 
-/// Bold forward arrow with a curled tail, drawn on a 24x24 grid.
-class ShareIcon extends StatelessWidget {
-  const ShareIcon({super.key, required this.color, this.size = 34});
-
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: Size.square(size),
-    painter: _GlyphPainter(_sharePath, color),
-  );
-}
-
 Path _commentPath() {
   final path = Path()
     ..fillType = PathFillType.evenOdd
@@ -48,21 +34,6 @@ Path _commentPath() {
     path.addOval(Rect.fromCircle(center: Offset(x, 10.25), radius: 1.35));
   }
   return path;
-}
-
-Path _sharePath() {
-  return Path()
-    ..moveTo(13.3, 3.6)
-    ..cubicTo(13.3, 2.8, 14.1, 2.4, 14.7, 2.9)
-    ..lineTo(22.4, 10.4)
-    ..cubicTo(23, 11, 23, 11.9, 22.4, 12.5)
-    ..lineTo(14.7, 20)
-    ..cubicTo(14.1, 20.5, 13.3, 20.1, 13.3, 19.3)
-    ..lineTo(13.3, 15.6)
-    ..cubicTo(8.3, 15.6, 4.9, 17.4, 2.9, 21)
-    ..cubicTo(2.5, 21.6, 1.7, 21.4, 1.8, 20.7)
-    ..cubicTo(2.6, 13.9, 6.6, 9.5, 13.3, 8.8)
-    ..close();
 }
 
 class _GlyphPainter extends CustomPainter {

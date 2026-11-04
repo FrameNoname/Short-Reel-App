@@ -72,10 +72,3 @@ exports.unfollow = async (req, res) => {
   await social.setFollow(req.app.locals.pool, req.user.id, pathId(req.params.id), false);
   res.json({ following: false });
 };
-
-exports.reportFilm = async (req, res) => {
-  const film = await visibleFilm(req);
-  const reason = text(req.body, 'reason', { max: 255 });
-  const id = await social.addReport(req.app.locals.pool, req.user.id, film.id, reason);
-  res.status(201).json({ id, status: 'open' });
-};

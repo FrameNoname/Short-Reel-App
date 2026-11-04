@@ -65,14 +65,3 @@ exports.setUserRole = async (req, res) => {
   await admin.setRole(pool, id, role);
   res.json({ id, role });
 };
-
-exports.listReports = async (req, res) => {
-  res.json({ reports: await admin.listReports(req.app.locals.pool) });
-};
-
-exports.resolveReport = async (req, res) => {
-  if ((await admin.resolveReport(req.app.locals.pool, pathId(req.params.id))) === 0) {
-    throw new ApiError(404, 'NOT_FOUND', 'Report not found');
-  }
-  res.json({ status: 'resolved' });
-};

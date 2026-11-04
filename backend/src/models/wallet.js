@@ -1,6 +1,5 @@
 const ApiError = require('../utils/ApiError');
 const { withTransaction } = require('../utils/transaction');
-const { hasActiveSubscription } = require('./access');
 
 async function setting(db, name, fallback) {
   const [rows] = await db.query('SELECT value FROM settings WHERE name = ?', [name]);
@@ -128,7 +127,6 @@ exports.unlock = (pool, user, episodeId) =>
       [user.id, episodeId],
     );
     if (existing.length > 0) return result('unlocked');
-    if (await hasActiveSubscription(conn, user.id)) return result('subscription');
 
     const price = episode.price_coins;
     const [debit] = await conn.query(

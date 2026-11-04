@@ -84,6 +84,7 @@ const _exact = {
   'Eps': 'ตอน',
   'Episodes': 'ตอน',
   'Share': 'แชร์',
+  'Speed': 'ความเร็ว',
   'More': 'เพิ่มเติม',
   'Report': 'รายงาน',
   'Reply': 'ตอบกลับ',
@@ -213,8 +214,8 @@ const _exact = {
   'About': 'เกี่ยวกับ',
   'Language': 'ภาษา',
   'Default speed': 'ความเร็วเริ่มต้น',
-  'Every film starts at this speed. You can still change it from the Share button.':
-      'หนังทุกเรื่องจะเริ่มที่ความเร็วนี้ คุณยังเปลี่ยนได้จากปุ่มแชร์',
+  'Every film starts at this speed. You can still change it from the Speed button.':
+      'หนังทุกเรื่องจะเริ่มที่ความเร็วนี้ คุณยังเปลี่ยนได้จากปุ่มความเร็ว',
   'Haptic feedback': 'การสั่นตอบสนอง',
   'A small buzz when you hold for 2x speed':
       'สั่นเบาๆ เมื่อกดค้างเพื่อเล่น 2 เท่า',

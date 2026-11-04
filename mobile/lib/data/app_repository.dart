@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import '../models/episode.dart';
 import '../models/film.dart';
-import '../models/subscription.dart';
 import '../models/transaction.dart';
 import '../models/user.dart';
 import 'film_filter.dart';
@@ -42,7 +41,7 @@ class AdminSales {
     this.unlockCount = 0,
   });
 
-  /// Simulated payments (coin packs and subscriptions) in dollars.
+  /// Simulated payments (coin packs) in dollars.
   final double totalUsd;
 
   /// The admin's share of the coins viewers spent on unlocks.
@@ -79,40 +78,18 @@ class Playback {
   final String? streamUrl;
 }
 
-class FilmReport {
-  const FilmReport({
-    required this.id,
-    required this.filmId,
-    required this.filmTitle,
-    required this.reason,
-    required this.isOpen,
-  });
-
-  final int id;
-  final int filmId;
-  final String filmTitle;
-  final String reason;
-  final bool isOpen;
-}
-
 class FilmComment {
   const FilmComment({
     required this.id,
     required this.userId,
     required this.username,
     required this.body,
-    this.parentId,
   });
 
   final int id;
   final int userId;
   final String username;
   final String body;
-
-  /// The comment this one replies to; null for a top-level comment.
-  final int? parentId;
-
-  bool get isReply => parentId != null;
 }
 
 class EpisodePricing {
@@ -184,17 +161,12 @@ abstract class AppRepository {
   Future<List<Episode>> episodes(int filmId);
   EpisodeAccess accessOf(int? userId, Episode episode);
   List<FilmComment> commentsOf(int filmId);
-  Future<void> addComment(int userId, int filmId, String body, {int? parentId});
+  Future<void> addComment(int userId, int filmId, String body);
 
   /// Loads the comments of [filmId] so [commentsOf] can answer.
   Future<void> loadComments(int filmId);
 
-  /// Removes a comment together with the replies under it.
   Future<void> removeComment(int commentId);
-  bool isCommentLiked(int userId, int commentId);
-  int commentLikeCount(int commentId);
-  void toggleCommentLike(int userId, int commentId);
-  Future<void> reportFilm(int userId, int filmId, String reason);
 
   /// Reads the current balance from the server (it may have changed elsewhere).
   Future<User> refreshBalance(int userId);
@@ -205,13 +177,9 @@ abstract class AppRepository {
 
   /// The demo button: [demoTopUpCoins] coins for nothing.
   Future<User> demoTopUp(int userId);
-  Future<Subscription> subscribe(int userId);
-  Future<Subscription?> subscriptionOf(int userId);
-  Future<void> cancelSubscription(int userId);
 
-  /// Plan price, typical episode price and demo coins; the API versions are
-  /// refreshed by [coinPacks].
-  double get subscriptionPriceUsd;
+  /// Typical episode price and demo coins; the API versions are refreshed by
+  /// [coinPacks].
   int get episodePriceCoins;
   Future<List<Transaction>> transactionsOf(int userId);
   Future<List<CoinPack>> coinPacks();
@@ -261,8 +229,6 @@ abstract class AppRepository {
   Future<List<Film>> reviewQueue();
   Future<List<Film>> liveFilms();
   Future<void> review(int filmId, String status, {String? note});
-  Future<List<FilmReport>> openReports();
-  Future<void> resolveReport(int reportId);
   Future<AdminSales> adminSales();
   Future<int> adminSharePercent();
   Future<void> setAdminSharePercent(int percent);
