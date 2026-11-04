@@ -117,7 +117,6 @@ class LoginGateView extends StatelessWidget {
                       _Perk(icon: Icons.lock_open_rounded, label: 'Unlock'),
                       _Perk(icon: Icons.favorite_rounded, label: 'Like'),
                       _Perk(icon: Icons.bookmark_rounded, label: 'Save'),
-                      _Perk(icon: Icons.person_add_rounded, label: 'Follow'),
                     ],
                   ),
                   const Spacer(),

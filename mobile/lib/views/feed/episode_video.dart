@@ -11,7 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/tab_active.dart';
 import '../../widgets/text.dart';
 
-/// Plays an episode of a film uploaded to ShortReel.
+/// Plays an episode of a ShortReel film.
 ///
 /// The backend decides whether this viewer may watch it and hands out a
 /// short-lived link only when they may; a locked episode never reaches the

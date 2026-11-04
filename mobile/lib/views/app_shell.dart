@@ -6,17 +6,15 @@ import 'package:provider/provider.dart';
 import '../controllers/auth_controller.dart';
 import '../l10n/app_language.dart';
 import '../models/user.dart';
-import '../theme/app_theme.dart';
 import '../widgets/tab_active.dart';
 import 'admin/admin_view.dart';
 import 'catalog/catalog_view.dart';
 import 'feed/feed_view.dart';
 import 'profile/profile_view.dart';
 import 'search/search_view.dart';
-import 'upload/upload_view.dart';
 import 'wallet/wallet_view.dart';
 
-enum AppTab { feed, search, catalog, upload, wallet, profile, admin }
+enum AppTab { feed, search, catalog, wallet, profile, admin }
 
 List<AppTab> tabsFor(UserRole role) {
   return switch (role) {
@@ -26,17 +24,9 @@ List<AppTab> tabsFor(UserRole role) {
       AppTab.wallet,
       AppTab.profile,
     ],
-    UserRole.creator => const [
-      AppTab.feed,
-      AppTab.search,
-      AppTab.upload,
-      AppTab.wallet,
-      AppTab.profile,
-    ],
     UserRole.admin => const [
       AppTab.feed,
       AppTab.search,
-      AppTab.upload,
       AppTab.wallet,
       AppTab.profile,
       AppTab.admin,
@@ -60,8 +50,6 @@ class _AppShellState extends State<AppShell> {
     ),
     AppTab.search => const SearchView(),
     AppTab.catalog => const CatalogView(),
-    // Upload opens as its own screen, so the tab has no body.
-    AppTab.upload => const SizedBox.shrink(),
     AppTab.wallet => const WalletView(),
     AppTab.profile => const ProfileView(),
     AppTab.admin => const AdminView(),
@@ -82,19 +70,6 @@ class _AppShellState extends State<AppShell> {
       selectedIcon: Icon(Icons.video_library),
       label: context.tr('Catalog'),
     ),
-    AppTab.upload => NavigationDestination(
-      icon: Container(
-        width: 46,
-        height: 36,
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      label: '',
-      tooltip: context.tr('Upload'),
-    ),
     AppTab.wallet => NavigationDestination(
       icon: Icon(Icons.account_balance_wallet_outlined),
       selectedIcon: Icon(Icons.account_balance_wallet),
@@ -112,15 +87,7 @@ class _AppShellState extends State<AppShell> {
     ),
   };
 
-  void _onSelected(AppTab tab) {
-    if (tab == AppTab.upload) {
-      Navigator.of(
-        context,
-      ).push(MaterialPageRoute<void>(builder: (_) => const UploadView()));
-    } else {
-      setState(() => _selected = tab);
-    }
-  }
+  void _onSelected(AppTab tab) => setState(() => _selected = tab);
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +95,7 @@ class _AppShellState extends State<AppShell> {
     // The catalog sits right after search.
     final tabs = List.of(base)
       ..insert(base.indexOf(AppTab.search) + 1, AppTab.catalog);
-    // A tab can disappear when a creator or admin logs out.
+    // A tab can disappear when an admin logs out.
     final index = max(tabs.indexOf(_selected), 0);
     // The feed runs full screen; its bar floats over the video on a scrim.
     final overVideo = tabs[index] == AppTab.feed;

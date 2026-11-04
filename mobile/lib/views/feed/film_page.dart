@@ -11,9 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/ai_label_badge.dart';
 import '../../widgets/common.dart';
 import '../../widgets/text.dart';
-import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
-import '../profile/creator_profile_view.dart';
 import 'catalog_video.dart';
 import 'comments_sheet.dart';
 import 'episode_video.dart';
@@ -52,9 +50,6 @@ class FilmPage extends StatefulWidget {
 class _FilmPageState extends State<FilmPage> {
   /// Holding the right edge plays at this speed until the finger lifts.
   static const _boostSpeed = 2.0;
-
-  /// Pixels per second a left swipe needs to open the channel.
-  static const _swipeVelocity = 600.0;
 
   /// How much of the screen, from the right, counts as the speed edge.
   static const _boostZone = 0.3;
@@ -103,9 +98,6 @@ class _FilmPageState extends State<FilmPage> {
     final episode = widget.episode ?? feed.currentEpisodeOf(film.id);
     final isLiked = userId != null && feed.repository.isLiked(userId, film.id);
     final isSaved = userId != null && feed.repository.isSaved(userId, film.id);
-    final isFollowing =
-        userId != null && feed.repository.isFollowing(userId, film.creatorId);
-    final isOwn = userId == film.creatorId;
     // Room for the floating navigation bar when the feed runs under it.
     final inset = MediaQuery.paddingOf(context).bottom;
 
@@ -139,12 +131,6 @@ class _FilmPageState extends State<FilmPage> {
                         HapticFeedback.mediumImpact();
                       }
                       setState(() => _boosting = true);
-                    },
-                    onHorizontalDragEnd: (d) {
-                      // A quick swipe to the left opens the channel.
-                      if ((d.primaryVelocity ?? 0) < -_swipeVelocity) {
-                        openCreatorProfile(context, film.creatorId);
-                      }
                     },
                     onLongPressEnd: (_) => setState(() => _boosting = false),
                     onLongPressCancel: () => setState(() => _boosting = false),
@@ -287,16 +273,6 @@ class _FilmPageState extends State<FilmPage> {
             bottom: inset + 96,
             child: Column(
               children: [
-                if (!isOwn)
-                  _CreatorAvatar(
-                    name: film.creatorName,
-                    isFollowing: isFollowing,
-                    onOpen: () => openCreatorProfile(context, film.creatorId),
-                    onFollow: () => _whenLoggedIn(
-                      context,
-                      (id) => feed.toggleFollow(id, film.creatorId),
-                    ),
-                  ),
                 _ActionButton(
                   icon: Icons.favorite_rounded,
                   color: isLiked ? AppColors.danger : AppColors.text,
@@ -345,22 +321,6 @@ class _FilmPageState extends State<FilmPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => openCreatorProfile(context, film.creatorId),
-                  child: ChannelName(
-                    '@${film.creatorName}',
-                    verified:
-                        feed.repository.userById(film.creatorId)?.isVerified ??
-                        false,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      shadows: _textShadow,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     Flexible(
@@ -550,102 +510,6 @@ class _HeartBurst extends StatelessWidget {
             color: AppColors.danger,
             shadows: [Shadow(blurRadius: 16, color: Color(0x66000000))],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Creator avatar at the top of the action rail. Tapping it opens the
-/// channel; the plus badge follows the creator and goes away once followed.
-class _CreatorAvatar extends StatelessWidget {
-  const _CreatorAvatar({
-    required this.name,
-    required this.isFollowing,
-    required this.onOpen,
-    required this.onFollow,
-  });
-
-  final String name;
-  final bool isFollowing;
-  final VoidCallback onOpen;
-  final VoidCallback onFollow;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: SizedBox(
-        width: 52,
-        height: 72,
-        child: Stack(
-          alignment: Alignment.topCenter,
-          children: [
-            Semantics(
-              button: true,
-              label: 'Open $name channel',
-              excludeSemantics: true,
-              onTap: onOpen,
-              child: GestureDetector(
-                key: const Key('channel-avatar'),
-                behavior: HitTestBehavior.opaque,
-                onTap: onOpen,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.surfaceHigh,
-                    child: Text(
-                      name[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.text,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (!isFollowing)
-              Positioned(
-                bottom: 0,
-                child: Semantics(
-                  button: true,
-                  label: 'Follow $name',
-                  excludeSemantics: true,
-                  onTap: onFollow,
-                  child: GestureDetector(
-                    key: const Key('follow-button'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onFollow,
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: Center(
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.primary,
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            size: 15,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
         ),
       ),
     );

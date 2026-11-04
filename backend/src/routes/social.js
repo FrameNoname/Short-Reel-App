@@ -12,7 +12,5 @@ router.delete('/films/:id/watchlist', requireAuth, social.removeFromWatchlist);
 router.get('/films/:id/comments', optionalAuth, social.listComments);
 router.post('/films/:id/comments', requireAuth, social.addComment);
 router.delete('/comments/:id', requireAuth, social.removeComment);
-router.post('/creators/:id/follow', requireAuth, social.follow);
-router.delete('/creators/:id/follow', requireAuth, social.unfollow);
 
 module.exports = router;

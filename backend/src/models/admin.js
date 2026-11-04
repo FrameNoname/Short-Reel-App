@@ -33,10 +33,10 @@ exports.review = (pool, filmId, { status, note, adminId }) =>
     await films.setReview(conn, filmId, { status, note: status === 'approved' ? null : note, adminId });
   });
 
+// Every coin spent on an unlock goes to the admin, who runs the catalogue.
 exports.sales = async (pool) => {
   const [[coins]] = await pool.query(
-    `SELECT COUNT(*) AS unlock_count, COALESCE(SUM(coins_spent), 0) AS coins_spent,
-            COALESCE(SUM(creator_share), 0) AS creator_share, COALESCE(SUM(admin_share), 0) AS admin_share
+    `SELECT COUNT(*) AS unlock_count, COALESCE(SUM(coins_spent), 0) AS coins_spent
        FROM unlocked_episodes`,
   );
   const [[topups]] = await pool.query(
@@ -44,18 +44,15 @@ exports.sales = async (pool) => {
        FROM coin_transactions WHERE type = 'topup'`,
   );
   const [perFilm] = await pool.query(
-    `SELECT f.id AS film_id, f.title, u.username AS owner, u.role AS owner_role, COUNT(ue.id) AS unlock_count,
-            COALESCE(SUM(ue.coins_spent), 0) AS coins_spent,
-            COALESCE(SUM(ue.creator_share), 0) AS creator_share,
-            COALESCE(SUM(ue.admin_share), 0) AS admin_share
+    `SELECT f.id AS film_id, f.title, COUNT(ue.id) AS unlock_count,
+            COALESCE(SUM(ue.coins_spent), 0) AS coins_spent
        FROM unlocked_episodes ue
        JOIN episodes e ON e.id = ue.episode_id
        JOIN films f ON f.id = e.film_id
-       JOIN users u ON u.id = f.creator_id
-      GROUP BY f.id, f.title, u.username, u.role ORDER BY coins_spent DESC, f.id`,
+      GROUP BY f.id, f.title ORDER BY coins_spent DESC, f.id`,
   );
   const [recent] = await pool.query(
-    `SELECT ue.id, ue.created_at, ue.coins_spent, ue.creator_share, ue.admin_share,
+    `SELECT ue.id, ue.created_at, ue.coins_spent,
             buyer.username AS buyer, f.id AS film_id, f.title AS film_title, e.episode_no
        FROM unlocked_episodes ue
        JOIN users buyer ON buyer.id = ue.user_id
@@ -71,27 +68,14 @@ exports.sales = async (pool) => {
       unit: 'usd (simulated, no real money)',
       coin_topups: num(topups),
     },
-    per_film: perFilm.map(num_owner),
+    per_film: perFilm.map((row) => ({
+      ...row,
+      unlock_count: Number(row.unlock_count),
+      coins_spent: Number(row.coins_spent),
+    })),
     recent_unlocks: recent,
   };
 };
-
-function num_owner(row) {
-  return {
-    ...row,
-    unlock_count: Number(row.unlock_count),
-    coins_spent: Number(row.coins_spent),
-    creator_share: Number(row.creator_share),
-    admin_share: Number(row.admin_share),
-  };
-}
-
-exports.setSharePercent = (pool, percent) =>
-  pool.query(
-    `INSERT INTO settings (name, value) VALUES ('admin_share_percent', ?)
-     ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-    [String(percent)],
-  );
 
 exports.listUsers = async (pool) => {
   const [rows] = await pool.query(

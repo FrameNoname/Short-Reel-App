@@ -6,22 +6,19 @@ import '../models/film.dart';
 import '../services/api_client.dart' show isStaleSession;
 import '../services/errors.dart';
 
-enum FeedTab { following, forYou }
-
 class FeedController extends ChangeNotifier {
   FeedController(this.repository);
 
   final AppRepository repository;
 
   List<Film> films = const [];
-  FeedTab tab = FeedTab.forYou;
   bool isLoading = true;
 
   final Map<int, int> _currentEpisode = {};
   final Map<int, List<int>> _episodeNumbers = {};
 
   // Counts feed loads; an answer from an older load is dropped, so a slow reply
-  // for one tab can never replace the films of the tab chosen after it.
+  // can never replace the films of a load started after it.
   int _loadId = 0;
   Set<String> _preferred = const {};
 
@@ -47,9 +44,7 @@ class FeedController extends ChangeNotifier {
   }
 
   Future<List<Film>> _fetch(int? userId) async {
-    final films = tab == FeedTab.following && userId != null
-        ? await repository.followingFilms(userId)
-        : await repository.films();
+    final films = await repository.films();
     if (_preferred.isEmpty) return films;
     // Liked genres first; the order inside each group is unchanged.
     return [
@@ -61,11 +56,6 @@ class FeedController extends ChangeNotifier {
   /// Puts these genres at the top of the feed.
   void preferGenres(Set<String> genres) {
     _preferred = genres;
-  }
-
-  Future<void> selectTab(FeedTab value, int? userId) async {
-    tab = value;
-    await load(userId);
   }
 
   int currentEpisodeOf(int filmId) => _currentEpisode[filmId] ?? 1;
@@ -101,7 +91,6 @@ class FeedController extends ChangeNotifier {
   void reset() {
     films = const [];
     error = null;
-    tab = FeedTab.forYou;
     _currentEpisode.clear();
     _episodeNumbers.clear();
     _loadId++;
@@ -128,11 +117,6 @@ class FeedController extends ChangeNotifier {
 
   Future<void> toggleSave(int userId, int filmId) async {
     await repository.toggleSave(userId, filmId);
-    notifyListeners();
-  }
-
-  Future<void> toggleFollow(int userId, int creatorId) async {
-    await repository.toggleFollow(userId, creatorId);
     notifyListeners();
   }
 }

@@ -51,24 +51,3 @@ exports.removeComment = async (req, res) => {
   await social.removeComment(req.app.locals.pool, req.user, pathId(req.params.id));
   res.status(204).end();
 };
-
-async function creatorTarget(req) {
-  const id = pathId(req.params.id);
-  if (id === req.user.id) throw new ApiError(400, 'VALIDATION_ERROR', 'You cannot follow yourself');
-  const [rows] = await req.app.locals.pool.query(
-    "SELECT id FROM users WHERE id = ? AND role IN ('creator', 'admin')",
-    [id],
-  );
-  if (rows.length === 0) throw new ApiError(404, 'NOT_FOUND', 'Creator not found');
-  return id;
-}
-
-exports.follow = async (req, res) => {
-  await social.setFollow(req.app.locals.pool, req.user.id, await creatorTarget(req), true);
-  res.json({ following: true });
-};
-
-exports.unfollow = async (req, res) => {
-  await social.setFollow(req.app.locals.pool, req.user.id, pathId(req.params.id), false);
-  res.json({ following: false });
-};

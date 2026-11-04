@@ -27,10 +27,7 @@ const _exact = {
   'Cannot play this episode': 'เล่นตอนนี้ไม่ได้',
   'Wallet': 'กระเป๋าเงิน',
   'Profile': 'โปรไฟล์',
-  'Upload': 'อัปโหลด',
   'Admin': 'แอดมิน',
-  'Following': 'กำลังติดตาม',
-  'For you': 'สำหรับคุณ',
   'Back': 'กลับ',
   'Close': 'ปิด',
   'Settings': 'การตั้งค่า',
@@ -50,13 +47,9 @@ const _exact = {
   'Show password': 'แสดงรหัสผ่าน',
   'Hide password': 'ซ่อนรหัสผ่าน',
   'Watch free episodes without an account': 'ดูตอนฟรีได้โดยไม่ต้องมีบัญชี',
-  'Watch, unlock and upload AI short films.':
-      'ดู ปลดล็อก และอัปโหลดหนังสั้น AI',
-  'I want to': 'ฉันต้องการ',
   'Watch': 'ดู',
   'Viewer': 'ผู้ชม',
   'Create': 'สร้าง',
-  'Creator': 'ผู้สร้าง',
   'Choose a username': 'ตั้งชื่อผู้ใช้',
   'Choose a username.': 'กรุณาตั้งชื่อผู้ใช้',
   'Create a password': 'ตั้งรหัสผ่าน',
@@ -73,11 +66,9 @@ const _exact = {
   'Log in to comment': 'เข้าสู่ระบบเพื่อแสดงความคิดเห็น',
   'Log in to keep watching': 'เข้าสู่ระบบเพื่อดูต่อ',
   'Keep browsing free episodes': 'ดูตอนฟรีต่อไป',
-  'Save films, unlock episodes and follow channels':
-      'บันทึกหนัง ปลดล็อกตอน และติดตามช่อง',
+  'Save films and unlock episodes': 'บันทึกหนังและปลดล็อกตอน',
   'Unlock': 'ปลดล็อก',
   'Like': 'ถูกใจ',
-  'Follow': 'ติดตาม',
   'Save': 'บันทึก',
 
   // Feed and player
@@ -93,7 +84,6 @@ const _exact = {
   'Save film': 'บันทึกหนัง',
   'Films': 'หนัง',
   'Not approved': 'ไม่ผ่านการอนุมัติ',
-  'Each video must be 200 MB or less.': 'วิดีโอแต่ละไฟล์ต้องไม่เกิน 200 MB',
   'Simulated sales (USD)': 'ยอดขายจำลอง (USD)',
   'More': 'เพิ่มเติม',
   'Report': 'รายงาน',
@@ -104,11 +94,6 @@ const _exact = {
   'Add a comment': 'เพิ่มความคิดเห็น',
   'No comments yet. Say something.': 'ยังไม่มีความคิดเห็น ลองพูดอะไรสักหน่อย',
   'Send comment': 'ส่งความคิดเห็น',
-  'Follow a creator to see their films here.':
-      'ติดตามผู้สร้างเพื่อดูหนังของพวกเขาที่นี่',
-  'Tap the + on a creator in For you to follow them.':
-      'กด + ที่ผู้สร้างในหน้า สำหรับคุณ เพื่อติดตาม',
-  'Find films for you': 'ค้นหาหนังสำหรับคุณ',
   'No films to show yet.': 'ยังไม่มีหนังให้แสดง',
 
   // Episodes and unlock
@@ -134,9 +119,9 @@ const _exact = {
   'Clear all': 'ล้างทั้งหมด',
   'Trending': 'กำลังฮิต',
   'Discover': 'ค้นพบ',
-  'Films, creators, prompts': 'หนัง ผู้สร้าง พรอมต์',
+  'Search films': 'ค้นหาหนัง',
+  'Watch and unlock AI short films.': 'ดูและปลดล็อกหนังสั้น AI',
   'Clear search': 'ล้างการค้นหา',
-  'Channels': 'ช่อง',
   'No films match your search.': 'ไม่พบหนังที่ตรงกับการค้นหา',
   'Genre': 'แนวหนัง',
   'Drama': 'ดราม่า',
@@ -152,14 +137,10 @@ const _exact = {
 
   // Profile
   'Watchlist': 'รายการที่บันทึก',
-  'Followers': 'ผู้ติดตาม',
   'Coins': 'เหรียญ',
   'Likes': 'ถูกใจ',
   'Saved films appear here.': 'หนังที่บันทึกไว้จะแสดงที่นี่',
   'Unlocked films appear here.': 'หนังที่ปลดล็อกแล้วจะแสดงที่นี่',
-  'Creators you follow appear here.': 'ผู้สร้างที่คุณติดตามจะแสดงที่นี่',
-  'Creator studio': 'สตูดิโอผู้สร้าง',
-  'Earnings and review status': 'รายได้และสถานะการตรวจสอบ',
   'Edit profile': 'แก้ไขโปรไฟล์',
   'Name': 'ชื่อ',
   'Bio': 'คำอธิบายตัวเอง',
@@ -168,11 +149,7 @@ const _exact = {
   'Enter a name for your channel.': 'กรุณาใส่ชื่อช่องของคุณ',
   'Change your name and bio': 'เปลี่ยนชื่อและคำอธิบายของคุณ',
   'No films yet.': 'ยังไม่มีหนัง',
-  'Official Short Reel channel': 'ช่องทางการของ Short Reel',
-  'This channel is not available.': 'ไม่พบช่องนี้',
   'Verified': 'ยืนยันแล้ว',
-  'My channel': 'ช่องของฉัน',
-  'Open channel': 'เปิดช่อง',
 
   // Onboarding
   'New': 'ใหม่',
@@ -229,41 +206,13 @@ const _exact = {
   '/mo': '/เดือน',
 
   // Upload and creator studio
-  'Upload film': 'อัปโหลดหนัง',
-  'Edit film': 'แก้ไขหนัง',
-  'Choose episode videos': 'เลือกวิดีโอของแต่ละตอน',
-  'MP4, vertical 9:16, up to 200 MB each':
-      'MP4 แนวตั้ง 9:16 ไม่เกิน 200 MB ต่อไฟล์',
   'Title': 'ชื่อเรื่อง',
-  'AI tool used': 'เครื่องมือ AI ที่ใช้',
   'Prompt credit': 'เครดิตพรอมต์',
-  'Episode pricing': 'ราคาแต่ละตอน',
   'Coins ': 'เหรียญ',
   'coins': 'เหรียญ',
-  'This film is AI-generated': 'หนังเรื่องนี้สร้างด้วย AI',
-  'Episode videos chosen': 'เลือกวิดีโอแล้ว',
-  'Title added': 'ใส่ชื่อเรื่องแล้ว',
-  'Prompt credit added': 'ใส่เครดิตพรอมต์แล้ว',
-  'Episode prices set': 'ตั้งราคาตอนแล้ว',
-  'AI label confirmed': 'ยืนยันป้าย AI แล้ว',
-  'Tick the AI label to submit': 'ติ๊กป้าย AI เพื่อส่ง',
-  'Set a price for every paid episode': 'ตั้งราคาให้ทุกตอนที่เสียเงิน',
-  'Fill in every field to submit': 'กรอกให้ครบทุกช่องเพื่อส่ง',
-  'Submit for review': 'ส่งให้ตรวจสอบ',
-  'Resubmit for review': 'ส่งให้ตรวจสอบอีกครั้ง',
   'Save changes': 'บันทึกการเปลี่ยนแปลง',
   'Changes saved.': 'บันทึกการเปลี่ยนแปลงแล้ว',
-  'Submitted. Waiting for admin review.': 'ส่งแล้ว รอแอดมินตรวจสอบ',
-  'Your earnings': 'รายได้ของคุณ',
-  'Your films': 'หนังของคุณ',
-  '+ Upload': '+ อัปโหลด',
-  'Upload your first film.': 'อัปโหลดหนังเรื่องแรกของคุณ',
   'Unlocks': 'การปลดล็อก',
-  'Waiting for admin review': 'รอแอดมินตรวจสอบ',
-  'Taken down by admin': 'ถูกแอดมินถอดออก',
-  'Delete this film?': 'ลบหนังเรื่องนี้หรือไม่?',
-  'This film has paid unlocks, so it cannot be deleted.':
-      'หนังเรื่องนี้มีการปลดล็อกแบบเสียเงินแล้ว จึงลบไม่ได้',
   'A price must be 0 to 500 coins.': 'ราคาต้องอยู่ระหว่าง 0 ถึง 500 เหรียญ',
   'Taken down': 'ถูกถอดออก',
   'Pending': 'รอตรวจสอบ',
@@ -273,15 +222,11 @@ const _exact = {
   // Admin
   'Moderator': 'ผู้ดูแล',
   'Total sales (demo)': 'ยอดขายรวม (ทดลอง)',
-  'Admin share': 'ส่วนแบ่งแอดมิน',
-  'Revenue share': 'การแบ่งรายได้',
-  'Applies to new unlocks. Admin-owned films always pay 100% to admin.':
-      'ใช้กับการปลดล็อกใหม่ หนังของแอดมินจ่ายให้แอดมิน 100% เสมอ',
   'AI label': 'ป้าย AI',
   'Approve': 'อนุมัติ',
   'Reject': 'ไม่อนุมัติ',
   'Reject this film?': 'ไม่อนุมัติหนังเรื่องนี้หรือไม่?',
-  'Tell the creator what to fix': 'บอกผู้สร้างว่าต้องแก้อะไร',
+  'Write the reason': 'เขียนเหตุผล',
   'Take down': 'ถอดออก',
   'Take down film': 'ถอดหนังออก',
   'Take this film down?': 'ถอดหนังเรื่องนี้ออกหรือไม่?',
@@ -306,7 +251,6 @@ final _rules = <(RegExp, String Function(Match))>[
   (RegExp(r'^Play episode (\d+)$'), (m) => 'เล่นตอนที่ ${m[1]}'),
   (RegExp(r'^Unlock for (\d+) coins$'), (m) => 'ปลดล็อกด้วย ${m[1]} เหรียญ'),
   (RegExp(r'^(\d+) coins$'), (m) => '${m[1]} เหรียญ'),
-  (RegExp(r'^(\d+) coins earned$'), (m) => 'ได้รับ ${m[1]} เหรียญ'),
   (RegExp(r'^(\d+) eps$'), (m) => '${m[1]} ตอน'),
   (RegExp(r'^(\d+) episodes?$'), (m) => '${m[1]} ตอน'),
   (RegExp(r'^(\d+) free$'), (m) => 'ฟรี ${m[1]} ตอน'),
@@ -334,19 +278,6 @@ final _rules = <(RegExp, String Function(Match))>[
     (m) =>
         'ซื้อ ${m[1]} เหรียญ ราคา \$${m[2]} แล้วใช้ ${m[3]} เหรียญกับตอนที่ '
         '${m[4]} นี่คือการทดลอง จึงไม่มีการเรียกเก็บเงินจริง',
-  ),
-  (RegExp(r'^Start Plus for (.+)$'), (m) => 'เริ่ม Plus ในราคา ${m[1]}'),
-  (
-    RegExp(r'^Or get Plus — watch everything for (.+)/mo$'),
-    (m) => 'หรือสมัคร Plus — ดูได้ทุกเรื่อง ${m[1]}/เดือน',
-  ),
-  (
-    RegExp(r'^Plus · (.+) / month, no coins needed$'),
-    (m) => 'Plus · ${m[1]} / เดือน ไม่ต้องใช้เหรียญ',
-  ),
-  (
-    RegExp(r'^Every episode, no coins\.\n(.+) a month$'),
-    (m) => 'ดูได้ทุกตอน ไม่ต้องใช้เหรียญ\n${m[1]} ต่อเดือน',
   ),
   (
     RegExp(
@@ -376,31 +307,18 @@ final _rules = <(RegExp, String Function(Match))>[
       return _date('${m[1]} ${m[2]}');
     },
   ),
-  (RegExp(r'^Report (.+)$'), (m) => 'รายงาน ${m[1]}'),
-  (RegExp(r'^Replying to (@.+)$'), (m) => 'กำลังตอบกลับ ${m[1]}'),
-  (RegExp(r'^Reply to (@.+)$'), (m) => 'ตอบกลับ ${m[1]}'),
-  (RegExp(r'^Creator (\d+)%$'), (m) => 'ผู้สร้าง ${m[1]}%'),
-  (
-    RegExp(r'^Creator (\d+)% · Admin (\d+)%$'),
-    (m) => 'ผู้สร้าง ${m[1]}% · แอดมิน ${m[2]}%',
-  ),
   (RegExp(r'^Review queue \((\d+)\)$'), (m) => 'คิวตรวจสอบ (${m[1]})'),
-  (RegExp(r'^Reports \((\d+)\)$'), (m) => 'รายงาน (${m[1]})'),
   (RegExp(r'^Live \((\d+)\)$'), (m) => 'เผยแพร่อยู่ (${m[1]})'),
+  (
+    RegExp(r'^Coins spent on (\d+) unlocks?$'),
+    (m) => 'เหรียญที่ใช้ปลดล็อก ${m[1]} ครั้ง',
+  ),
   (RegExp(r'^(.+) likes$'), (m) => 'ถูกใจ ${m[1]}'),
   (RegExp(r'^Enter 1 to (\d+) coins\.$'), (m) => 'ใส่ 1 ถึง ${m[1]} เหรียญ'),
-  (
-    RegExp(r'^(\d+) demo videos selected$'),
-    (m) => 'เลือกวิดีโอตัวอย่าง ${m[1]} รายการแล้ว',
-  ),
   (RegExp(r'^(\S+) speed$'), (m) => 'ความเร็ว ${m[1]}'),
   (
     RegExp(r'^VIDEO · (.+) · EP (\d+)$'),
     (m) => 'วิดีโอ · ${m[1]} · ตอนที่ ${m[2]}',
-  ),
-  (
-    RegExp(r'^(.+) and all its episodes will be removed\.$'),
-    (m) => '${m[1]} และทุกตอนจะถูกลบ',
   ),
   (
     RegExp(
@@ -415,19 +333,7 @@ final _rules = <(RegExp, String Function(Match))>[
     ),
     (m) => 'คุณดูตอนฟรีของ ${m[1]} แล้ว เข้าสู่ระบบเพื่อดูต่อจากตอนที่ ${m[2]}',
   ),
-  (
-    RegExp(r'^From (\d+) paid unlocks?$'),
-    (m) => 'จากการปลดล็อกแบบเสียเงิน ${m[1]} ครั้ง',
-  ),
-  (
-    RegExp(r'^you keep (\d+)%, admin share (\d+)%$'),
-    (m) => 'คุณได้ ${m[1]}% ส่วนแบ่งแอดมิน ${m[2]}%',
-  ),
   (RegExp(r'^(\d+) × (.+) coins$'), (m) => '${m[1]} × ${m[2]} เหรียญ'),
-  (
-    RegExp(r'^"(.+)" — edit and resubmit$'),
-    (m) => '"${m[1]}" — แก้ไขแล้วส่งใหม่',
-  ),
   (RegExp(r'^Episode (\d+) costs$'), (m) => 'ตอนที่ ${m[1]} ราคา'),
   (
     RegExp(r'^\. You have (\d+) — you need$'),
@@ -437,10 +343,6 @@ final _rules = <(RegExp, String Function(Match))>[
   (RegExp(r'^· (.+)$'), (m) => '· ${thaiOf(m[1]!)}'),
   (RegExp(r'^(@\S+) · (\w+)$'), (m) => '${m[1]} · ${thaiOf(m[2]!)}'),
   (RegExp(r'^Poster of (.+)$'), (m) => 'โปสเตอร์ของ ${m[1]}'),
-  (
-    RegExp(r'^Admin share of (\d+) spent$'),
-    (m) => 'ส่วนของแอดมินจาก ${m[1]} ที่ใช้ไป',
-  ),
   (RegExp(r'^(\d+) days$'), (m) => '${m[1]} วัน'),
   (RegExp(r'^vs previous (\d+) days$'), (m) => 'เทียบกับ ${m[1]} วันก่อนหน้า'),
   (RegExp(r'^(\d+)m ago$'), (m) => '${m[1]} นาทีที่แล้ว'),

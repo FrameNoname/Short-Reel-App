@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart' hide Text;
 import 'package:provider/provider.dart';
 
-import '../../controllers/feed_controller.dart';
 import '../../controllers/film_search_controller.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
-import '../../models/user.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/error_view.dart';
 import '../../widgets/text.dart';
-import '../../widgets/verified_badge.dart';
 import '../player/player_view.dart';
-import '../profile/creator_profile_view.dart';
 
 class SearchView extends StatefulWidget {
   const SearchView({super.key});
@@ -90,7 +86,7 @@ class _SearchViewState extends State<SearchView> {
                         _focus.unfocus();
                       },
                       decoration: InputDecoration(
-                        hintText: context.tr('Films, creators, prompts'),
+                        hintText: context.tr('Search films'),
                         prefixIcon: const Icon(
                           Icons.search,
                           color: AppColors.muted,
@@ -128,38 +124,6 @@ class _SearchViewState extends State<SearchView> {
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
                         slivers: [
-                          if (search.creators.isNotEmpty)
-                            SliverToBoxAdapter(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Channels',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    height: 84,
-                                    child: ListView.separated(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: search.creators.length,
-                                      separatorBuilder: (_, _) =>
-                                          const SizedBox(width: 8),
-                                      itemBuilder: (_, i) => _ChannelChip(
-                                        user: search.creators[i],
-                                        onTap: () => openCreatorProfile(
-                                          context,
-                                          search.creators[i].id,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           SliverToBoxAdapter(
                             child: Padding(
                               padding: const EdgeInsets.only(
@@ -233,13 +197,6 @@ class _FilmCardState extends State<FilmCard> {
 
   @override
   Widget build(BuildContext context) {
-    final verified =
-        context
-            .read<FeedController>()
-            .repository
-            .userById(film.creatorId)
-            ?.isVerified ??
-        false;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => _setPressed(true),
@@ -275,21 +232,8 @@ class _FilmCardState extends State<FilmCard> {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: '@${film.creatorName}'),
-                  if (verified)
-                    const WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Padding(
-                        padding: EdgeInsets.only(left: 3),
-                        child: VerifiedBadge(size: 13),
-                      ),
-                    ),
-                  TextSpan(text: ' · ${film.genreName}'),
-                ],
-              ),
+            Text(
+              film.genreName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: AppColors.muted, fontSize: 12),
@@ -327,50 +271,6 @@ class _PosterPill extends StatelessWidget {
   }
 }
 
-class _ChannelChip extends StatelessWidget {
-  const _ChannelChip({required this.user, required this.onTap});
-
-  final User user;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final name = user.displayName ?? user.username;
-    return GestureDetector(
-      key: Key('channel-${user.id}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(
-        width: 88,
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.primarySoft,
-              child: Text(
-                user.username[0].toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            ChannelName(
-              name,
-              verified: user.isVerified,
-              badgeSize: 12,
-              style: const TextStyle(fontSize: 12),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Shown while the search box is focused and empty: what the person looked
-/// for before, and what everyone is watching.
 class _Suggestions extends StatelessWidget {
   const _Suggestions({
     required this.recent,
