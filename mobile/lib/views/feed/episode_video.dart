@@ -184,7 +184,10 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
       }
       // Owned here until it is installed as _video: whatever happens before
       // that (initialize fails, the page goes away) disposes it exactly once.
-      final next = VideoPlayerController.networkUrl(Uri.parse(url));
+      // `asset:` links point at clips bundled with the app (offline demo).
+      final next = url.startsWith('asset:')
+          ? VideoPlayerController.asset(url.substring('asset:'.length))
+          : VideoPlayerController.networkUrl(Uri.parse(url));
       var installed = false;
       try {
         await next.initialize();

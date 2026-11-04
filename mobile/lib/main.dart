@@ -11,31 +11,20 @@ import 'controllers/profile_controller.dart';
 import 'controllers/settings_controller.dart';
 import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
-import 'data/api_repository.dart';
+import 'data/mock_repository.dart';
 import 'l10n/app_language.dart';
 import 'services/api_client.dart';
 import 'services/catalog_service.dart';
-import 'services/token_store.dart';
 import 'theme/app_theme.dart';
 import 'views/app_shell.dart';
 import 'views/auth/login_view.dart';
 import 'widgets/loading_view.dart';
 
 void main() {
-  final tokens = SecureTokenStore();
-  final api = ApiClient(tokens: tokens);
-  // The Series Jeen catalog is always on.
-  final catalog = CatalogService(api);
-  final repository = ApiRepository(client: api, tokens: tokens)
-    ..useCatalog(catalog);
-  runApp(
-    ShortReelApp(
-      repository: repository,
-      catalog: catalog,
-      api: api,
-      restoreSession: true,
-    ),
-  );
+  // Front-end only: every screen reads the in-memory demo data in
+  // data/mock_data.dart. Nothing connects to the backend, so the Series Jeen
+  // catalog (which goes through the backend) is not shown either.
+  runApp(ShortReelApp(repository: MockRepository()));
 }
 
 class ShortReelApp extends StatelessWidget {
