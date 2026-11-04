@@ -85,6 +85,16 @@ const _exact = {
   'Episodes': 'ตอน',
   'Share': 'แชร์',
   'Speed': 'ความเร็ว',
+  'This episode costs coins. Unlock it to keep watching.':
+      'ตอนนี้ต้องใช้เหรียญ ปลดล็อกเพื่อดูต่อ',
+  'Log in to keep watching this episode.': 'เข้าสู่ระบบเพื่อดูตอนนี้ต่อ',
+  'Log in or unlock': 'เข้าสู่ระบบหรือปลดล็อก',
+  'Pause video': 'หยุดวิดีโอ',
+  'Save film': 'บันทึกหนัง',
+  'Films': 'หนัง',
+  'Not approved': 'ไม่ผ่านการอนุมัติ',
+  'Each video must be 200 MB or less.': 'วิดีโอแต่ละไฟล์ต้องไม่เกิน 200 MB',
+  'Simulated sales (USD)': 'ยอดขายจำลอง (USD)',
   'More': 'เพิ่มเติม',
   'Report': 'รายงาน',
   'Delete': 'ลบ',
@@ -177,7 +187,6 @@ const _exact = {
   'Open channel': 'เปิดช่อง',
 
   // Onboarding
-
   'New': 'ใหม่',
   'Earlier': 'ก่อนหน้า',
   'Just now': 'เมื่อสักครู่',
@@ -441,6 +450,10 @@ final _rules = <(RegExp, String Function(Match))>[
   (RegExp(r'^· (.+)$'), (m) => '· ${thaiOf(m[1]!)}'),
   (RegExp(r'^(@\S+) · (\w+)$'), (m) => '${m[1]} · ${thaiOf(m[2]!)}'),
   (RegExp(r'^Poster of (.+)$'), (m) => 'โปสเตอร์ของ ${m[1]}'),
+  (
+    RegExp(r'^Admin share of (\d+) spent$'),
+    (m) => 'ส่วนของแอดมินจาก ${m[1]} ที่ใช้ไป',
+  ),
   (RegExp(r'^(\d+) days$'), (m) => '${m[1]} วัน'),
   (RegExp(r'^vs previous (\d+) days$'), (m) => 'เทียบกับ ${m[1]} วันก่อนหน้า'),
   (RegExp(r'^(\d+)m ago$'), (m) => '${m[1]} นาทีที่แล้ว'),
