@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/auth_controller.dart';
+import '../controllers/catalog_controller.dart';
 import '../l10n/app_language.dart';
 import '../models/user.dart';
 import '../widgets/tab_active.dart';
@@ -92,9 +93,12 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     final base = tabsFor(context.watch<AuthController>().role);
-    // The catalog sits right after search.
-    final tabs = List.of(base)
-      ..insert(base.indexOf(AppTab.search) + 1, AppTab.catalog);
+    // The catalog sits right after search, when the app has one.
+    final hasCatalog = context.read<CatalogController?>() != null;
+    final tabs = List.of(base);
+    if (hasCatalog) {
+      tabs.insert(base.indexOf(AppTab.search) + 1, AppTab.catalog);
+    }
     // A tab can disappear when an admin logs out.
     final index = max(tabs.indexOf(_selected), 0);
     // The feed runs full screen; its bar floats over the video on a scrim.
