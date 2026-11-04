@@ -1,38 +1,3 @@
-const ApiError = require('../utils/ApiError');
-const { withTransaction } = require('../utils/transaction');
-const films = require('./films');
-
-// from -> allowed next statuses. Approving needs at least one episode.
-const TRANSITIONS = {
-  pending: ['approved', 'rejected'],
-  approved: ['taken_down'],
-  rejected: ['approved'],
-  taken_down: ['approved'],
-};
-const NOTE_REQUIRED = new Set(['rejected', 'taken_down']);
-
-exports.REVIEW_STATUSES = ['approved', 'rejected', 'taken_down'];
-
-exports.review = (pool, filmId, { status, note, adminId }) =>
-  withTransaction(pool, async (conn) => {
-    const [rows] = await conn.query('SELECT id, status FROM films WHERE id = ? FOR UPDATE', [filmId]);
-    if (rows.length === 0) throw new ApiError(404, 'NOT_FOUND', 'Film not found');
-    const from = rows[0].status;
-    if (!TRANSITIONS[from].includes(status)) {
-      throw new ApiError(409, 'CONFLICT', `A ${from} film cannot become ${status}`);
-    }
-    if (NOTE_REQUIRED.has(status) && !note) {
-      throw new ApiError(400, 'VALIDATION_ERROR', 'note is required to reject or take down a film');
-    }
-    if (status === 'approved') {
-      const [[count]] = await conn.query('SELECT COUNT(*) AS n FROM episodes WHERE film_id = ?', [filmId]);
-      if (count.n === 0) {
-        throw new ApiError(409, 'CONFLICT', 'A film needs at least one episode before it can go live');
-      }
-    }
-    await films.setReview(conn, filmId, { status, note: status === 'approved' ? null : note, adminId });
-  });
-
 // Every coin spent on an unlock goes to the admin, who runs the catalogue.
 exports.sales = async (pool) => {
   const [[coins]] = await pool.query(
@@ -76,12 +41,3 @@ exports.sales = async (pool) => {
     recent_unlocks: recent,
   };
 };
-
-exports.listUsers = async (pool) => {
-  const [rows] = await pool.query(
-    'SELECT id, username, display_name, role, coin_balance, created_at FROM users ORDER BY id',
-  );
-  return rows;
-};
-
-exports.setRole = (pool, id, role) => pool.query('UPDATE users SET role = ? WHERE id = ?', [role, id]);

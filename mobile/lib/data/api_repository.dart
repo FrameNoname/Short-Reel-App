@@ -298,19 +298,15 @@ class ApiRepository implements AppRepository {
   // ---- admin ------------------------------------------------------------
 
   @override
-  Future<List<Film>> reviewQueue() async =>
-      _rememberAll(await _api.get('/admin/reviews'));
-
-  @override
   Future<List<Film>> liveFilms() async => _rememberAll(
     await _api.get('/admin/films', query: {'status': 'approved'}),
   );
 
   @override
-  Future<void> review(int filmId, String status, {String? note}) async {
-    await _api.post(
-      '/admin/films/$filmId/review',
-      data: {'status': status, 'note': ?note},
+  Future<void> takeDown(int filmId) async {
+    await _api.put(
+      '/admin/films/$filmId/status',
+      data: {'status': 'taken_down'},
     );
   }
 

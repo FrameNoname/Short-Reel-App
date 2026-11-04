@@ -168,7 +168,6 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = switch (status) {
       'approved' => AppColors.green,
-      'pending' => AppColors.gold,
       _ => AppColors.danger,
     };
     final label = switch (status) {

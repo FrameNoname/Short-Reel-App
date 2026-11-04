@@ -11,7 +11,6 @@ class Film {
     required this.status,
     this.genreName = '',
     this.aiToolName = '',
-    this.reviewNote,
     this.likeCount = 0,
     this.commentCount = 0,
     this.episodeCount = 0,
@@ -31,7 +30,6 @@ class Film {
   final String status;
   final String genreName;
   final String aiToolName;
-  final String? reviewNote;
   final int likeCount;
   final int commentCount;
   final int episodeCount;
@@ -59,7 +57,6 @@ class Film {
     status: json['status'] as String,
     genreName: json['genre'] as String? ?? '',
     aiToolName: json['ai_tool'] as String? ?? '',
-    reviewNote: json['review_note'] as String?,
     likeCount: json['like_count'] as int? ?? 0,
     commentCount: json['comment_count'] as int? ?? 0,
     episodeCount: json['episode_count'] as int? ?? 0,
@@ -72,8 +69,6 @@ class Film {
     int? aiToolId,
     String? promptCredit,
     String? status,
-    String? reviewNote,
-    bool clearReviewNote = false,
     String? genreName,
     String? aiToolName,
     int? likeCount,
@@ -91,7 +86,6 @@ class Film {
       status: status ?? this.status,
       genreName: genreName ?? this.genreName,
       aiToolName: aiToolName ?? this.aiToolName,
-      reviewNote: clearReviewNote ? null : reviewNote ?? this.reviewNote,
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
       episodeCount: episodeCount,
