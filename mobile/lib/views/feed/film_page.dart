@@ -98,6 +98,9 @@ class _FilmPageState extends State<FilmPage> {
     final episode = widget.episode ?? feed.currentEpisodeOf(film.id);
     final isLiked = userId != null && feed.repository.isLiked(userId, film.id);
     final isSaved = userId != null && feed.repository.isSaved(userId, film.id);
+    // A paid catalog episode stays closed until it is unlocked; the backend
+    // refuses its links anyway, this only shows why.
+    final catalogLocked = feed.repository.catalogEpisodeLocked(film, episode);
     // Room for the floating navigation bar when the feed runs under it.
     final inset = MediaQuery.paddingOf(context).bottom;
 
@@ -164,7 +167,21 @@ class _FilmPageState extends State<FilmPage> {
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (film.catalogDramaId != null) ...[
+                    if (film.catalogDramaId != null && catalogLocked) ...[
+                      if (film.posterUrl != null)
+                        Image.network(
+                          film.posterUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        ),
+                      PointerInterceptor(child: gestures),
+                      PointerInterceptor(
+                        child: _CatalogLocked(
+                          loggedIn: userId != null,
+                          onUnlock: () => showEpisodes(context, film),
+                        ),
+                      ),
+                    ] else if (film.catalogDramaId != null) ...[
                       CatalogVideo(
                         film: film,
                         episode: episode,
@@ -598,6 +615,46 @@ class _ActionButton extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown over a catalog episode that costs coins and is not unlocked yet.
+class _CatalogLocked extends StatelessWidget {
+  const _CatalogLocked({required this.loggedIn, required this.onUnlock});
+
+  final bool loggedIn;
+  final Future<void> Function() onUnlock;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(24, 24, 84, 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xCC000000),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              loggedIn
+                  ? 'This episode costs coins. Unlock it to keep watching.'
+                  : 'Log in to keep watching this episode.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.text),
+            ),
+            const SizedBox(height: 10),
+            FilledButton(
+              key: const Key('catalog-unlock'),
+              onPressed: onUnlock,
+              child: Text(loggedIn ? 'Unlock' : 'Log in or unlock'),
+            ),
+          ],
         ),
       ),
     );

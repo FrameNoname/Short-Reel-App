@@ -21,7 +21,8 @@ exports.getBalance = async (pool, userId) => {
 exports.listTransactions = async (pool, userId, { limit, offset }) => {
   const [rows] = await pool.query(
     `SELECT t.id, t.type, t.amount, t.balance_after, t.price_usd, t.coin_pack_id, t.episode_id,
-            t.created_at, p.name AS pack_name, e.episode_no, f.id AS film_id, f.title AS film_title
+            t.created_at, p.name AS pack_name, e.episode_no, f.id AS film_id, f.title AS film_title,
+            f.catalog_drama_id
        FROM coin_transactions t
        LEFT JOIN coin_packs p ON p.id = t.coin_pack_id
        LEFT JOIN episodes e ON e.id = t.episode_id
@@ -38,7 +39,8 @@ exports.listTransactions = async (pool, userId, { limit, offset }) => {
 
 exports.listUnlocked = async (pool, userId) => {
   const [rows] = await pool.query(
-    `SELECT ue.episode_id, ue.coins_spent, ue.created_at, e.episode_no, f.id AS film_id, f.title AS film_title
+    `SELECT ue.episode_id, ue.coins_spent, ue.created_at, e.episode_no, f.id AS film_id, f.title AS film_title,
+            f.catalog_drama_id
        FROM unlocked_episodes ue JOIN episodes e ON e.id = ue.episode_id JOIN films f ON f.id = e.film_id
       WHERE ue.user_id = ? ORDER BY ue.id DESC`,
     [userId],
