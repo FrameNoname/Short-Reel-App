@@ -472,18 +472,9 @@ class MockRepository implements AppRepository {
     return filmIds.map((id) => _films[id]!).toList();
   }
 
+  /// This build has no Series Jeen catalog, so nothing there is locked.
   @override
-  Future<List<Film>> reviewQueue() async =>
-      _films.values.where((f) => f.status == 'pending').toList();
-
-  @override
-  Future<List<Film>> liveFilms() async => _approved.toList();
-
-  @override
-  Future<void> review(int filmId, String status, {String? note}) async {
-    final film = _films[filmId]!;
-    _films[filmId] = film.copyWith(status: status, reviewNote: note);
-  }
+  bool catalogEpisodeLocked(Film film, int episodeNo) => false;
 
   @override
   Future<AdminSales> adminSales() async => AdminSales(

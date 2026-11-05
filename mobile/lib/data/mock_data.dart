@@ -3,7 +3,7 @@ import 'package:shortreel/models/film.dart';
 import 'package:shortreel/models/user.dart';
 
 // Demo data based on backend/db/shortreel.sql: one admin and two viewers.
-// Quiet Orbit and Night Tram are extra films that fill the admin review screens.
+// Quiet Orbit and Night Tram are two extra films beyond the seed.
 
 const mockPasswords = {
   'admin': '1111',
@@ -99,7 +99,7 @@ const mockFilms = [
     aiToolId: 3,
     promptCredit: 'Prompt: glass harbour, dreamlike',
     isAiGenerated: true,
-    status: 'pending',
+    status: 'approved',
     genreName: 'Fantasy',
     aiToolName: 'Video-to-video',
     episodeCount: 8,
@@ -129,7 +129,7 @@ const mockFilms = [
     aiToolId: 2,
     promptCredit: 'Prompt: silent orbital station',
     isAiGenerated: true,
-    status: 'pending',
+    status: 'approved',
     genreName: 'Sci-Fi',
     aiToolName: 'Image-to-video',
     episodeCount: 8,
@@ -143,8 +143,7 @@ const mockFilms = [
     aiToolId: 4,
     promptCredit: null,
     isAiGenerated: true,
-    status: 'rejected',
-    reviewNote: 'Missing prompt credit',
+    status: 'approved',
     genreName: 'Thriller',
     aiToolName: 'Mixed',
     episodeCount: 8,
