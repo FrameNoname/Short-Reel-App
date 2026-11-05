@@ -18,8 +18,8 @@ ShortReel เป็นแอปดูหนังสั้น AI แบบเล
 - **โซเชียล:** กดถูกใจ บันทึกหนังไว้ดูทีหลัง และคอมเมนต์
 - **ค้นหา:** ค้นจากชื่อหนัง
 - **โปรไฟล์:** ดูเหรียญ รายการหนังที่บันทึกไว้ และหนังที่ปลดล็อกแล้ว
-- **แอดมิน:** ตรวจหนังได้ 4 แบบ (รอตรวจ, อนุมัติ, ไม่อนุมัติ, ถอดออก) จัดการ role ผู้ใช้ และดูยอดขาย เหรียญที่ใช้ปลดล็อกเป็นของแอดมินทั้งหมด
-- **Series Jeen:** แท็บแคตตาล็อกรวมซีรีส์จาก FreeReels, Melolo และแพลตฟอร์มอื่น ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย
+- **แอดมิน:** ดูยอดขาย เหรียญที่ใช้ปลดล็อกเป็นของแอดมินทั้งหมด รวมถึงซีรีส์จาก Series Jeen
+- **Series Jeen:** แท็บแคตตาล็อกรวมซีรีส์จาก FreeReels, Melolo และแพลตฟอร์มอื่น ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย ตอนที่ 1-5 ดูฟรี ตอนต่อจากนั้นตอนละ 10 เหรียญ (แก้ได้ที่ `catalog_free_episodes` และ `catalog_price_coins` ในตาราง `settings`) backend ตรวจสิทธิ์ก่อนส่งลิงก์วิดีโอทุกครั้ง
 
 แอปแสดงผลเป็นภาษาไทย การจ่ายเงินทั้งหมดเป็นแบบ **จำลอง** ไม่มี payment gateway และไม่ใช้เงินจริง
 
@@ -117,7 +117,7 @@ flutter run -d edge --web-port 8080 --dart-define=API_BASE_URL=http://localhost:
 | `mira.lens` | `4444` | Viewer มี 142 เหรียญ และปลดล็อกไว้บางตอน |
 | `viewer01` | `6666` | Viewer มี 80 เหรียญ |
 
-สมัครสมาชิกใหม่ได้เป็น Viewer เท่านั้น ถ้าต้องการ Admin ให้ admin เปลี่ยน role ให้ผ่าน `PUT /api/admin/users/:id/role`
+สมัครสมาชิกใหม่ได้เป็น Viewer เท่านั้น ถ้าต้องการ Admin เพิ่ม ให้แก้คอลัมน์ `role` ในตาราง `users` เป็น `admin` ผ่าน phpMyAdmin
 
 ### API
 
@@ -131,8 +131,8 @@ flutter run -d edge --web-port 8080 --dart-define=API_BASE_URL=http://localhost:
 | ตอน | `GET /episodes/:id`, `GET /episodes/:id/stream`, `POST /episodes/:id/unlock` |
 | กระเป๋าเงิน | `GET /wallet`, `GET /wallet/transactions`, `GET /wallet/unlocked`, `POST /wallet/topup`, `GET /coin-packs` |
 | โซเชียล | `POST/DELETE /films/:id/like`, `GET /watchlist`, `POST/DELETE /films/:id/watchlist`, `GET/POST /films/:id/comments`, `DELETE /comments/:id` |
-| แอดมิน | `GET /admin/reviews`, `GET /admin/films`, `POST /admin/films/:id/review`, `GET /admin/sales`, `GET /admin/users`, `PUT /admin/users/:id/role` |
-| Series Jeen | `GET /catalog/platforms`, `GET /catalog/platforms/:platformId/dramas`, `GET /catalog/dramas/:dramaId`, `GET /catalog/dramas/:dramaId/episodes` |
+| แอดมิน | `GET /admin/sales` |
+| Series Jeen | `GET /catalog/platforms`, `GET /catalog/platforms/:platformId/dramas`, `GET /catalog/dramas/:dramaId`, `GET /catalog/dramas/:dramaId/episodes`, `POST /catalog/dramas/:dramaId/episodes/:episodeNo/unlock`, `GET /catalog/access` |
 
 ### ตรวจโค้ดและ test
 
@@ -160,11 +160,8 @@ ShortReel is a vertical-feed app for AI short films, watched one episode at a ti
 - **Social:** like, save to a watchlist, and comment.
 - **Search:** by film title.
 - **Profile:** your coins, saved films and unlocked films.
-- **Admin:**
-  - Review films: approve, reject or take them down.
-  - Manage user roles.
-  - View sales. Every coin spent on an unlock goes to the admin.
-- **Series Jeen:** a catalog tab with series from FreeReels, Melolo and other platforms. These series are also added to the end of the feed.
+- **Admin:** view sales. Every coin spent on an unlock goes to the admin, including Series Jeen episodes.
+- **Series Jeen:** a catalog tab with series from FreeReels, Melolo and other platforms. These series are also added to the end of the feed. Episodes 1-5 are free and each later episode costs 10 coins (set by `catalog_free_episodes` and `catalog_price_coins` in the `settings` table). The backend checks access before it hands out any video link.
 
 The app is shown in Thai. All payments are **simulated**: there is no payment gateway and no real money.
 
@@ -264,7 +261,7 @@ Set `SERIESJEEN_API_KEY` in `backend/.env`. The catalog tab then loads series on
 | `mira.lens` | `4444` | Viewer with 142 coins and a few unlocked episodes |
 | `viewer01` | `6666` | Viewer with 80 coins |
 
-New sign-ups are always Viewers. To make someone an Admin, an admin changes their role through `PUT /api/admin/users/:id/role`.
+New sign-ups are always Viewers. To make someone an Admin, set their `role` column in the `users` table to `admin` through phpMyAdmin.
 
 ### API
 
@@ -278,8 +275,8 @@ All routes start with `/api`.
 | Episodes | `GET /episodes/:id`, `GET /episodes/:id/stream`, `POST /episodes/:id/unlock` |
 | Wallet | `GET /wallet`, `GET /wallet/transactions`, `GET /wallet/unlocked`, `POST /wallet/topup`, `GET /coin-packs` |
 | Social | `POST/DELETE /films/:id/like`, `GET /watchlist`, `POST/DELETE /films/:id/watchlist`, `GET/POST /films/:id/comments`, `DELETE /comments/:id` |
-| Admin | `GET /admin/reviews`, `GET /admin/films`, `POST /admin/films/:id/review`, `GET /admin/sales`, `GET /admin/users`, `PUT /admin/users/:id/role` |
-| Series Jeen | `GET /catalog/platforms`, `GET /catalog/platforms/:platformId/dramas`, `GET /catalog/dramas/:dramaId`, `GET /catalog/dramas/:dramaId/episodes` |
+| Admin | `GET /admin/sales` |
+| Series Jeen | `GET /catalog/platforms`, `GET /catalog/platforms/:platformId/dramas`, `GET /catalog/dramas/:dramaId`, `GET /catalog/dramas/:dramaId/episodes`, `POST /catalog/dramas/:dramaId/episodes/:episodeNo/unlock`, `GET /catalog/access` |
 
 ### Lint and tests
 

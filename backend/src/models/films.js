@@ -1,7 +1,7 @@
 const FILM_SELECT = `
   SELECT f.id, f.title, f.synopsis, f.poster_url, f.genre_id, f.ai_tool_id,
          g.name AS genre, t.name AS ai_tool, f.prompt_credit, f.is_ai_generated, f.status,
-         f.review_note, f.reviewed_at, f.created_at,
+         f.catalog_drama_id, f.created_at,
          (SELECT COUNT(*) FROM episodes e WHERE e.film_id = f.id) AS episode_count,
          (SELECT COUNT(*) FROM episodes e WHERE e.film_id = f.id AND e.is_free = 1) AS free_count,
          (SELECT COALESCE(SUM(e.duration_sec), 0) FROM episodes e WHERE e.film_id = f.id) AS total_duration_sec,
@@ -19,8 +19,9 @@ const SORT_SQL = {
 
 exports.SORTS = Object.keys(SORT_SQL);
 
+// Catalog series are listed by the app from Series Jeen itself, never here.
 exports.search = async (pool, { status, q, sort, limit, offset }) => {
-  const where = [];
+  const where = ['catalog_drama_id IS NULL'];
   const params = [];
   if (status) {
     where.push('status = ?');
@@ -30,7 +31,7 @@ exports.search = async (pool, { status, q, sort, limit, offset }) => {
     where.push('title LIKE ?');
     params.push(`%${q}%`);
   }
-  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const clause = `WHERE ${where.join(' AND ')}`;
   const [rows] = await pool.query(
     `SELECT * FROM (${FILM_SELECT}) films ${clause} ORDER BY ${SORT_SQL[sort] ?? SORT_SQL.latest} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
@@ -51,13 +52,7 @@ exports.lookups = async (pool) => {
   return { genres, ai_tools: aiTools };
 };
 
-exports.setReview = (db, id, { status, note, adminId }) =>
-  db.query(
-    'UPDATE films SET status = ?, review_note = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
-    [status, note ?? null, adminId, id],
-  );
-
-exports.serialize = (row, { includePrivate = false } = {}) => ({
+exports.serialize = (row) => ({
   id: row.id,
   title: row.title,
   synopsis: row.synopsis,
@@ -69,7 +64,6 @@ exports.serialize = (row, { includePrivate = false } = {}) => ({
   prompt_credit: row.prompt_credit,
   is_ai_generated: Boolean(row.is_ai_generated),
   status: row.status,
-  review_note: includePrivate ? row.review_note : undefined,
   episode_count: Number(row.episode_count),
   free_count: Number(row.free_count),
   total_duration_sec: Number(row.total_duration_sec),

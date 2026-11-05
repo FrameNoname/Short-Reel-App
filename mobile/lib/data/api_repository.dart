@@ -44,6 +44,12 @@ class ApiRepository implements AppRepository {
   List<Film> _catalogFilms = const [];
   Future<void>? _catalogLoading;
 
+  // Catalog prices and the catalog episodes this viewer paid for, as
+  // (drama id, episode number). The backend decides; this only mirrors it.
+  int _catalogFree = 5;
+  int _catalogPrice = 10;
+  final Set<(int, int)> _catalogUnlocked = {};
+
   // ---- session ----------------------------------------------------------
 
   User _userFrom(Map<String, dynamic> json) {
@@ -111,6 +117,7 @@ class ApiRepository implements AppRepository {
     _liked.clear();
     _saved.clear();
     _unlockedFilmIds.clear();
+    _catalogUnlocked.clear();
     _watchlistIds = const [];
     _comments.clear();
   }
@@ -187,7 +194,10 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<List<Episode>> episodes(int filmId) async {
-    if (filmId >= catalogFilmIdBase) return _catalogEpisodes(filmId);
+    if (filmId >= catalogFilmIdBase) {
+      await _loadCatalogAccess();
+      return _catalogEpisodes(filmId);
+    }
     final json = await _api.get('/films/$filmId') as Map<String, dynamic>;
     _remember(json['film'] as Map<String, dynamic>);
     final list = [
@@ -203,7 +213,6 @@ class ApiRepository implements AppRepository {
   @override
   EpisodeAccess accessOf(int? userId, Episode episode) {
     if (episode.access != null) return episode.access!;
-    // Catalog episodes carry no access: they are not sold here.
     return episode.priceCoins == 0 ? EpisodeAccess.free : EpisodeAccess.locked;
   }
 
@@ -238,6 +247,9 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<User> unlock(int userId, int episodeId) async {
+    if (episodeId >= catalogFilmIdBase * 1000) {
+      return _unlockCatalog(episodeId);
+    }
     final json =
         await _api.post('/episodes/$episodeId/unlock') as Map<String, dynamic>;
     final filmId = _episodeFilm[episodeId];
@@ -296,23 +308,6 @@ class ApiRepository implements AppRepository {
   int get demoTopUpCoins => _demoCoins;
 
   // ---- admin ------------------------------------------------------------
-
-  @override
-  Future<List<Film>> reviewQueue() async =>
-      _rememberAll(await _api.get('/admin/reviews'));
-
-  @override
-  Future<List<Film>> liveFilms() async => _rememberAll(
-    await _api.get('/admin/films', query: {'status': 'approved'}),
-  );
-
-  @override
-  Future<void> review(int filmId, String status, {String? note}) async {
-    await _api.post(
-      '/admin/films/$filmId/review',
-      data: {'status': status, 'note': ?note},
-    );
-  }
 
   @override
   Future<AdminSales> adminSales() async {
@@ -442,12 +437,18 @@ class ApiRepository implements AppRepository {
       ..clear()
       ..addAll([
         for (final row in unlocked['unlocked'] as List)
-          (row as Map<String, dynamic>)['film_id'] as int,
+          _filmIdOfUnlock(row as Map<String, dynamic>),
       ]);
+    await _loadCatalogAccess().catchError((Object _) {});
     for (final id in {..._watchlistIds, ..._unlockedFilmIds}) {
       if (_films.containsKey(id)) continue;
       try {
-        await episodes(id);
+        if (_isCatalog(id)) {
+          final json = await _api.get('/catalog/dramas/${id - catalogFilmIdBase}');
+          catalogFilm(CatalogDrama.fromJson(json as Map<String, dynamic>));
+        } else {
+          await episodes(id);
+        }
       } on ApiException {
         // A film that is gone is simply left out of the list.
       }
@@ -475,6 +476,52 @@ class ApiRepository implements AppRepository {
     _catalogLoading = _loadCatalog(service).catchError((Object _) {});
   }
 
+  /// A catalog series is a film row on the backend, but the app knows it by
+  /// its drama id.
+  int _filmIdOfUnlock(Map<String, dynamic> row) {
+    final dramaId = row['catalog_drama_id'] as int?;
+    return dramaId == null ? row['film_id'] as int : catalogFilmIdBase + dramaId;
+  }
+
+  Future<void> _loadCatalogAccess() async {
+    final json = await _api.get('/catalog/access') as Map<String, dynamic>;
+    _catalogFree = json['free_episodes'] as int;
+    _catalogPrice = json['price_coins'] as int;
+    _catalogUnlocked
+      ..clear()
+      ..addAll([
+        for (final row in json['unlocked'] as List)
+          (
+            (row as Map<String, dynamic>)['drama_id'] as int,
+            row['episode_no'] as int,
+          ),
+      ]);
+  }
+
+  bool _catalogOpen(int dramaId, int episodeNo) =>
+      episodeNo <= _catalogFree ||
+      _me?.role == UserRole.admin ||
+      _catalogUnlocked.contains((dramaId, episodeNo));
+
+  @override
+  bool catalogEpisodeLocked(Film film, int episodeNo) {
+    final dramaId = film.catalogDramaId;
+    return dramaId != null && !_catalogOpen(dramaId, episodeNo);
+  }
+
+  /// Catalog episode ids are film id * 1000 + episode number.
+  Future<User> _unlockCatalog(int episodeId) async {
+    final filmId = episodeId ~/ 1000;
+    final episodeNo = episodeId % 1000;
+    final dramaId = filmId - catalogFilmIdBase;
+    final json =
+        await _api.post('/catalog/dramas/$dramaId/episodes/$episodeNo/unlock')
+            as Map<String, dynamic>;
+    _catalogUnlocked.add((dramaId, episodeNo));
+    if ((json['charged'] as int? ?? 0) > 0) _unlockedFilmIds.add(filmId);
+    return _withBalance(json['balance'] as int);
+  }
+
   Future<void> _loadCatalog(CatalogService service) async {
     final platforms = (await service.platforms())
         .where((p) => p.hasAccess)
@@ -490,6 +537,7 @@ class ApiRepository implements AppRepository {
         for (final list in lists)
           if (i < list.length) catalogFilm(list[i]),
     ];
+    await _loadCatalogAccess();
   }
 
   @override
@@ -515,6 +563,7 @@ class ApiRepository implements AppRepository {
 
   List<Episode> _catalogEpisodes(int filmId) {
     final film = _films[filmId];
+    final dramaId = filmId - catalogFilmIdBase;
     return [
       for (var n = 1; n <= (film?.episodeCount ?? 0); n++)
         Episode(
@@ -523,8 +572,13 @@ class ApiRepository implements AppRepository {
           episodeNo: n,
           title: 'Episode $n',
           durationSec: 0,
-          isFree: true,
-          priceCoins: 0,
+          isFree: n <= _catalogFree,
+          priceCoins: n <= _catalogFree ? 0 : _catalogPrice,
+          access: n <= _catalogFree
+              ? EpisodeAccess.free
+              : _catalogOpen(dramaId, n)
+              ? EpisodeAccess.unlocked
+              : EpisodeAccess.locked,
         ),
     ];
   }

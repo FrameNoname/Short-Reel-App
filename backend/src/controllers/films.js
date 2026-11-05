@@ -3,7 +3,7 @@ const { pathId, bad } = require('../utils/validate');
 const films = require('../models/films');
 const episodes = require('../models/episodes');
 const social = require('../models/social');
-const { viewerContext, accessOf, canSeeFilm, isAdmin } = require('../models/access');
+const { viewerContext, accessOf, canSeeFilm } = require('../models/access');
 
 async function withViewerFlags(pool, user, rows, serialized) {
   if (!user) return serialized;
@@ -51,7 +51,7 @@ exports.getOne = async (req, res) => {
   const ctx = await viewerContext(pool, req.user);
   const rows = await episodes.listByFilm(pool, film.id);
   const [body] = await withViewerFlags(pool, req.user, [film], [
-    films.serialize(film, { includePrivate: isAdmin(req.user) }),
+    films.serialize(film),
   ]);
   res.json({
     film: body,

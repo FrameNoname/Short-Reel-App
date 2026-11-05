@@ -6,11 +6,6 @@ const admin = require('../controllers/admin');
 const router = Router();
 
 router.use(requireAuth, requireRole('admin'));
-router.get('/reviews', admin.listReviews);
-router.get('/films', admin.listFilms);
-router.post('/films/:id/review', admin.reviewFilm);
 router.get('/sales', admin.sales);
-router.get('/users', admin.listUsers);
-router.put('/users/:id/role', admin.setUserRole);
 
 module.exports = router;

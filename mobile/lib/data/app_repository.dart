@@ -87,6 +87,10 @@ abstract class AppRepository {
   Future<List<Film>> films([String query = '']);
   Future<List<Episode>> episodes(int filmId);
   EpisodeAccess accessOf(int? userId, Episode episode);
+
+  /// Whether this viewer must pay before a catalog episode plays. Always
+  /// false for the app's own films.
+  bool catalogEpisodeLocked(Film film, int episodeNo);
   List<FilmComment> commentsOf(int filmId);
   Future<void> addComment(int userId, int filmId, String body);
 
@@ -122,8 +126,5 @@ abstract class AppRepository {
   List<Film> watchlistOf(int userId);
   List<Film> unlockedFilmsOf(int userId);
 
-  Future<List<Film>> reviewQueue();
-  Future<List<Film>> liveFilms();
-  Future<void> review(int filmId, String status, {String? note});
   Future<AdminSales> adminSales();
 }
