@@ -213,15 +213,9 @@ const _exact = {
   'Changes saved.': 'บันทึกการเปลี่ยนแปลงแล้ว',
   'Unlocks': 'การปลดล็อก',
   'A price must be 0 to 500 coins.': 'ราคาต้องอยู่ระหว่าง 0 ถึง 500 เหรียญ',
-  'Taken down': 'ถูกถอดออก',
-  'Approved': 'อนุมัติแล้ว',
 
   // Admin
   'Total sales (demo)': 'ยอดขายรวม (ทดลอง)',
-  'Take down': 'ถอดออก',
-  'Take down film': 'ถอดหนังออก',
-  'Take this film down?': 'ถอดหนังเรื่องนี้ออกหรือไม่?',
-  'No live films.': 'ไม่มีหนังที่เผยแพร่อยู่',
 
   // Errors and misc
   'Try again': 'ลองอีกครั้ง',
@@ -296,7 +290,6 @@ final _rules = <(RegExp, String Function(Match))>[
       return _date('${m[1]} ${m[2]}');
     },
   ),
-  (RegExp(r'^Live \((\d+)\)$'), (m) => 'เผยแพร่อยู่ (${m[1]})'),
   (
     RegExp(r'^Coins spent on (\d+) unlocks?$'),
     (m) => 'เหรียญที่ใช้ปลดล็อก ${m[1]} ครั้ง',

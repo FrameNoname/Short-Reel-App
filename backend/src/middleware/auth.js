@@ -45,23 +45,4 @@ async function optionalAuth(req, res, next) {
   }
 }
 
-// Token check only, no database. For the optional catalog relay.
-function requireToken(req, res, next) {
-  try {
-    req.user = readToken(req);
-    next();
-  } catch (err) {
-    next(err);
-  }
-}
-
-function optionalToken(req, res, next) {
-  try {
-    if (req.headers.authorization !== undefined) req.user = readToken(req);
-    next();
-  } catch (err) {
-    next(err);
-  }
-}
-
-module.exports = { requireAuth, optionalAuth, requireToken, optionalToken };
+module.exports = { requireAuth, optionalAuth };
