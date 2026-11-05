@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { requireToken: requireAuth, optionalToken: optionalAuth } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const catalog = require('../controllers/catalog');
 
 const router = Router();
@@ -12,5 +12,7 @@ const viewerOnly = (req, res, next) =>
   (req.app.locals.catalogAllowGuest ? optionalAuth : requireAuth)(req, res, next);
 
 router.get('/dramas/:dramaId/episodes', viewerOnly, catalog.episodes);
+router.post('/dramas/:dramaId/episodes/:episodeNo/unlock', requireAuth, catalog.unlock);
+router.get('/access', optionalAuth, catalog.access);
 
 module.exports = router;

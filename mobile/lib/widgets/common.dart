@@ -159,39 +159,6 @@ class DemoBadge extends StatelessWidget {
   }
 }
 
-class StatusChip extends StatelessWidget {
-  const StatusChip(this.status, {super.key});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (status) {
-      'approved' => AppColors.green,
-      _ => AppColors.danger,
-    };
-    final label = switch (status) {
-      'taken_down' => 'Taken down',
-      _ => status[0].toUpperCase() + status.substring(1),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
 class StatTile extends StatelessWidget {
   const StatTile({
     super.key,

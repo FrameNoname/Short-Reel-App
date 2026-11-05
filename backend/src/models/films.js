@@ -1,7 +1,7 @@
 const FILM_SELECT = `
   SELECT f.id, f.title, f.synopsis, f.poster_url, f.genre_id, f.ai_tool_id,
          g.name AS genre, t.name AS ai_tool, f.prompt_credit, f.is_ai_generated, f.status,
-         f.created_at,
+         f.catalog_drama_id, f.created_at,
          (SELECT COUNT(*) FROM episodes e WHERE e.film_id = f.id) AS episode_count,
          (SELECT COUNT(*) FROM episodes e WHERE e.film_id = f.id AND e.is_free = 1) AS free_count,
          (SELECT COALESCE(SUM(e.duration_sec), 0) FROM episodes e WHERE e.film_id = f.id) AS total_duration_sec,
@@ -19,8 +19,9 @@ const SORT_SQL = {
 
 exports.SORTS = Object.keys(SORT_SQL);
 
+// Catalog series are listed by the app from Series Jeen itself, never here.
 exports.search = async (pool, { status, q, sort, limit, offset }) => {
-  const where = [];
+  const where = ['catalog_drama_id IS NULL'];
   const params = [];
   if (status) {
     where.push('status = ?');
@@ -30,7 +31,7 @@ exports.search = async (pool, { status, q, sort, limit, offset }) => {
     where.push('title LIKE ?');
     params.push(`%${q}%`);
   }
-  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  const clause = `WHERE ${where.join(' AND ')}`;
   const [rows] = await pool.query(
     `SELECT * FROM (${FILM_SELECT}) films ${clause} ORDER BY ${SORT_SQL[sort] ?? SORT_SQL.latest} LIMIT ? OFFSET ?`,
     [...params, limit, offset],
@@ -50,8 +51,6 @@ exports.lookups = async (pool) => {
   ]);
   return { genres, ai_tools: aiTools };
 };
-
-exports.setStatus = (db, id, status) => db.query('UPDATE films SET status = ? WHERE id = ?', [status, id]);
 
 exports.serialize = (row) => ({
   id: row.id,

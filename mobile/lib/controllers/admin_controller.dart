@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
-import '../models/film.dart';
 import '../services/errors.dart';
 
 class AdminController extends ChangeNotifier {
@@ -9,7 +8,6 @@ class AdminController extends ChangeNotifier {
 
   final AppRepository repository;
 
-  List<Film> liveFilms = const [];
   AdminSales sales = const AdminSales(totalUsd: 0);
   bool isLoading = false;
   String? error;
@@ -19,12 +17,7 @@ class AdminController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final results = await Future.wait<Object>([
-        repository.liveFilms(),
-        repository.adminSales(),
-      ]);
-      liveFilms = results[0] as List<Film>;
-      sales = results[1] as AdminSales;
+      sales = await repository.adminSales();
     } on Object catch (e) {
       error = errorMessage(e);
     }
@@ -32,13 +25,7 @@ class AdminController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> takeDown(int filmId) async {
-    await repository.takeDown(filmId);
-    await load();
-  }
-
   void reset() {
-    liveFilms = const [];
     sales = const AdminSales(totalUsd: 0);
     error = null;
     notifyListeners();

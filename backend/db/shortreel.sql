@@ -55,33 +55,38 @@ CREATE TABLE `ai_tools` (
 
 -- --------------------------------------------------------
 -- films : catalogue entries + AI label + live / taken-down status
+--         A Series Jeen series gets a row (catalog_drama_id set) the first
+--         time someone unlocks one of its episodes; it never shows in /films.
 -- --------------------------------------------------------
 CREATE TABLE `films` (
   `id`              smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
   `title`           varchar(100) NOT NULL,
   `synopsis`        varchar(500) DEFAULT NULL,
   `poster_url`      varchar(255) DEFAULT NULL,
-  `genre_id`        tinyint(3) UNSIGNED NOT NULL,
-  `ai_tool_id`      tinyint(3) UNSIGNED NOT NULL,
+  `genre_id`        tinyint(3) UNSIGNED DEFAULT NULL,  -- NULL for catalog series
+  `ai_tool_id`      tinyint(3) UNSIGNED DEFAULT NULL,  -- NULL for catalog series
   `prompt_credit`   varchar(500) DEFAULT NULL,         -- prompt / tool credit
   `is_ai_generated` tinyint(1) NOT NULL DEFAULT 1,     -- mandatory AI label
   `status`          enum('approved','taken_down') NOT NULL DEFAULT 'approved',
+  `catalog_drama_id` int(10) UNSIGNED DEFAULT NULL,    -- Series Jeen drama id
   `created_at`      datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
+  UNIQUE KEY `catalog_drama_id` (`catalog_drama_id`),
   KEY `status` (`status`),
   CONSTRAINT `films_genre_fk`   FOREIGN KEY (`genre_id`)   REFERENCES `genres` (`id`),
   CONSTRAINT `films_tool_fk`    FOREIGN KEY (`ai_tool_id`) REFERENCES `ai_tools` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- episodes : each one free or coin-priced
+-- episodes : each one free or coin-priced. Catalog episodes have no
+--            video_path: they stream from Series Jeen via /api/catalog.
 -- --------------------------------------------------------
 CREATE TABLE `episodes` (
   `id`               smallint(5) UNSIGNED NOT NULL AUTO_INCREMENT,
   `film_id`          smallint(5) UNSIGNED NOT NULL,
-  `episode_no`       tinyint(3) UNSIGNED NOT NULL,
+  `episode_no`       smallint(5) UNSIGNED NOT NULL,
   `title`            varchar(100) DEFAULT NULL,
-  `video_path`       varchar(255) NOT NULL,          -- file in backend/uploads
+  `video_path`       varchar(255) DEFAULT NULL,      -- file in backend/uploads
   `duration_sec`     smallint(5) UNSIGNED NOT NULL DEFAULT 0,
   `is_free`          tinyint(1) NOT NULL DEFAULT 0,
   `price_coins`      smallint(5) UNSIGNED NOT NULL DEFAULT 0,  -- 0 when free
@@ -211,7 +216,9 @@ INSERT INTO `coin_packs` (`id`, `name`, `coins`, `price_usd`) VALUES
 (1, 'Starter', 60, 0.99), (2, 'Popular', 330, 4.99), (3, 'Best value', 750, 9.99);
 
 INSERT INTO `settings` (`name`, `value`) VALUES
-('demo_topup_coins', '100');
+('demo_topup_coins', '100'),
+('catalog_free_episodes', '5'),   -- Series Jeen: episodes 1-5 are free
+('catalog_price_coins', '10');    -- Series Jeen: price of every later episode
 
 -- unlocks (user 2 = mira.lens, user 3 = viewer01)
 INSERT INTO `unlocked_episodes` (`id`, `user_id`, `episode_id`, `coins_spent`)

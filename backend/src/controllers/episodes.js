@@ -22,7 +22,8 @@ function streamUrl(req, episodeId, user) {
 
 async function loadEpisode(pool, id) {
   const episode = await episodes.findWithFilm(pool, id);
-  if (!episode) throw new ApiError(404, 'NOT_FOUND', 'Episode not found');
+  // A catalog episode has no file here; it plays through /api/catalog.
+  if (!episode || episode.video_path === null) throw new ApiError(404, 'NOT_FOUND', 'Episode not found');
   return episode;
 }
 
