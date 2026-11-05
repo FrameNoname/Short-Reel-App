@@ -24,10 +24,10 @@ List<AppTab> tabsFor(UserRole role) {
       AppTab.wallet,
       AppTab.profile,
     ],
+    // The admin watches every episode free, so there is nothing to top up.
     UserRole.admin => const [
       AppTab.feed,
       AppTab.search,
-      AppTab.wallet,
       AppTab.profile,
       AppTab.admin,
     ],
