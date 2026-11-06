@@ -99,19 +99,23 @@ class FeedController extends ChangeNotifier {
 
   Future<void> toggleLike(int userId, int filmId) async {
     await repository.toggleLike(userId, filmId);
-    films = await _fetch(userId);
-    notifyListeners();
+    _showLatest();
   }
 
   Future<void> addComment(int userId, int filmId, String body) async {
     await repository.addComment(userId, filmId, body);
-    films = await _fetch(userId);
-    notifyListeners();
+    _showLatest();
   }
 
   Future<void> removeComment(int userId, int commentId) async {
     await repository.removeComment(commentId);
-    films = await _fetch(userId);
+    _showLatest();
+  }
+
+  /// The repository already updated its copy of the film (like and comment
+  /// counts), so the feed swaps that in instead of reloading every film.
+  void _showLatest() {
+    films = [for (final film in films) repository.filmById(film.id) ?? film];
     notifyListeners();
   }
 

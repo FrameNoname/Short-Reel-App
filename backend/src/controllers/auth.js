@@ -57,11 +57,9 @@ exports.register = async (req, res) => {
     throw new ApiError(400, 'VALIDATION_ERROR', 'username may use letters, numbers, "_" and "."');
   }
   const password = rawPassword(req.body, { strong: true });
-  // Everyone signs up as a viewer. Admin accounts are never created from the
-  // outside; an admin promotes users.
-  const role = req.body?.role ?? 'viewer';
-  if (role === 'admin') throw new ApiError(403, 'FORBIDDEN', 'Admin accounts cannot be self-registered');
-  if (role !== 'viewer') throw new ApiError(400, 'VALIDATION_ERROR', 'role is not valid');
+  // Everyone signs up as a viewer; any role in the body is ignored. Admin
+  // accounts only come from the database itself.
+  const role = 'viewer';
   const displayName = text(req.body, 'display_name', { max: 50, optional: true }) ?? username;
 
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
@@ -73,7 +71,7 @@ exports.register = async (req, res) => {
     throw err;
   }
   const user = await users.findById(pool, id);
-  res.status(201).json({ token: signToken(req, user), user: publicUser(user, false) });
+  res.status(201).json({ token: signToken(req, user), user: publicUser(user) });
 };
 
 exports.login = async (req, res) => {
