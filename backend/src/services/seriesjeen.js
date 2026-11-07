@@ -1,6 +1,6 @@
 const ApiError = require('../utils/ApiError');
 
-const DEFAULT_BASE_URL = 'https://api-v2.seriesjeen.online';
+const DEFAULT_BASE_URL = 'https://api.seriesjeen.online';
 const TIMEOUT_MS = 10000;
 
 // The upstream key never leaves this process; the app only talks to our API.
@@ -19,8 +19,15 @@ function createCatalogClient({ apiKey, baseUrl = DEFAULT_BASE_URL, fetchImpl = f
     } catch {
       throw new ApiError(502, 'CATALOG_UNREACHABLE', 'The catalog is not reachable');
     }
-    if (res.ok) return res.json();
-    throw toApiError(res);
+    if (!res.ok) throw toApiError(res);
+    const body = await res.json();
+    // Errors can also come back as 200 with { success: false, error }.
+    if (body && body.success === false) {
+      throw /not found/i.test(String(body.error))
+        ? new ApiError(404, 'NOT_FOUND', 'Not found in the catalog')
+        : new ApiError(502, 'CATALOG_ERROR', 'The catalog could not answer');
+    }
+    return body;
   }
 
   return { get };

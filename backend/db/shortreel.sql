@@ -78,6 +78,19 @@ CREATE TABLE `films` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
+-- catalog_series : FreeReels names a series with a string id; this gives
+--                  each one the number used in films.catalog_drama_id and
+--                  by the app. A row is added the first time a list shows it.
+-- --------------------------------------------------------
+CREATE TABLE `catalog_series` (
+  `id`         int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `series_id`  varchar(64) NOT NULL,                  -- FreeReels series id
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `series_id` (`series_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+-- --------------------------------------------------------
 -- episodes : each one free or coin-priced. Catalog episodes have no
 --            video_path: they stream from Series Jeen via /api/catalog.
 -- --------------------------------------------------------
