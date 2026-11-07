@@ -1,3 +1,4 @@
+import '../models/admin.dart';
 import '../models/catalog.dart';
 import '../models/coin_pack.dart';
 
@@ -6,6 +7,7 @@ import '../models/film.dart';
 import '../models/transaction.dart';
 import '../models/user.dart';
 
+export '../models/admin.dart';
 export '../models/episode.dart' show EpisodeAccess;
 
 /// Coins and dollars are different units and are kept in separate fields.
@@ -14,7 +16,11 @@ class AdminSales {
     required this.totalUsd,
     this.coinsSpent = 0,
     this.unlockCount = 0,
+    this.perFilm = const [],
   });
+
+  /// Films that sold at least one unlock, best seller first.
+  final List<FilmSales> perFilm;
 
   /// Simulated payments (coin packs) in dollars.
   final double totalUsd;
@@ -127,4 +133,26 @@ abstract class AppRepository {
   List<Film> unlockedFilmsOf(int userId);
 
   Future<AdminSales> adminSales();
+
+  // Admin: content, comments and settings.
+  Future<List<AdminFilm>> adminFilms();
+  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown);
+  Future<List<AdminEpisode>> adminEpisodes(int filmId);
+  Future<AdminEpisode> adminUpdateEpisode(
+    AdminEpisode episode, {
+    required bool isFree,
+    required int priceCoins,
+  });
+  Future<List<AdminComment>> adminComments();
+  Future<void> adminDeleteComment(int commentId);
+  Future<AdminSettings> adminSettings();
+  Future<AdminSettings> adminSaveSettings(AdminSettings settings);
+  Future<List<AdminCoinPack>> adminCoinPacks();
+  Future<void> adminSaveCoinPack({
+    int? id,
+    required String name,
+    required int coins,
+    required double priceUsd,
+  });
+  Future<void> adminDeleteCoinPack(int id);
 }
