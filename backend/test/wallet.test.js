@@ -112,3 +112,16 @@ test('listTransactions pages with one extra row to tell if more exist', async ()
     (err) => err.status === 400,
   );
 });
+
+test('typicalEpisodePrice is the most common price of our own paid episodes', async () => {
+  const pool = fakePool([['GROUP BY e.price_coins', [{ price_coins: 20 }]]]);
+  assert.equal(await wallet.typicalEpisodePrice(pool), 20);
+});
+
+test('typicalEpisodePrice falls back to the catalog price with nothing for sale', async () => {
+  const pool = fakePool([
+    ['GROUP BY e.price_coins', []],
+    [/FROM settings/, (params) => (params[0] === 'catalog_price_coins' ? [{ value: '12' }] : [])],
+  ]);
+  assert.equal(await wallet.typicalEpisodePrice(pool), 12);
+});

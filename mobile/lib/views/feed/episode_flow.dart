@@ -21,7 +21,7 @@ Future<void> showEpisodes(BuildContext context, Film film) async {
   final messenger = ScaffoldMessenger.of(context);
   final List<Episode> episodes;
   try {
-    episodes = await feed.repository.episodes(film.id);
+    episodes = await feed.episodes(film.id);
     // Fresh balance, plan and coin packs before anything can be unlocked.
     await wallet.load();
   } on Object catch (e) {
@@ -47,7 +47,7 @@ Future<void> _open(
 ) async {
   final feed = context.read<FeedController>();
   final user = context.read<AuthController>().user;
-  if (feed.repository.accessOf(user?.id, episode) != EpisodeAccess.locked) {
+  if (feed.accessOf(user?.id, episode) != EpisodeAccess.locked) {
     feed.play(episode);
     return;
   }

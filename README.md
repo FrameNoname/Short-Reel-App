@@ -19,7 +19,7 @@ ShortReel เป็นแอปดูหนังสั้น AI แบบเล
 - **ค้นหา:** ค้นจากชื่อหนัง
 - **โปรไฟล์:** ดูเหรียญ รายการหนังที่บันทึกไว้ และหนังที่ปลดล็อกแล้ว
 - **แอดมิน:** ดูยอดขายและเรื่องที่ขายดี ถอดหนังออกหรือนำกลับมา ตั้งตอนฟรีและราคาแต่ละตอน ดูและลบความคิดเห็น แก้ราคา Series Jeen จำนวนตอนฟรี เหรียญทดลอง และแพ็กเหรียญ เหรียญที่ใช้ปลดล็อกเป็นของแอดมินทั้งหมด รวมถึงซีรีส์จาก Series Jeen
-- **Series Jeen:** แท็บแคตตาล็อกรวมซีรีส์จาก FreeReels, Melolo และแพลตฟอร์มอื่น ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย ตอนที่ 1-5 ดูฟรี ตอนต่อจากนั้นตอนละ 10 เหรียญ (แก้ได้ที่ `catalog_free_episodes` และ `catalog_price_coins` ในตาราง `settings`) backend ตรวจสิทธิ์ก่อนส่งลิงก์วิดีโอทุกครั้ง
+- **Series Jeen:** แท็บแคตตาล็อกแสดงซีรีส์พากย์ไทยจาก FreeReels ผ่าน Series Open API (`https://api.seriesjeen.online`) ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย ตอนที่ 1-5 ดูฟรี ตอนต่อจากนั้นตอนละ 10 เหรียญ (แก้ได้ที่ `catalog_free_episodes` และ `catalog_price_coins` ในตาราง `settings`) backend ตรวจสิทธิ์ก่อนส่งลิงก์วิดีโอทุกครั้ง
 
 แอปแสดงผลเป็นภาษาไทย การจ่ายเงินทั้งหมดเป็นแบบ **จำลอง** ไม่มี payment gateway และไม่ใช้เงินจริง
 
@@ -107,7 +107,7 @@ flutter run -d edge --web-port 8080 --dart-define=API_BASE_URL=http://localhost:
 
 #### 5. Series Jeen
 
-ใส่ `SERIESJEEN_API_KEY` ใน `backend/.env` แท็บแคตตาล็อกจะโหลดซีรีส์ได้ทุกครั้งที่รัน ถ้าไม่มี key แท็บนี้จะโหลดไม่ขึ้น แต่ส่วนอื่นของแอปยังใช้ได้ปกติ
+ใส่ `SERIESJEEN_API_KEY` ใน `backend/.env` แท็บแคตตาล็อกจะโหลดซีรีส์ได้ทุกครั้งที่รัน ถ้าไม่มี key แท็บนี้จะโหลดไม่ขึ้น แต่ส่วนอื่นของแอปยังใช้ได้ปกติ key ต้องมีสิทธิ์แพลตฟอร์ม FreeReels FreeReels ใช้ id แบบตัวอักษร backend จึงแปลงเป็นเลขผ่านตาราง `catalog_series`
 
 ### บัญชีทดสอบ
 
@@ -161,7 +161,7 @@ ShortReel is a vertical-feed app for AI short films, watched one episode at a ti
 - **Search:** by film title.
 - **Profile:** your coins, saved films and unlocked films.
 - **Admin:** view sales and top sellers, take films down or bring them back, set which episodes are free and what each costs, read and delete comments, and change the Series Jeen price, free episode count, demo top-up and coin packs. Every coin spent on an unlock goes to the admin, including Series Jeen episodes.
-- **Series Jeen:** a catalog tab with series from FreeReels, Melolo and other platforms. These series are also added to the end of the feed. Episodes 1-5 are free and each later episode costs 10 coins (set by `catalog_free_episodes` and `catalog_price_coins` in the `settings` table). The backend checks access before it hands out any video link.
+- **Series Jeen:** a catalog tab with Thai-dubbed FreeReels series from the Series Open API (`https://api.seriesjeen.online`). These series are also added to the end of the feed. Episodes 1-5 are free and each later episode costs 10 coins (set by `catalog_free_episodes` and `catalog_price_coins` in the `settings` table). The backend checks access before it hands out any video link.
 
 The app is shown in Thai. All payments are **simulated**: there is no payment gateway and no real money.
 
@@ -251,7 +251,7 @@ On the Android emulator the default is `http://10.0.2.2:3000/api`. On a real pho
 
 #### 5. Series Jeen
 
-Set `SERIESJEEN_API_KEY` in `backend/.env`. The catalog tab then loads series on every run. Without a key, the tab cannot load, but the rest of the app works normally.
+Set `SERIESJEEN_API_KEY` in `backend/.env`. The catalog tab then loads series on every run. Without a key, the tab cannot load, but the rest of the app works normally. The key needs access to the FreeReels platform. FreeReels names series with string ids, so the backend gives each one a number in the `catalog_series` table.
 
 ### Test accounts
 

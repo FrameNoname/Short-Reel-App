@@ -1,15 +1,16 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
+import '../models/catalog.dart';
 import '../models/episode.dart';
 import '../models/film.dart';
 import '../services/api_client.dart' show isStaleSession;
 import '../services/errors.dart';
 
 class FeedController extends ChangeNotifier {
-  FeedController(this.repository);
+  FeedController(this._repository);
 
-  final AppRepository repository;
+  final AppRepository _repository;
 
   List<Film> films = const [];
   bool isLoading = true;
@@ -44,7 +45,7 @@ class FeedController extends ChangeNotifier {
   }
 
   Future<List<Film>> _fetch(int? userId) async {
-    final films = await repository.films();
+    final films = await _repository.films();
     if (_preferred.isEmpty) return films;
     // Liked genres first; the order inside each group is unchanged.
     return [
@@ -98,29 +99,56 @@ class FeedController extends ChangeNotifier {
   }
 
   Future<void> toggleLike(int userId, int filmId) async {
-    await repository.toggleLike(userId, filmId);
+    await _repository.toggleLike(userId, filmId);
     _showLatest();
   }
 
   Future<void> addComment(int userId, int filmId, String body) async {
-    await repository.addComment(userId, filmId, body);
+    await _repository.addComment(userId, filmId, body);
     _showLatest();
   }
 
   Future<void> removeComment(int userId, int commentId) async {
-    await repository.removeComment(commentId);
+    await _repository.removeComment(commentId);
     _showLatest();
   }
 
   /// The repository already updated its copy of the film (like and comment
   /// counts), so the feed swaps that in instead of reloading every film.
   void _showLatest() {
-    films = [for (final film in films) repository.filmById(film.id) ?? film];
+    films = [for (final film in films) _repository.filmById(film.id) ?? film];
     notifyListeners();
   }
 
+  // ---- reads the views need; they never touch the repository -------------
+
+  /// Whether this build streams real video rather than placeholders.
+  bool get playsVideo => _repository.playsVideo;
+
+  bool isLiked(int userId, int filmId) => _repository.isLiked(userId, filmId);
+
+  bool isSaved(int userId, int filmId) => _repository.isSaved(userId, filmId);
+
+  Future<List<Episode>> episodes(int filmId) => _repository.episodes(filmId);
+
+  EpisodeAccess accessOf(int? userId, Episode episode) =>
+      _repository.accessOf(userId, episode);
+
+  bool catalogEpisodeLocked(Film film, int episodeNo) =>
+      _repository.catalogEpisodeLocked(film, episodeNo);
+
+  /// Where to stream an episode from, once access is confirmed.
+  Future<Playback> playback(int episodeId) => _repository.playback(episodeId);
+
+  /// The feed film for a catalog series, made once and then reused.
+  Film catalogFilm(CatalogDrama drama) => _repository.catalogFilm(drama);
+
+  Future<void> loadComments(int filmId) => _repository.loadComments(filmId);
+
+  List<FilmComment> commentsOf(int filmId) => _repository.commentsOf(filmId);
+
   Future<void> toggleSave(int userId, int filmId) async {
-    await repository.toggleSave(userId, filmId);
+    await _repository.toggleSave(userId, filmId);
     notifyListeners();
   }
 }

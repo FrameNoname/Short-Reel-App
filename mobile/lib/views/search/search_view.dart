@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/empty_view.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/on_init.dart';
 import '../../widgets/text.dart';
 import '../player/player_view.dart';
 
@@ -48,11 +49,14 @@ class _SearchViewState extends State<SearchView> {
   void initState() {
     super.initState();
     _focus.addListener(() => setState(() => _suggesting = _focus.hasFocus));
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final search = context.read<FilmSearchController>();
-      search.apply(search.query);
-      search.loadTrending();
-    });
+  }
+
+  /// Runs each time the tab is opened, so a film the admin took down (or a
+  /// new one) shows up right away instead of after the next search.
+  void _refresh() {
+    final search = context.read<FilmSearchController>();
+    search.apply(search.query);
+    search.loadTrending();
   }
 
   @override
@@ -60,116 +64,119 @@ class _SearchViewState extends State<SearchView> {
     final search = context.watch<FilmSearchController>();
     final films = search.results;
     final showSuggestions = _suggesting && _query.text.isEmpty;
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Discover',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _query,
-                      focusNode: _focus,
-                      onTapOutside: (_) {},
-                      textInputAction: TextInputAction.search,
-                      onChanged: search.apply,
-                      onSubmitted: (value) {
-                        search.remember(value);
-                        _focus.unfocus();
-                      },
-                      decoration: InputDecoration(
-                        hintText: context.tr('Search films'),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: AppColors.muted,
-                        ),
-                        suffixIcon: _query.text.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: context.tr('Clear search'),
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: AppColors.muted,
+    return OnActivated(
+      run: _refresh,
+      child: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Discover',
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _query,
+                        focusNode: _focus,
+                        onTapOutside: (_) {},
+                        textInputAction: TextInputAction.search,
+                        onChanged: search.type,
+                        onSubmitted: (value) {
+                          search.remember(value);
+                          _focus.unfocus();
+                        },
+                        decoration: InputDecoration(
+                          hintText: context.tr('Search films'),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppColors.muted,
+                          ),
+                          suffixIcon: _query.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: context.tr('Clear search'),
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: AppColors.muted,
+                                  ),
+                                  onPressed: () {
+                                    _query.clear();
+                                    search.apply('');
+                                  },
                                 ),
-                                onPressed: () {
-                                  _query.clear();
-                                  search.apply('');
-                                },
-                              ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: showSuggestions
-                    ? _Suggestions(
-                        recent: search.recent,
-                        trending: search.trending,
-                        onTerm: _useTerm,
-                        onForget: search.forget,
-                        onClear: search.clearRecent,
-                        onDismiss: _focus.unfocus,
-                      )
-                    : CustomScrollView(
-                        keyboardDismissBehavior:
-                            ScrollViewKeyboardDismissBehavior.onDrag,
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.only(
-                                top: 12,
-                                bottom: 8,
-                              ),
-                              child: Text(
-                                '${films.length} ${films.length == 1 ? 'film' : 'films'}',
-                                style: const TextStyle(
-                                  color: AppColors.muted,
-                                  fontSize: 13,
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: showSuggestions
+                      ? _Suggestions(
+                          recent: search.recent,
+                          trending: search.trending,
+                          onTerm: _useTerm,
+                          onForget: search.forget,
+                          onClear: search.clearRecent,
+                          onDismiss: _focus.unfocus,
+                        )
+                      : CustomScrollView(
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 12,
+                                  bottom: 8,
+                                ),
+                                child: Text(
+                                  '${films.length} ${films.length == 1 ? 'film' : 'films'}',
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          if (search.error != null)
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: ErrorView(
-                                message: search.error!,
-                                onRetry: () => search.apply(search.query),
+                            if (search.error != null)
+                              SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: ErrorView(
+                                  message: search.error!,
+                                  onRetry: () => search.apply(search.query),
+                                ),
+                              )
+                            else if (films.isEmpty)
+                              const SliverFillRemaining(
+                                hasScrollBody: false,
+                                child: EmptyView(
+                                  message: 'No films match your search.',
+                                ),
+                              )
+                            else
+                              SliverGrid.builder(
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 14,
+                                      childAspectRatio: 0.66,
+                                    ),
+                                itemCount: films.length,
+                                itemBuilder: (_, i) => FilmCard(film: films[i]),
                               ),
-                            )
-                          else if (films.isEmpty)
-                            const SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: EmptyView(
-                                message: 'No films match your search.',
-                              ),
-                            )
-                          else
-                            SliverGrid.builder(
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 14,
-                                    childAspectRatio: 0.66,
-                                  ),
-                              itemCount: films.length,
-                              itemBuilder: (_, i) => FilmCard(film: films[i]),
-                            ),
-                        ],
-                      ),
-              ),
-            ],
+                          ],
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -135,9 +135,7 @@ class _DramaCard extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () {
-        final film = context.read<FeedController>().repository.catalogFilm(
-          drama,
-        );
+        final film = context.read<FeedController>().catalogFilm(drama);
         Navigator.of(
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => PlayerView(film: film)));

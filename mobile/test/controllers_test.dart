@@ -63,19 +63,22 @@ void main() {
       expect(auth.isLoggedIn, isFalse);
     });
 
-    test('logout clears the user and runs the logout listeners even offline', () async {
-      repo.logoutFails = true;
-      final auth = AuthController(repo);
-      var cleaned = false;
-      auth.addLogoutListener(() => cleaned = true);
-      await auth.login('viewer01', '6666');
+    test(
+      'logout clears the user and runs the logout listeners even offline',
+      () async {
+        repo.logoutFails = true;
+        final auth = AuthController(repo);
+        var cleaned = false;
+        auth.addLogoutListener(() => cleaned = true);
+        await auth.login('viewer01', '6666');
 
-      await auth.logout();
+        await auth.logout();
 
-      expect(auth.user, isNull);
-      expect(cleaned, isTrue);
-      expect(auth.hasEntered, isFalse);
-    });
+        expect(auth.user, isNull);
+        expect(cleaned, isTrue);
+        expect(auth.hasEntered, isFalse);
+      },
+    );
 
     test('a login that finishes after logout is dropped', () async {
       repo.loginGate = Completer<User>();
@@ -144,18 +147,21 @@ void main() {
       expect(repo.calls, containsAll(['demoTopUp', 'topUpPack 1']));
     });
 
-    test('unlock spends coins, and a refused unlock reaches the caller', () async {
-      await wallet.unlock(9);
-      expect(wallet.balance, 60);
+    test(
+      'unlock spends coins, and a refused unlock reaches the caller',
+      () async {
+        await wallet.unlock(9);
+        expect(wallet.balance, 60);
 
-      repo.unlockError = const ApiException(
-        code: 'INSUFFICIENT_COINS',
-        message: 'Not enough coins',
-        statusCode: 402,
-      );
-      await expectLater(wallet.unlock(9), throwsA(isA<ApiException>()));
-      expect(wallet.balance, 60);
-    });
+        repo.unlockError = const ApiException(
+          code: 'INSUFFICIENT_COINS',
+          message: 'Not enough coins',
+          statusCode: 402,
+        );
+        await expectLater(wallet.unlock(9), throwsA(isA<ApiException>()));
+        expect(wallet.balance, 60);
+      },
+    );
 
     test('logging out drops what was loaded', () async {
       await wallet.load();
@@ -174,19 +180,22 @@ void main() {
       expect(search.error, isNull);
     });
 
-    test('a slow answer for an old word does not replace the newer one', () async {
-      repo.filmList = [_film(1, 'Salt & Signal'), _film(2, 'Paper Moons')];
-      repo.filmGates['s'] = Completer<List<Film>>();
-      final search = FilmSearchController(repo);
+    test(
+      'a slow answer for an old word does not replace the newer one',
+      () async {
+        repo.filmList = [_film(1, 'Salt & Signal'), _film(2, 'Paper Moons')];
+        repo.filmGates['s'] = Completer<List<Film>>();
+        final search = FilmSearchController(repo);
 
-      final old = search.apply('s');
-      await search.apply('paper');
-      repo.filmGates['s']!.complete([_film(1, 'Salt & Signal')]);
-      await old;
+        final old = search.apply('s');
+        await search.apply('paper');
+        repo.filmGates['s']!.complete([_film(1, 'Salt & Signal')]);
+        await old;
 
-      expect(search.query, 'paper');
-      expect(search.results.map((f) => f.title), ['Paper Moons']);
-    });
+        expect(search.query, 'paper');
+        expect(search.results.map((f) => f.title), ['Paper Moons']);
+      },
+    );
 
     test('a failed search clears the results and shows why', () async {
       repo.filmsError = _serverDown;
@@ -194,6 +203,24 @@ void main() {
       await search.apply('x');
       expect(search.results, isEmpty);
       expect(search.error, 'Cannot reach the server');
+    });
+
+    test('typing searches once, after the pause, for the last word', () async {
+      repo.filmList = [_film(1, 'Salt & Signal'), _film(2, 'Paper Moons')];
+      final search = FilmSearchController(repo);
+      Iterable<String> filmCalls() =>
+          repo.calls.where((c) => c.startsWith('films'));
+      for (final word in ['p', 'pa', 'pap', 'paper']) {
+        search.type(word);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      expect(filmCalls(), isEmpty);
+      await Future<void>.delayed(
+        FilmSearchController.typingPause + const Duration(milliseconds: 100),
+      );
+      expect(filmCalls(), ['films paper']);
+      expect(search.results.map((f) => f.title), ['Paper Moons']);
+      search.dispose();
     });
 
     test('trending is the five most liked films', () async {

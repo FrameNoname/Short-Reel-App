@@ -6,9 +6,9 @@ import '../services/errors.dart';
 /// State for the admin tab and the screens it opens: sales, films, comments,
 /// settings and coin packs. Actions throw so the screen can show the message.
 class AdminController extends ChangeNotifier {
-  AdminController(this.repository);
+  AdminController(this._repository);
 
-  final AppRepository repository;
+  final AppRepository _repository;
 
   AdminSales sales = const AdminSales(totalUsd: 0);
   bool isLoading = false;
@@ -32,7 +32,7 @@ class AdminController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      sales = await repository.adminSales();
+      sales = await _repository.adminSales();
     } on Object catch (e) {
       error = errorMessage(e);
     }
@@ -47,7 +47,7 @@ class AdminController extends ChangeNotifier {
     filmsError = null;
     notifyListeners();
     try {
-      films = await repository.adminFilms();
+      films = await _repository.adminFilms();
     } on Object catch (e) {
       filmsError = errorMessage(e);
     }
@@ -56,7 +56,7 @@ class AdminController extends ChangeNotifier {
   }
 
   Future<void> setTakenDown(AdminFilm film, bool takenDown) async {
-    await repository.adminSetFilmTakenDown(film.id, takenDown);
+    await _repository.adminSetFilmTakenDown(film.id, takenDown);
     films = [
       for (final f in films) f.id == film.id ? f.withTakenDown(takenDown) : f,
     ];
@@ -64,13 +64,13 @@ class AdminController extends ChangeNotifier {
   }
 
   Future<List<AdminEpisode>> episodesOf(int filmId) =>
-      repository.adminEpisodes(filmId);
+      _repository.adminEpisodes(filmId);
 
   Future<AdminEpisode> updateEpisode(
     AdminEpisode episode, {
     required bool isFree,
     required int priceCoins,
-  }) => repository.adminUpdateEpisode(
+  }) => _repository.adminUpdateEpisode(
     episode,
     isFree: isFree,
     priceCoins: priceCoins,
@@ -83,7 +83,7 @@ class AdminController extends ChangeNotifier {
     commentsError = null;
     notifyListeners();
     try {
-      comments = await repository.adminComments();
+      comments = await _repository.adminComments();
     } on Object catch (e) {
       commentsError = errorMessage(e);
     }
@@ -92,7 +92,7 @@ class AdminController extends ChangeNotifier {
   }
 
   Future<void> deleteComment(AdminComment comment) async {
-    await repository.adminDeleteComment(comment.id);
+    await _repository.adminDeleteComment(comment.id);
     comments = [
       for (final c in comments)
         if (c.id != comment.id) c,
@@ -108,8 +108,8 @@ class AdminController extends ChangeNotifier {
     notifyListeners();
     try {
       final results = await Future.wait([
-        repository.adminSettings(),
-        repository.adminCoinPacks(),
+        _repository.adminSettings(),
+        _repository.adminCoinPacks(),
       ]);
       settings = results[0] as AdminSettings;
       coinPacks = results[1] as List<AdminCoinPack>;
@@ -121,7 +121,7 @@ class AdminController extends ChangeNotifier {
   }
 
   Future<void> saveSettings(AdminSettings value) async {
-    settings = await repository.adminSaveSettings(value);
+    settings = await _repository.adminSaveSettings(value);
     notifyListeners();
   }
 
@@ -131,18 +131,18 @@ class AdminController extends ChangeNotifier {
     required int coins,
     required double priceUsd,
   }) async {
-    await repository.adminSaveCoinPack(
+    await _repository.adminSaveCoinPack(
       id: id,
       name: name,
       coins: coins,
       priceUsd: priceUsd,
     );
-    coinPacks = await repository.adminCoinPacks();
+    coinPacks = await _repository.adminCoinPacks();
     notifyListeners();
   }
 
   Future<void> deleteCoinPack(AdminCoinPack pack) async {
-    await repository.adminDeleteCoinPack(pack.id);
+    await _repository.adminDeleteCoinPack(pack.id);
     coinPacks = [
       for (final p in coinPacks)
         if (p.id != pack.id) p,
