@@ -147,7 +147,6 @@ const _exact = {
   'Tell people what you make': 'บอกให้คนอื่นรู้ว่าคุณสร้างอะไร',
   'Profile saved.': 'บันทึกโปรไฟล์แล้ว',
   'Enter a name for your channel.': 'กรุณาใส่ชื่อช่องของคุณ',
-  'Change your name and bio': 'เปลี่ยนชื่อและคำอธิบายของคุณ',
   'No films yet.': 'ยังไม่มีหนัง',
   'Verified': 'ยืนยันแล้ว',
 
