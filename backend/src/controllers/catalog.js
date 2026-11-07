@@ -1,6 +1,7 @@
 const ApiError = require('../utils/ApiError');
 const catalogModel = require('../models/catalog');
 const wallet = require('../models/wallet');
+const freereels = require('../services/freereels');
 
 const SORTS = new Set(['latest', 'title', 'episodes']);
 const MAX_EPISODES_PER_REQUEST = 3;
@@ -43,9 +44,24 @@ function relay(handler) {
   };
 }
 
-exports.platforms = relay((client) => client.get('/api/platforms'));
+exports.platforms = relay(async (client) => freereels.toPlatforms(await client.get(freereels.paths.access)));
 
-exports.dramas = relay((client, req) => {
+// The catalog's string id behind one of our drama numbers.
+async function seriesIdFor(req, dramaId) {
+  const seriesId = await catalogModel.seriesIdOf(req.app.locals.pool, Number(dramaId));
+  if (!seriesId) throw new ApiError(404, 'NOT_FOUND', 'Not found in the catalog');
+  return seriesId;
+}
+
+async function readDrama(client, req, dramaId) {
+  const seriesId = await seriesIdFor(req, dramaId);
+  const info = freereels.detailInfo(await client.get(freereels.paths.drama(seriesId)));
+  if (!info) throw new ApiError(404, 'NOT_FOUND', 'Not found in the catalog');
+  return { seriesId, drama: freereels.toDramaFromDetail(info, Number(dramaId)) };
+}
+
+// FreeReels has no genre filter or sort, so those are checked and ignored.
+exports.dramas = relay(async (client, req) => {
   const { q, genre, sort } = req.query;
   if (q !== undefined && (typeof q !== 'string' || q.length < 1 || q.length > 100)) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'q is not valid');
@@ -56,16 +72,22 @@ exports.dramas = relay((client, req) => {
   if (sort !== undefined && !SORTS.has(sort)) {
     throw new ApiError(400, 'VALIDATION_ERROR', 'sort is not valid');
   }
-  return client.get(`/api/platforms/${id(req.params.platformId)}/dramas`, {
-    q,
-    genre,
-    sort,
+  if (Number(id(req.params.platformId)) !== freereels.PLATFORM_ID) {
+    throw new ApiError(404, 'NOT_FOUND', 'Not found in the catalog');
+  }
+  const paging = {
     page: intIn(req.query.page, 'page', 1, 100000),
     page_size: intIn(req.query.page_size, 'page_size', 1, 50),
-  });
+  };
+  const body = q
+    ? await client.get(freereels.paths.search, { keyword: q, ...paging })
+    : await client.get(freereels.paths.thai, paging);
+  const items = (body.items ?? []).filter((i) => i && i.series_id);
+  const ids = await catalogModel.idsFor(req.app.locals.pool, items.map((i) => i.series_id));
+  return freereels.toPage({ ...body, items }, ids);
 });
 
-exports.drama = relay((client, req) => client.get(`/api/dramas/${id(req.params.dramaId)}`));
+exports.drama = relay(async (client, req) => (await readDrama(client, req, id(req.params.dramaId))).drama);
 
 // The only upstream call that spends quota, so it needs a logged-in viewer.
 // Paid episodes are checked here, before upstream is asked for any link.
@@ -78,7 +100,14 @@ exports.episodes = relay(async (client, req) => {
       ? new ApiError(403, 'FORBIDDEN', 'Unlock this episode to watch it')
       : new ApiError(401, 'UNAUTHENTICATED', 'Log in to watch this episode');
   }
-  return client.get(`/api/dramas/${dramaId}/episodes`, { ep: range.value });
+  const seriesId = await seriesIdFor(req, dramaId);
+  const episodes = [];
+  for (let n = range.from; n <= range.to; n++) {
+    const episode = freereels.toEpisode(await client.get(freereels.paths.play(seriesId, n)), n);
+    if (!episode) throw new ApiError(502, 'CATALOG_ERROR', 'The catalog could not answer');
+    episodes.push(episode);
+  }
+  return { episodes };
 });
 
 // Prices, plus the catalog episodes this viewer already paid for.
@@ -104,8 +133,8 @@ exports.unlock = relay(async (client, req) => {
   if (req.user.role === 'admin') {
     return { access: 'owner', charged: 0, already_unlocked: false, balance };
   }
-  // Reading the series checks it exists and has this episode; it spends no quota.
-  const drama = await client.get(`/api/dramas/${dramaId}`);
+  // Reading the series checks it exists and has this episode.
+  const { drama } = await readDrama(client, req, dramaId);
   if (episodeNo > Number(drama.episode_count)) throw new ApiError(404, 'NOT_FOUND', 'Episode not found');
   const episodeId = await catalogModel.ensureEpisode(pool, {
     dramaId,

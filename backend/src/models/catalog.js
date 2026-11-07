@@ -1,4 +1,4 @@
-// Series Jeen series sold for coins. The early episodes are free; a later one
+// Series Jeen (FreeReels) series sold for coins. The early episodes are free; a later one
 // is paid once and stays open. A series and its paid episodes become rows in
 // films/episodes the first time someone unlocks one, so unlocking, the ledger
 // and admin sales all run through the same tables as the app's own films.
@@ -6,6 +6,34 @@ const { setting } = require('./wallet');
 const { isAdmin } = require('./access');
 
 const TITLE_MAX = 100;
+
+// The catalog names a series with a string id; the app, films and unlocks use
+// a number. catalog_series gives each string id a number the first time it is
+// seen, so the same series always gets the same number.
+exports.idsFor = async (db, seriesIds) => {
+  const unique = [...new Set(seriesIds.map(String))];
+  if (unique.length === 0) return new Map();
+  const lookup = async () => {
+    const [rows] = await db.query('SELECT id, series_id FROM catalog_series WHERE series_id IN (?)', [unique]);
+    return new Map(rows.map((r) => [r.series_id, r.id]));
+  };
+  const known = await lookup();
+  const missing = unique.filter((s) => !known.has(s));
+  if (missing.length === 0) return known;
+  // Only new ids are inserted, so repeat lists do not burn auto-increment
+  // numbers. IGNORE covers two requests adding the same id at once.
+  await db.query(
+    `INSERT IGNORE INTO catalog_series (series_id) VALUES ${missing.map(() => '(?)').join(', ')}`,
+    missing,
+  );
+  return lookup();
+};
+
+// The catalog's string id for one of our numbers, or null if we never saw it.
+exports.seriesIdOf = async (db, id) => {
+  const [[row]] = await db.query('SELECT series_id FROM catalog_series WHERE id = ?', [id]);
+  return row ? row.series_id : null;
+};
 
 exports.pricing = async (db) => ({
   free_episodes: Number(await setting(db, 'catalog_free_episodes', 5)),
