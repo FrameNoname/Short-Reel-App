@@ -55,7 +55,17 @@ class MockRepository implements AppRepository {
     ),
   ];
   final Map<int, int> _commentFilm = {1: 1, 2: 2};
+  late final Map<int, DateTime> _commentTime = {
+    1: _now.subtract(const Duration(hours: 5)),
+    2: _now.subtract(const Duration(days: 1)),
+  };
   int _nextCommentId = 3;
+
+  // What the admin can change: the packs on sale and the demo top-up.
+  final List<CoinPack> _packs = List.of(mockCoinPacks);
+  final Map<int, int> _packSold = {1: 1};
+  int _nextPackId = mockCoinPacks.length + 1;
+  AdminSettings _settings = const AdminSettings();
 
   double _salesUsd = 0.99;
   int _nextEpisodeId = 1;
@@ -314,6 +324,7 @@ class MockRepository implements AppRepository {
       ),
     );
     _commentFilm[id] = filmId;
+    _commentTime[id] = DateTime.now();
     final film = _films[filmId]!;
     _films[filmId] = film.copyWith(commentCount: film.commentCount + 1);
   }
@@ -380,8 +391,10 @@ class MockRepository implements AppRepository {
   Future<User> demoTopUp(int userId) => _topUp(userId, demoTopUpCoins);
 
   @override
-  Future<User> topUpPack(int userId, CoinPack pack) =>
-      _topUp(userId, pack.coins, priceUsd: pack.priceUsd);
+  Future<User> topUpPack(int userId, CoinPack pack) {
+    _packSold[pack.id] = (_packSold[pack.id] ?? 0) + 1;
+    return _topUp(userId, pack.coins, priceUsd: pack.priceUsd);
+  }
 
   Future<User> _topUp(int userId, int coins, {double priceUsd = 0}) async {
     final updated = _user(
@@ -401,10 +414,11 @@ class MockRepository implements AppRepository {
       List.unmodifiable(_transactions[userId] ?? const []);
 
   @override
-  Future<List<CoinPack>> coinPacks() async => mockCoinPacks;
+  Future<List<CoinPack>> coinPacks() async =>
+      List.unmodifiable([..._packs]..sort((a, b) => a.coins - b.coins));
 
   @override
-  int get demoTopUpCoins => 100;
+  int get demoTopUpCoins => _settings.demoTopUpCoins;
 
   @override
   bool isLiked(int userId, int filmId) => _likes.contains((userId, filmId));
@@ -477,11 +491,169 @@ class MockRepository implements AppRepository {
   bool catalogEpisodeLocked(Film film, int episodeNo) => false;
 
   @override
-  Future<AdminSales> adminSales() async => AdminSales(
-    totalUsd: _salesUsd,
-    coinsSpent: _unlocks.fold(0, (sum, u) => sum + u.coinsSpent),
-    unlockCount: _unlocks.length,
-  );
+  Future<AdminSales> adminSales() async {
+    final perFilm = <int, (int, int)>{};
+    for (final u in _unlocks) {
+      final filmId = _episodes[u.episodeId]!.filmId;
+      final (count, coins) = perFilm[filmId] ?? (0, 0);
+      perFilm[filmId] = (count + 1, coins + u.coinsSpent);
+    }
+    final rows = [
+      for (final MapEntry(key: id, value: (count, coins)) in perFilm.entries)
+        FilmSales(
+          filmId: id,
+          title: _films[id]!.title,
+          unlockCount: count,
+          coinsSpent: coins,
+        ),
+    ]..sort((a, b) => b.coinsSpent.compareTo(a.coinsSpent));
+    return AdminSales(
+      totalUsd: _salesUsd,
+      coinsSpent: _unlocks.fold(0, (sum, u) => sum + u.coinsSpent),
+      unlockCount: _unlocks.length,
+      perFilm: rows,
+    );
+  }
+
+  // ---- admin: films, comments, settings and coin packs ----------------------
+
+  /// The app's own films, taken-down ones included; catalog series are not
+  /// listed, as on the server.
+  @override
+  Future<List<AdminFilm>> adminFilms() async {
+    final own = _films.values.where((f) => f.catalogDramaId == null).toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+    return [
+      for (final f in own)
+        AdminFilm(
+          id: f.id,
+          title: f.title,
+          posterUrl: f.posterUrl,
+          takenDown: f.status == 'taken_down',
+          episodeCount: _episodes.values.where((e) => e.filmId == f.id).length,
+          likeCount: f.likeCount,
+          commentCount: f.commentCount,
+          coinsSpent: _unlocks
+              .where((u) => _episodes[u.episodeId]!.filmId == f.id)
+              .fold(0, (sum, u) => sum + u.coinsSpent),
+        ),
+    ];
+  }
+
+  @override
+  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown) async {
+    final film = _films[filmId];
+    if (film == null || film.catalogDramaId != null) {
+      throw _error('NOT_FOUND', 'Film not found', 404);
+    }
+    _films[filmId] = film.copyWith(
+      status: takenDown ? 'taken_down' : 'approved',
+    );
+  }
+
+  @override
+  Future<List<AdminEpisode>> adminEpisodes(int filmId) async => [
+    for (final e in await episodes(filmId))
+      AdminEpisode(
+        id: e.id,
+        episodeNo: e.episodeNo,
+        title: e.title,
+        isFree: e.isFree,
+        priceCoins: e.priceCoins,
+        unlockCount: _unlocks.where((u) => u.episodeId == e.id).length,
+      ),
+  ];
+
+  @override
+  Future<AdminEpisode> adminUpdateEpisode(
+    AdminEpisode episode, {
+    required bool isFree,
+    required int priceCoins,
+  }) async {
+    final price = isFree ? 0 : priceCoins;
+    if (!isFree && price < 1) {
+      throw _error(
+        'VALIDATION_ERROR',
+        'A paid episode needs a price of at least 1 coin',
+        400,
+      );
+    }
+    _episodes[episode.id] = _episodes[episode.id]!.withPrice(price);
+    return episode.copyWith(isFree: isFree, priceCoins: price);
+  }
+
+  @override
+  Future<List<AdminComment>> adminComments() async => [
+    for (final c in _comments)
+      AdminComment(
+        id: c.id,
+        body: c.body,
+        username: c.username,
+        filmTitle: _films[_commentFilm[c.id]]?.title ?? '',
+        createdAt: _commentTime[c.id] ?? _now,
+      ),
+  ];
+
+  @override
+  Future<void> adminDeleteComment(int commentId) => removeComment(commentId);
+
+  @override
+  Future<AdminSettings> adminSettings() async => _settings;
+
+  @override
+  Future<AdminSettings> adminSaveSettings(AdminSettings settings) async {
+    _settings = settings;
+    return settings;
+  }
+
+  @override
+  Future<List<AdminCoinPack>> adminCoinPacks() async => [
+    for (final p in await coinPacks())
+      AdminCoinPack(
+        id: p.id,
+        name: p.name,
+        coins: p.coins,
+        priceUsd: p.priceUsd,
+        soldCount: _packSold[p.id] ?? 0,
+      ),
+  ];
+
+  @override
+  Future<void> adminSaveCoinPack({
+    int? id,
+    required String name,
+    required int coins,
+    required double priceUsd,
+  }) async {
+    final pack = CoinPack(
+      id: id ?? _nextPackId++,
+      name: name,
+      coins: coins,
+      priceUsd: priceUsd,
+    );
+    final index = _packs.indexWhere((p) => p.id == id);
+    if (id != null && index < 0) {
+      throw _error('NOT_FOUND', 'Coin pack not found', 404);
+    }
+    if (index < 0) {
+      _packs.add(pack);
+    } else {
+      _packs[index] = pack;
+    }
+  }
+
+  /// A pack that was already bought stays, as on the server.
+  @override
+  Future<void> adminDeleteCoinPack(int id) async {
+    if ((_packSold[id] ?? 0) > 0) {
+      throw _error(
+        'IN_USE',
+        'This pack was already bought and cannot be deleted',
+        409,
+      );
+    }
+    _packs.removeWhere((p) => p.id == id);
+  }
 }
 
 class _Unlock {
