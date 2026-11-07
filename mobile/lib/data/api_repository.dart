@@ -24,14 +24,13 @@ class ApiRepository implements AppRepository {
   /// Catalog series get ids from here up, so they never collide with real ids.
   static const catalogFilmIdBase = 100000000;
 
-  static const _typicalEpisodePrice = 20;
-
   final ApiClient _api;
   final TokenStore _tokens;
   final String _origin;
 
   User? _me;
   int _demoCoins = 100;
+  int _episodePrice = 20;
 
   final Map<int, Film> _films = {};
   final Set<int> _liked = {};
@@ -295,6 +294,7 @@ class ApiRepository implements AppRepository {
   Future<List<CoinPack>> coinPacks() async {
     final json = await _api.get('/coin-packs') as Map<String, dynamic>;
     _demoCoins = json['demo_topup_coins'] as int;
+    _episodePrice = json['episode_price_coins'] as int? ?? _episodePrice;
     return [
       for (final p in json['coin_packs'] as List)
         CoinPack.fromJson(p as Map<String, dynamic>),
@@ -302,7 +302,7 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  int get episodePriceCoins => _typicalEpisodePrice;
+  int get episodePriceCoins => _episodePrice;
 
   @override
   int get demoTopUpCoins => _demoCoins;
@@ -556,7 +556,9 @@ class ApiRepository implements AppRepository {
       if (_films.containsKey(id)) continue;
       try {
         if (_isCatalog(id)) {
-          final json = await _api.get('/catalog/dramas/${id - catalogFilmIdBase}');
+          final json = await _api.get(
+            '/catalog/dramas/${id - catalogFilmIdBase}',
+          );
           catalogFilm(CatalogDrama.fromJson(json as Map<String, dynamic>));
         } else {
           await episodes(id);
@@ -592,7 +594,9 @@ class ApiRepository implements AppRepository {
   /// its drama id.
   int _filmIdOfUnlock(Map<String, dynamic> row) {
     final dramaId = row['catalog_drama_id'] as int?;
-    return dramaId == null ? row['film_id'] as int : catalogFilmIdBase + dramaId;
+    return dramaId == null
+        ? row['film_id'] as int
+        : catalogFilmIdBase + dramaId;
   }
 
   Future<void> _loadCatalogAccess() async {

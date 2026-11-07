@@ -13,6 +13,18 @@ exports.listCoinPacks = async (pool) => {
   return rows.map((r) => ({ ...r, price_usd: Number(r.price_usd) }));
 };
 
+// The price most paid episodes have, for "about N episodes" hints. Our own
+// films decide it; with none for sale, the catalog price applies.
+exports.typicalEpisodePrice = async (pool) => {
+  const [rows] = await pool.query(
+    `SELECT e.price_coins FROM episodes e JOIN films f ON f.id = e.film_id
+      WHERE e.is_free = 0 AND e.price_coins > 0 AND f.status = 'approved' AND f.catalog_drama_id IS NULL
+      GROUP BY e.price_coins ORDER BY COUNT(*) DESC, e.price_coins LIMIT 1`,
+  );
+  if (rows.length > 0) return rows[0].price_coins;
+  return Number(await setting(pool, 'catalog_price_coins', 10));
+};
+
 exports.getBalance = async (pool, userId) => {
   const [rows] = await pool.query('SELECT coin_balance FROM users WHERE id = ?', [userId]);
   return rows[0].coin_balance;

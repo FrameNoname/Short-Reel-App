@@ -154,8 +154,8 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
       _message = null;
     });
     try {
-      final repository = context.read<FeedController>().repository;
-      final episodes = await repository.episodes(widget.film.id);
+      final feed = context.read<FeedController>();
+      final episodes = await feed.episodes(widget.film.id);
       if (token != _token || !mounted) return;
       if (episodes.isEmpty) throw StateError('no such episode');
       final numbers = [for (final e in episodes) e.episodeNo]..sort();
@@ -168,7 +168,7 @@ class _EpisodeVideoState extends State<EpisodeVideo> {
       );
       if (wanted != widget.episodeNo) widget.onResolved?.call(wanted);
       final match = episodes.where((e) => e.episodeNo == wanted);
-      final playback = await repository.playback(match.first.id);
+      final playback = await feed.playback(match.first.id);
       if (token != _token || !mounted) return;
       final url = playback.streamUrl;
       if (url == null) {

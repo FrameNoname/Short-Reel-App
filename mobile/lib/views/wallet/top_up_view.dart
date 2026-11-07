@@ -22,21 +22,17 @@ class _TopUpViewState extends State<TopUpView> {
   CoinPack? _selected;
   bool _busy = false;
 
-  String _describe(CoinPack pack) {
-    final episodes =
-        pack.coins ~/ context.read<WalletController>().episodePrice;
-    return switch (pack.coins) {
-      330 => 'Includes 30 bonus coins, about $episodes episodes',
-      750 => 'Includes 100 bonus coins, about $episodes episodes',
-      _ => 'About $episodes episodes',
-    };
+  String _describe(CoinPack pack, CoinPackOffers offers) {
+    final price = context.read<WalletController>().episodePrice;
+    final episodes = price > 0 ? pack.coins ~/ price : 0;
+    final bonus = offers.bonusOf(pack);
+    return bonus > 0
+        ? 'Includes $bonus bonus coins, about $episodes episodes'
+        : 'About $episodes episodes';
   }
 
-  String? _badge(CoinPack pack) => switch (pack.coins) {
-    330 => 'Most popular',
-    750 => 'Best value',
-    _ => null,
-  };
+  String? _badge(CoinPack pack, CoinPackOffers offers) =>
+      offers.bestValue == pack ? 'Best value' : null;
 
   @override
   void initState() {
@@ -72,6 +68,7 @@ class _TopUpViewState extends State<TopUpView> {
             : const LoadingView(),
       );
     }
+    final offers = CoinPackOffers(packs);
     final selected = _selected ?? packs[packs.length > 1 ? 1 : 0];
     return Scaffold(
       appBar: AppBar(
@@ -141,7 +138,7 @@ class _TopUpViewState extends State<TopUpView> {
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
-                                if (_badge(pack) case final badge?) ...[
+                                if (_badge(pack, offers) case final badge?) ...[
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
@@ -164,7 +161,7 @@ class _TopUpViewState extends State<TopUpView> {
                               ],
                             ),
                             Text(
-                              _describe(pack),
+                              _describe(pack, offers),
                               style: const TextStyle(
                                 color: AppColors.muted,
                                 fontSize: 12,
