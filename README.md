@@ -14,12 +14,12 @@ ShortReel เป็นแอปดูหนังสั้น AI แบบเล
 
 - **ฟีด:** เลื่อนดูหนังแนวตั้ง ปรับความเร็ววิดีโอได้ และลากแถบเลื่อนเพื่อ seek
 - **ตอนและเหรียญ:** ตอนฟรีดูได้โดยไม่ต้องล็อกอิน ตอนที่ล็อกไว้ใช้เหรียญปลดล็อก
-- **กระเป๋าเงิน:** เติมเหรียญด้วย coin pack หรือปุ่มเดโม +100 ดูประวัติธุรกรรมได้
+- **กระเป๋าเงิน:** เติมเหรียญด้วย coin pack หรือปุ่มเดโม +100 ดูประวัติธุรกรรมได้ โบนัสและป้าย "คุ้มที่สุด" ของแต่ละแพ็กคำนวณจากจำนวนเหรียญและราคาจริง แอดมินแก้แพ็กแล้วข้อความเปลี่ยนตาม
 - **โซเชียล:** กดถูกใจ บันทึกหนังไว้ดูทีหลัง และคอมเมนต์
-- **ค้นหา:** ค้นจากชื่อหนัง
+- **ค้นหา:** ค้นจากชื่อหนัง ระบบจะค้นหลังหยุดพิมพ์ 300 มิลลิวินาที และโหลดรายการใหม่ทุกครั้งที่เปิดแท็บ
 - **โปรไฟล์:** ดูเหรียญ รายการหนังที่บันทึกไว้ และหนังที่ปลดล็อกแล้ว
 - **แอดมิน:** ดูยอดขายและเรื่องที่ขายดี ถอดหนังออกหรือนำกลับมา ตั้งตอนฟรีและราคาแต่ละตอน ดูและลบความคิดเห็น แก้ราคา Series Jeen จำนวนตอนฟรี เหรียญทดลอง และแพ็กเหรียญ เหรียญที่ใช้ปลดล็อกเป็นของแอดมินทั้งหมด รวมถึงซีรีส์จาก Series Jeen
-- **Series Jeen:** แท็บแคตตาล็อกแสดงซีรีส์พากย์ไทยจาก FreeReels ผ่าน Series Open API (`https://api.seriesjeen.online`) ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย ตอนที่ 1-5 ดูฟรี ตอนต่อจากนั้นตอนละ 10 เหรียญ (แก้ได้ที่ `catalog_free_episodes` และ `catalog_price_coins` ในตาราง `settings`) backend ตรวจสิทธิ์ก่อนส่งลิงก์วิดีโอทุกครั้ง
+- **Series Jeen:** แท็บแคตตาล็อกแสดงซีรีส์พากย์ไทยจาก FreeReels ผ่าน Series Open API (`https://api.seriesjeen.online`) ซีรีส์เหล่านี้ต่อท้ายฟีดด้วย ตอนที่ 1-5 ดูฟรี ตอนต่อจากนั้นตอนละ 10 เหรียญ (แก้ได้ที่ `catalog_free_episodes` และ `catalog_price_coins` ในตาราง `settings`) backend ตรวจสิทธิ์ก่อนส่งลิงก์วิดีโอทุกครั้ง บนเว็บจะไม่มีซับไทย เพราะเซิร์ฟเวอร์ของ FreeReels ไม่อนุญาต CORS แต่วิดีโอเล่นได้ปกติ บน Android ซับขึ้นตามปกติ
 
 แอปแสดงผลเป็นภาษาไทย การจ่ายเงินทั้งหมดเป็นแบบ **จำลอง** ไม่มี payment gateway และไม่ใช้เงินจริง
 
@@ -27,20 +27,26 @@ ShortReel เป็นแอปดูหนังสั้น AI แบบเล
 
 ```
 backend/            REST API (Express 5)
-  db/shortreel.sql  สคีมาและข้อมูลตัวอย่าง (12 ตาราง)
+  db/shortreel.sql  สคีมาและข้อมูลตัวอย่าง (13 ตาราง)
   src/routes/       เส้นทาง API
   src/controllers/  ตรวจ input และตอบกลับ
   src/models/       คำสั่ง SQL
-  src/services/     สตรีมวิดีโอ, Series Jeen
+  src/services/     สตรีมวิดีโอ, Series Jeen (FreeReels)
+  test/             unit test (node --test ไม่ต้องใช้ฐานข้อมูล)
   scripts/          สคริปต์นำเข้าคลิปเดโม
   uploads/          ไฟล์วิดีโอ (ไม่อยู่ใน git)
 mobile/             แอป Flutter แบบ MVC
   lib/models/       โมเดลข้อมูล
   lib/views/        หน้าจอ
+  lib/widgets/      widget ที่ใช้ร่วมกัน
   lib/controllers/  state ของแต่ละหน้า (Provider)
   lib/data/         repository ที่เรียก API
+  lib/services/     HTTP client, token และ Series Jeen
   lib/l10n/         คำแปลภาษาไทย
+  test/             unit test ของ model และ controller
 ```
+
+หน้าจอคุยกับ controller เท่านั้น controller เก็บ repository เป็นตัวแปร private หน้าจอจึงเรียก API หรือ repository เองไม่ได้
 
 ### ความปลอดภัย
 
@@ -49,6 +55,7 @@ mobile/             แอป Flutter แบบ MVC
 - วิดีโอเปิดได้เฉพาะผ่าน `/api/episodes/:id/stream` ซึ่งตรวจสิทธิ์ทุกครั้งและรองรับ Range (206) โฟลเดอร์ `uploads/` ไม่ได้เปิดสาธารณะ
 - การปลดล็อกทำใน transaction เดียว จึงไม่หักเหรียญซ้ำและยอดไม่ติดลบ
 - API key ของ Series Jeen เก็บไว้ที่ backend แอปไม่เห็น key
+- แอปรอเชื่อมต่อ API ไม่เกิน 10 วินาที และรอคำตอบไม่เกิน 20 วินาที ถ้าเน็ตหลุดจะขึ้นข้อความแทนการโหลดค้าง
 
 ### วิธีติดตั้ง
 
@@ -144,6 +151,15 @@ cd mobile && flutter test
 
 ไฟล์ test ของ backend วางที่ `backend/test/*.test.js` ส่วนของ Flutter วางที่ `mobile/test/*_test.dart` ถ้า test ต้องใช้ฐานข้อมูล ให้ใช้ฐานที่ชื่อลงท้ายด้วย `_test` ห้ามใช้ `shortreel`
 
+### Branch
+
+| Branch | ใช้ทำอะไร |
+|---|---|
+| `main` | เวอร์ชันหลัก |
+| `develop` | รวมงานก่อนขึ้น `main` |
+| `Frame-dev` | งานที่กำลังพัฒนา แอปต่อ backend จริง |
+| `frontend-only` | แอปอย่างเดียว ไม่ต่อ backend ใช้ข้อมูลจำลองใน `mobile/lib/data/mock_repository.dart` รันได้ด้วย `flutter run` โดยไม่ต้องเปิด backend หรือ MySQL |
+
 ---
 
 ## English
@@ -156,12 +172,12 @@ ShortReel is a vertical-feed app for AI short films, watched one episode at a ti
 
 - **Feed:** vertical swipe feed with playback speed control and a draggable seek bar.
 - **Episodes and coins:** free episodes play without logging in. Locked episodes are unlocked with coins.
-- **Wallet:** top up with coin packs or the demo +100 button, and view transaction history.
+- **Wallet:** top up with coin packs or the demo +100 button, and view transaction history. Each pack's bonus and the "Best value" badge are worked out from its coins and price, so they follow any pack the admin edits.
 - **Social:** like, save to a watchlist, and comment.
-- **Search:** by film title.
+- **Search:** by film title. It searches once typing pauses for 300 ms, and reloads each time the tab is opened.
 - **Profile:** your coins, saved films and unlocked films.
 - **Admin:** view sales and top sellers, take films down or bring them back, set which episodes are free and what each costs, read and delete comments, and change the Series Jeen price, free episode count, demo top-up and coin packs. Every coin spent on an unlock goes to the admin, including Series Jeen episodes.
-- **Series Jeen:** a catalog tab with Thai-dubbed FreeReels series from the Series Open API (`https://api.seriesjeen.online`). These series are also added to the end of the feed. Episodes 1-5 are free and each later episode costs 10 coins (set by `catalog_free_episodes` and `catalog_price_coins` in the `settings` table). The backend checks access before it hands out any video link.
+- **Series Jeen:** a catalog tab with Thai-dubbed FreeReels series from the Series Open API (`https://api.seriesjeen.online`). These series are also added to the end of the feed. Episodes 1-5 are free and each later episode costs 10 coins (set by `catalog_free_episodes` and `catalog_price_coins` in the `settings` table). The backend checks access before it hands out any video link. On the web there are no Thai subtitles, because the FreeReels servers do not allow CORS; the video still plays. On Android the subtitles show normally.
 
 The app is shown in Thai. All payments are **simulated**: there is no payment gateway and no real money.
 
@@ -169,20 +185,26 @@ The app is shown in Thai. All payments are **simulated**: there is no payment ga
 
 ```
 backend/            REST API (Express 5)
-  db/shortreel.sql  schema and sample data (12 tables)
+  db/shortreel.sql  schema and sample data (13 tables)
   src/routes/       API routes
   src/controllers/  input checks and responses
   src/models/       SQL queries
-  src/services/     video streaming, Series Jeen
+  src/services/     video streaming, Series Jeen (FreeReels)
+  test/             unit tests (node --test, no database needed)
   scripts/          demo clip import script
   uploads/          video files (not in git)
 mobile/             Flutter app (MVC)
   lib/models/       data models
   lib/views/        screens
+  lib/widgets/      shared widgets
   lib/controllers/  per-screen state (Provider)
   lib/data/         repository that calls the API
+  lib/services/     HTTP client, token storage and Series Jeen
   lib/l10n/         Thai translations
+  test/             model and controller unit tests
 ```
+
+Screens talk to controllers only. Each controller keeps its repository private, so a screen cannot call the API or the repository itself.
 
 ### Security
 
@@ -191,6 +213,7 @@ mobile/             Flutter app (MVC)
 - Videos are served only through `/api/episodes/:id/stream`. It checks access on every request and supports Range requests (206). The `uploads/` folder is not public.
 - An unlock runs in a single transaction, so coins are never charged twice and balances never go negative.
 - The Series Jeen API key stays on the backend. The app never sees it.
+- The app waits at most 10 seconds to connect to the API and 20 seconds for an answer. A dropped connection shows a message instead of an endless spinner.
 
 ### Getting started
 
@@ -287,3 +310,12 @@ cd mobile && flutter test
 ```
 
 Put backend tests in `backend/test/*.test.js` and Flutter tests in `mobile/test/*_test.dart`. Tests that need a database must use one whose name ends in `_test`, never `shortreel`.
+
+### Branches
+
+| Branch | Purpose |
+|---|---|
+| `main` | The main version |
+| `develop` | Collects work before it goes to `main` |
+| `Frame-dev` | Work in progress; the app talks to the real backend |
+| `frontend-only` | The app alone, with no backend. It uses sample data from `mobile/lib/data/mock_repository.dart` and runs with `flutter run`, without the backend or MySQL. |
