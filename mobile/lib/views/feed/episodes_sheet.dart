@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
-import '../../controllers/wallet_controller.dart';
 import '../../models/episode.dart';
 import '../../models/film.dart';
 import '../../theme/app_theme.dart';
@@ -22,7 +21,10 @@ class EpisodesSheet extends StatelessWidget {
     final feed = context.watch<FeedController>();
     final user = context.watch<AuthController>().user;
     final current = feed.currentEpisodeOf(film.id);
-    final wallet = context.watch<WalletController>();
+    final paidPrices = {
+      for (final e in episodes)
+        if (e.priceCoins > 0) e.priceCoins,
+    };
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 22),
       // A long series has more tiles than the sheet has room for.
@@ -80,10 +82,15 @@ class EpisodesSheet extends StatelessWidget {
                 const SizedBox(width: 14),
                 const _Legend(color: AppColors.primary, label: 'Unlocked'),
                 const SizedBox(width: 14),
-                _Legend(
-                  color: AppColors.gold,
-                  label: '${wallet.episodePrice} coins',
-                ),
+                // Prices come from this film's own episodes: one price shows
+                // as coins, mixed prices as "Paid" (each tile has its price).
+                if (paidPrices.isNotEmpty)
+                  _Legend(
+                    color: AppColors.gold,
+                    label: paidPrices.length == 1
+                        ? '${paidPrices.first} coins'
+                        : 'Paid',
+                  ),
               ],
             ),
           ],
