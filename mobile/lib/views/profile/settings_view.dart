@@ -11,7 +11,6 @@ import '../../widgets/text.dart';
 import '../../widgets/verified_badge.dart';
 import '../auth/login_view.dart';
 import '../feed/speed_sheet.dart';
-import 'edit_profile_view.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -86,13 +85,6 @@ class SettingsView extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
-            _Row(
-              icon: Icons.edit_rounded,
-              title: 'Edit profile',
-              subtitle: 'Change your name and bio',
-              onTap: () => _open(context, const EditProfileView()),
             ),
           ],
           const _SectionLabel('Playback'),
