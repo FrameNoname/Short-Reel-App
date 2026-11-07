@@ -68,7 +68,7 @@ class EpisodesSheet extends StatelessWidget {
                     key: Key('episode-${episode.episodeNo}'),
                     episode: episode,
                     isCurrent: episode.episodeNo == current,
-                    access: feed.repository.accessOf(user?.id, episode),
+                    access: feed.accessOf(user?.id, episode),
                     onTap: () => Navigator.of(context).pop(episode),
                   ),
               ],

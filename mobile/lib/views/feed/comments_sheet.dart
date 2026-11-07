@@ -41,9 +41,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
   Future<void> _load() async {
     try {
-      await context.read<FeedController>().repository.loadComments(
-        widget.film.id,
-      );
+      await context.read<FeedController>().loadComments(widget.film.id);
     } on Object {
       // The sheet keeps showing what it has.
     }
@@ -83,8 +81,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   Widget build(BuildContext context) {
     final feed = context.watch<FeedController>();
     final userId = context.watch<AuthController>().user?.id;
-    final repository = feed.repository;
-    final all = repository.commentsOf(widget.film.id);
+    final all = feed.commentsOf(widget.film.id);
     final comments = all;
     return Padding(
       padding: EdgeInsets.fromLTRB(

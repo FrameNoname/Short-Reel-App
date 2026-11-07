@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../controllers/profile_controller.dart';
-import '../../data/app_repository.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
 import '../../models/user.dart';
@@ -45,14 +44,14 @@ class ProfileView extends StatelessWidget {
         body: LoginPrompt(onLogin: () => _open(context, const LoginView())),
       );
     }
-    final repository = context.watch<ProfileController>().repository;
+    final profile = context.watch<ProfileController>();
     return OnActivated(
       run: () => context.read<ProfileController>().load(user.id),
-      child: _scaffold(context, user, repository),
+      child: _scaffold(context, user, profile),
     );
   }
 
-  Widget _scaffold(BuildContext context, User user, AppRepository repository) {
+  Widget _scaffold(BuildContext context, User user, ProfileController profile) {
     return Scaffold(
       body: SafeArea(
         child: DefaultTabController(
@@ -182,11 +181,11 @@ class ProfileView extends StatelessWidget {
                   child: TabBarView(
                     children: [
                       _FilmRow(
-                        films: repository.watchlistOf(user.id),
+                        films: profile.watchlistOf(user.id),
                         emptyMessage: 'Saved films appear here.',
                       ),
                       _FilmRow(
-                        films: repository.unlockedFilmsOf(user.id),
+                        films: profile.unlockedFilmsOf(user.id),
                         emptyMessage: 'Unlocked films appear here.',
                       ),
                     ],
