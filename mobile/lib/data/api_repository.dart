@@ -321,7 +321,119 @@ class ApiRepository implements AppRepository {
       totalUsd: dollars('coin_topups'),
       coinsSpent: coins['coins_spent'] as int,
       unlockCount: coins['unlock_count'] as int,
+      perFilm: [
+        for (final row in (json['per_film'] as List? ?? const []))
+          FilmSales.fromJson(row as Map<String, dynamic>),
+      ],
     );
+  }
+
+  @override
+  Future<List<AdminFilm>> adminFilms() async {
+    final json = await _api.get('/admin/films') as Map<String, dynamic>;
+    return [
+      for (final f in json['films'] as List)
+        AdminFilm.fromJson(f as Map<String, dynamic>),
+    ];
+  }
+
+  @override
+  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown) async {
+    await _api.put(
+      '/admin/films/$filmId/status',
+      data: {'status': takenDown ? 'taken_down' : 'approved'},
+    );
+  }
+
+  @override
+  Future<List<AdminEpisode>> adminEpisodes(int filmId) async {
+    final json =
+        await _api.get('/admin/films/$filmId/episodes') as Map<String, dynamic>;
+    return [
+      for (final e in json['episodes'] as List)
+        AdminEpisode.fromJson(e as Map<String, dynamic>),
+    ];
+  }
+
+  @override
+  Future<AdminEpisode> adminUpdateEpisode(
+    AdminEpisode episode, {
+    required bool isFree,
+    required int priceCoins,
+  }) async {
+    final json =
+        await _api.put(
+              '/admin/episodes/${episode.id}',
+              data: {'is_free': isFree, if (!isFree) 'price_coins': priceCoins},
+            )
+            as Map<String, dynamic>;
+    return episode.copyWith(
+      isFree: json['is_free'] as bool,
+      priceCoins: json['price_coins'] as int,
+    );
+  }
+
+  @override
+  Future<List<AdminComment>> adminComments() async {
+    final json =
+        await _api.get('/admin/comments', query: {'limit': 200})
+            as Map<String, dynamic>;
+    return [
+      for (final c in json['comments'] as List)
+        AdminComment.fromJson(c as Map<String, dynamic>),
+    ];
+  }
+
+  @override
+  Future<void> adminDeleteComment(int commentId) async {
+    await _api.delete('/admin/comments/$commentId');
+  }
+
+  @override
+  Future<AdminSettings> adminSettings() async {
+    final json = await _api.get('/admin/settings') as Map<String, dynamic>;
+    return AdminSettings.fromJson(json['settings'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<AdminSettings> adminSaveSettings(AdminSettings settings) async {
+    final json =
+        await _api.put('/admin/settings', data: settings.toJson())
+            as Map<String, dynamic>;
+    final saved = AdminSettings.fromJson(
+      json['settings'] as Map<String, dynamic>,
+    );
+    _demoCoins = saved.demoTopUpCoins;
+    return saved;
+  }
+
+  @override
+  Future<List<AdminCoinPack>> adminCoinPacks() async {
+    final json = await _api.get('/admin/coin-packs') as Map<String, dynamic>;
+    return [
+      for (final p in json['coin_packs'] as List)
+        AdminCoinPack.fromJson(p as Map<String, dynamic>),
+    ];
+  }
+
+  @override
+  Future<void> adminSaveCoinPack({
+    int? id,
+    required String name,
+    required int coins,
+    required double priceUsd,
+  }) async {
+    final data = {'name': name, 'coins': coins, 'price_usd': priceUsd};
+    if (id == null) {
+      await _api.post('/admin/coin-packs', data: data);
+    } else {
+      await _api.put('/admin/coin-packs/$id', data: data);
+    }
+  }
+
+  @override
+  Future<void> adminDeleteCoinPack(int id) async {
+    await _api.delete('/admin/coin-packs/$id');
   }
 
   // ---- like, save, comments ---------------------------------------------

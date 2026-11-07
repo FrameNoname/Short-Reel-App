@@ -8,4 +8,20 @@ const router = Router();
 router.use(requireAuth, requireRole('admin'));
 router.get('/sales', admin.sales);
 
+router.get('/films', admin.listFilms);
+router.put('/films/:id/status', admin.setFilmStatus);
+router.get('/films/:id/episodes', admin.listEpisodes);
+router.put('/episodes/:id', admin.updateEpisode);
+
+router.get('/comments', admin.listComments);
+router.delete('/comments/:id', admin.removeComment);
+
+router.get('/settings', admin.getSettings);
+router.put('/settings', admin.saveSettings);
+
+router.get('/coin-packs', admin.listCoinPacks);
+router.post('/coin-packs', admin.createCoinPack);
+router.put('/coin-packs/:id', admin.updateCoinPack);
+router.delete('/coin-packs/:id', admin.deleteCoinPack);
+
 module.exports = router;
