@@ -40,9 +40,23 @@ bool isStaleSession(Object error) =>
     error is ApiException && error.code == staleSessionCode;
 
 class ApiClient {
+  static const connectTimeout = Duration(seconds: 10);
+  static const receiveTimeout = Duration(seconds: 20);
+
   ApiClient({required TokenStore tokens, Dio? dio, this.onUnauthorized})
     : _tokens = tokens,
-      _dio = dio ?? Dio(BaseOptions(baseUrl: apiBaseUrl)) {
+      _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: apiBaseUrl,
+              // A dead or slow network ends in an error the screen can show,
+              // never in a spinner that turns forever. Video streams do not
+              // go through here.
+              connectTimeout: connectTimeout,
+              receiveTimeout: receiveTimeout,
+            ),
+          ) {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {

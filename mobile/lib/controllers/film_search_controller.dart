@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/app_repository.dart';
@@ -28,7 +30,19 @@ class FilmSearchController extends ChangeNotifier {
   // slow answer for an old word can never replace the answer to the current one.
   int _request = 0;
 
+  /// How long typing has to pause before the search runs.
+  static const typingPause = Duration(milliseconds: 300);
+
+  Timer? _typing;
+
+  /// Searches once typing pauses, so every key press does not hit the API.
+  void type(String value) {
+    _typing?.cancel();
+    _typing = Timer(typingPause, () => apply(value));
+  }
+
   Future<void> apply(String value) async {
+    _typing?.cancel();
     final request = ++_request;
     query = value;
     error = null;
@@ -74,5 +88,11 @@ class FilmSearchController extends ChangeNotifier {
   void clearRecent() {
     recent = const [];
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _typing?.cancel();
+    super.dispose();
   }
 }

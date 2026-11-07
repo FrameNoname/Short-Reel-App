@@ -51,6 +51,7 @@ exports.listCoinPacks = async (req, res) => {
   res.json({
     simulated_payment: true,
     demo_topup_coins: Number(await wallet.setting(pool, 'demo_topup_coins', 100)),
+    episode_price_coins: await wallet.typicalEpisodePrice(pool),
     coin_packs: await wallet.listCoinPacks(pool),
   });
 };
