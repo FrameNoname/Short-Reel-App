@@ -63,7 +63,7 @@ class _FilmPageState extends State<FilmPage> {
 
   Film get film => widget.film;
 
-  bool get playsVideo => context.read<FeedController>().repository.playsVideo;
+  bool get playsVideo => context.read<FeedController>().playsVideo;
 
   void _whenLoggedIn(BuildContext context, void Function(int userId) action) {
     final userId = context.read<AuthController>().user?.id;
@@ -80,7 +80,7 @@ class _FilmPageState extends State<FilmPage> {
     final feed = context.read<FeedController>();
     _whenLoggedIn(context, (userId) {
       setState(() => _bursts.add(_Burst(_burstId++, _lastTap)));
-      if (!feed.repository.isLiked(userId, film.id)) {
+      if (!feed.isLiked(userId, film.id)) {
         feed.toggleLike(userId, film.id);
       }
     });
@@ -96,11 +96,11 @@ class _FilmPageState extends State<FilmPage> {
     final feed = context.watch<FeedController>();
     final userId = context.watch<AuthController>().user?.id;
     final episode = widget.episode ?? feed.currentEpisodeOf(film.id);
-    final isLiked = userId != null && feed.repository.isLiked(userId, film.id);
-    final isSaved = userId != null && feed.repository.isSaved(userId, film.id);
+    final isLiked = userId != null && feed.isLiked(userId, film.id);
+    final isSaved = userId != null && feed.isSaved(userId, film.id);
     // A paid catalog episode stays closed until it is unlocked; the backend
     // refuses its links anyway, this only shows why.
-    final catalogLocked = feed.repository.catalogEpisodeLocked(film, episode);
+    final catalogLocked = feed.catalogEpisodeLocked(film, episode);
     // Room for the floating navigation bar when the feed runs under it.
     final inset = MediaQuery.paddingOf(context).bottom;
 

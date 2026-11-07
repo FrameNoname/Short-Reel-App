@@ -9,11 +9,11 @@ import '../services/errors.dart';
 import 'auth_controller.dart';
 
 class WalletController extends ChangeNotifier {
-  WalletController(this.repository, this._auth) {
+  WalletController(this._repository, this._auth) {
     _auth.addListener(_followLogin);
   }
 
-  final AppRepository repository;
+  final AppRepository _repository;
   final AuthController _auth;
 
   List<Transaction> transactions = const [];
@@ -28,9 +28,9 @@ class WalletController extends ChangeNotifier {
   int get balance => _auth.user?.coinBalance ?? 0;
 
   /// A typical episode price, only used for "= N episodes" hints.
-  int get episodePrice => repository.episodePriceCoins;
+  int get episodePrice => _repository.episodePriceCoins;
 
-  int get demoTopUpCoins => repository.demoTopUpCoins;
+  int get demoTopUpCoins => _repository.demoTopUpCoins;
 
   /// Another person logged in (or out): drop what belonged to the last one.
   void _followLogin() {
@@ -57,11 +57,11 @@ class WalletController extends ChangeNotifier {
     notifyListeners();
     try {
       final results = await Future.wait<Object?>([
-        repository.transactionsOf(id),
-        repository.coinPacks(),
+        _repository.transactionsOf(id),
+        _repository.coinPacks(),
         // The balance is read from the server too: it may have changed from
         // another device since this person logged in.
-        repository.refreshBalance(id),
+        _repository.refreshBalance(id),
       ]);
       // Another person logged in, or a newer load started: this answer is old.
       if (request != _request || _auth.user?.id != id) return;
@@ -93,14 +93,14 @@ class WalletController extends ChangeNotifier {
   }
 
   Future<void> demoTopUp() =>
-      _act((id) async => _auth.updateUser(await repository.demoTopUp(id)));
+      _act((id) async => _auth.updateUser(await _repository.demoTopUp(id)));
 
   Future<void> buy(CoinPack pack) => _act(
-    (id) async => _auth.updateUser(await repository.topUpPack(id, pack)),
+    (id) async => _auth.updateUser(await _repository.topUpPack(id, pack)),
   );
 
   Future<void> unlock(int episodeId) => _act(
-    (id) async => _auth.updateUser(await repository.unlock(id, episodeId)),
+    (id) async => _auth.updateUser(await _repository.unlock(id, episodeId)),
   );
 
   @override

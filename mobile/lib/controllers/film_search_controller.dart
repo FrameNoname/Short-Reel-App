@@ -6,9 +6,9 @@ import '../services/api_client.dart' show isStaleSession;
 import '../services/errors.dart';
 
 class FilmSearchController extends ChangeNotifier {
-  FilmSearchController(this.repository);
+  FilmSearchController(this._repository);
 
-  final AppRepository repository;
+  final AppRepository _repository;
 
   String query = '';
   List<Film> results = const [];
@@ -33,7 +33,7 @@ class FilmSearchController extends ChangeNotifier {
     query = value;
     error = null;
     try {
-      final found = await repository.films(value);
+      final found = await _repository.films(value);
       if (request != _request) return;
       results = found;
     } on Object catch (e) {
@@ -46,7 +46,7 @@ class FilmSearchController extends ChangeNotifier {
 
   Future<void> loadTrending() async {
     try {
-      final films = [...await repository.films()]
+      final films = [...await _repository.films()]
         ..sort((a, b) => b.likeCount.compareTo(a.likeCount));
       trending = films.take(5).toList();
     } on Object {
