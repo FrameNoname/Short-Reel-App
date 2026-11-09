@@ -229,6 +229,11 @@ const _exact = {
       'ผู้ชมจะมองไม่เห็นเรื่องนี้ แต่นำกลับมาได้ภายหลัง',
   'Take down': 'ถอดออก',
   'Taken down': 'ถูกถอดออก',
+  'Search Series Jeen': 'ค้นหาเรื่องใน Series Jeen',
+  'No Series Jeen series sold yet. Search to take one down.':
+      'ยังไม่มีเรื่อง Series Jeen ที่ขายได้ ค้นหาเพื่อถอดเรื่องออก',
+  'App films': 'หนังของแอป',
+  'Nothing found': 'ไม่พบผลลัพธ์',
   'Film taken down.': 'ถอดหนังออกแล้ว',
   'Film is live again.': 'หนังกลับมาแสดงแล้ว',
   'This film has no episodes.': 'หนังเรื่องนี้ยังไม่มีตอน',
