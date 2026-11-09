@@ -134,6 +134,44 @@ class FakeRepository implements AppRepository {
         .toList();
   }
 
+  // ---- likes, comments and the library ----
+  /// What [filmById] answers, as the repository's latest copy of a film.
+  final Map<int, Film> latest = {};
+  List<Film> watchlist = const [];
+  List<Film> unlockedFilms = const [];
+  Object? libraryError;
+
+  @override
+  Film? filmById(int id) => latest[id];
+
+  @override
+  Future<void> toggleLike(int userId, int filmId) async =>
+      calls.add('toggleLike $filmId');
+
+  @override
+  Future<void> toggleSave(int userId, int filmId) async =>
+      calls.add('toggleSave $filmId');
+
+  @override
+  Future<void> addComment(int userId, int filmId, String body) async =>
+      calls.add('addComment $filmId $body');
+
+  @override
+  Future<void> removeComment(int commentId) async =>
+      calls.add('removeComment $commentId');
+
+  @override
+  Future<void> refreshLibrary(int userId) async {
+    calls.add('refreshLibrary $userId');
+    if (libraryError != null) throw libraryError!;
+  }
+
+  @override
+  List<Film> watchlistOf(int userId) => watchlist;
+
+  @override
+  List<Film> unlockedFilmsOf(int userId) => unlockedFilms;
+
   // ---- admin ----
   AdminSales sales = const AdminSales(totalUsd: 4.99, coinsSpent: 80);
   List<AdminFilm> adminFilmList = const [];
