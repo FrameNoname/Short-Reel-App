@@ -11,11 +11,11 @@ void main() {
 
   test('a taken-down film disappears from the feed and comes back', () async {
     final film = (await repo.adminFilms()).first;
-    await repo.adminSetFilmTakenDown(film.id, true);
+    await repo.adminSetFilmTakenDown(film, true);
     expect((await repo.films()).map((f) => f.id), isNot(contains(film.id)));
     expect((await repo.adminFilms()).first.takenDown, isTrue);
 
-    await repo.adminSetFilmTakenDown(film.id, false);
+    await repo.adminSetFilmTakenDown(film, false);
     expect((await repo.films()).map((f) => f.id), contains(film.id));
   });
 
