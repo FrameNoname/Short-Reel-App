@@ -541,7 +541,8 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown) async {
+  Future<void> adminSetFilmTakenDown(AdminFilm admin, bool takenDown) async {
+    final filmId = admin.id;
     final film = _films[filmId];
     if (film == null || film.catalogDramaId != null) {
       throw _error('NOT_FOUND', 'Film not found', 404);
@@ -550,6 +551,10 @@ class MockRepository implements AppRepository {
       status: takenDown ? 'taken_down' : 'approved',
     );
   }
+
+  // There is no Series Jeen catalog without the backend.
+  @override
+  Future<List<AdminFilm>> adminSearchCatalog(String query) async => const [];
 
   @override
   Future<List<AdminEpisode>> adminEpisodes(int filmId) async => [
