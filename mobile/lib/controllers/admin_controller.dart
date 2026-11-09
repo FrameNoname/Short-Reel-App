@@ -18,6 +18,13 @@ class AdminController extends ChangeNotifier {
   bool filmsLoading = false;
   String? filmsError;
 
+  /// Series Jeen search on the films screen; empty when not searching.
+  String searchQuery = '';
+  List<AdminFilm> searchResults = const [];
+  bool searchLoading = false;
+  String? searchError;
+  int _searchTurn = 0;
+
   List<AdminComment> comments = const [];
   bool commentsLoading = false;
   String? commentsError;
@@ -55,12 +62,46 @@ class AdminController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setTakenDown(AdminFilm film, bool takenDown) async {
-    await _repository.adminSetFilmTakenDown(film.id, takenDown);
-    films = [
-      for (final f in films) f.id == film.id ? f.withTakenDown(takenDown) : f,
-    ];
+  Future<void> searchCatalog(String query) async {
+    final turn = ++_searchTurn;
+    searchQuery = query.trim();
+    searchError = null;
+    if (searchQuery.isEmpty) {
+      searchResults = const [];
+      searchLoading = false;
+      notifyListeners();
+      return;
+    }
+    searchLoading = true;
     notifyListeners();
+    try {
+      final results = await _repository.adminSearchCatalog(searchQuery);
+      if (turn != _searchTurn) return;
+      searchResults = results;
+    } on Object catch (e) {
+      if (turn != _searchTurn) return;
+      searchError = errorMessage(e);
+    }
+    searchLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> setTakenDown(AdminFilm film, bool takenDown) async {
+    await _repository.adminSetFilmTakenDown(film, takenDown);
+    searchResults = [
+      for (final f in searchResults)
+        f.sameAs(film) ? f.withTakenDown(takenDown) : f,
+    ];
+    if (films.any(film.sameAs)) {
+      films = [
+        for (final f in films) f.sameAs(film) ? f.withTakenDown(takenDown) : f,
+      ];
+      notifyListeners();
+    } else {
+      // A series found by search gets its own row once taken down.
+      notifyListeners();
+      await loadFilms();
+    }
   }
 
   Future<List<AdminEpisode>> episodesOf(int filmId) =>
@@ -155,6 +196,9 @@ class AdminController extends ChangeNotifier {
     error = null;
     films = const [];
     filmsError = null;
+    searchQuery = '';
+    searchResults = const [];
+    searchError = null;
     comments = const [];
     commentsError = null;
     settings = const AdminSettings();

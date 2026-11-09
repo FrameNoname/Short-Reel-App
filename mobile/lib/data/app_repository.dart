@@ -136,7 +136,8 @@ abstract class AppRepository {
 
   // Admin: content, comments and settings.
   Future<List<AdminFilm>> adminFilms();
-  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown);
+  Future<void> adminSetFilmTakenDown(AdminFilm film, bool takenDown);
+  Future<List<AdminFilm>> adminSearchCatalog(String query);
   Future<List<AdminEpisode>> adminEpisodes(int filmId);
   Future<AdminEpisode> adminUpdateEpisode(
     AdminEpisode episode, {

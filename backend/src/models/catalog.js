@@ -6,6 +6,10 @@ const { setting } = require('./wallet');
 const { isAdmin } = require('./access');
 
 const TITLE_MAX = 100;
+const POSTER_MAX = 255;
+
+// A cover link too long for the column is left out rather than cut.
+const posterOrNull = (url) => (url && String(url).length <= POSTER_MAX ? String(url) : null);
 
 // The catalog names a series with a string id; the app, films and unlocks use
 // a number. catalog_series gives each string id a number the first time it is
@@ -33,6 +37,39 @@ exports.idsFor = async (db, seriesIds) => {
 exports.seriesIdOf = async (db, id) => {
   const [[row]] = await db.query('SELECT series_id FROM catalog_series WHERE id = ?', [id]);
   return row ? row.series_id : null;
+};
+
+// The drama numbers among `ids` the admin took down.
+exports.takenDownIds = async (db, ids) => {
+  if (ids.length === 0) return new Set();
+  const [rows] = await db.query(
+    "SELECT catalog_drama_id FROM films WHERE status = 'taken_down' AND catalog_drama_id IN (?)",
+    [ids],
+  );
+  return new Set(rows.map((r) => r.catalog_drama_id));
+};
+
+exports.isTakenDown = async (db, dramaId) => (await exports.takenDownIds(db, [dramaId])).size > 0;
+
+// Admin rows for these drama numbers, by drama number.
+exports.filmsOf = async (db, ids) => {
+  if (ids.length === 0) return new Map();
+  const [rows] = await db.query(
+    'SELECT id, catalog_drama_id, status FROM films WHERE catalog_drama_id IN (?)',
+    [ids],
+  );
+  return new Map(rows.map((r) => [r.catalog_drama_id, r]));
+};
+
+// Takes a series down or brings it back. A series nobody bought yet has no
+// films row, so one is made to hold the status.
+exports.setStatus = async (db, { dramaId, title, poster, status }) => {
+  await db.query(
+    `INSERT INTO films (title, poster_url, is_ai_generated, catalog_drama_id, status) VALUES (?, ?, 0, ?, ?)
+     ON DUPLICATE KEY UPDATE status = VALUES(status), title = VALUES(title),
+       poster_url = COALESCE(VALUES(poster_url), poster_url)`,
+    [String(title).slice(0, TITLE_MAX), posterOrNull(poster), dramaId, status],
+  );
 };
 
 exports.pricing = async (db) => ({
@@ -82,11 +119,11 @@ exports.unlocksOf = async (db, userId) => {
 // episode rows on first use. Both inserts are idempotent (unique keys), so two
 // viewers unlocking the same new series at once end up with the same rows. The
 // price follows the current setting, so a change applies to the next unlock.
-exports.ensureEpisode = async (db, { dramaId, title, episodeNo, priceCoins }) => {
+exports.ensureEpisode = async (db, { dramaId, title, poster, episodeNo, priceCoins }) => {
   await db.query(
-    `INSERT INTO films (title, is_ai_generated, catalog_drama_id) VALUES (?, 0, ?)
-     ON DUPLICATE KEY UPDATE title = VALUES(title)`,
-    [String(title).slice(0, TITLE_MAX), dramaId],
+    `INSERT INTO films (title, poster_url, is_ai_generated, catalog_drama_id) VALUES (?, ?, 0, ?)
+     ON DUPLICATE KEY UPDATE title = VALUES(title), poster_url = COALESCE(VALUES(poster_url), poster_url)`,
+    [String(title).slice(0, TITLE_MAX), posterOrNull(poster), dramaId],
   );
   const [[film]] = await db.query('SELECT id FROM films WHERE catalog_drama_id = ?', [dramaId]);
   await db.query(
