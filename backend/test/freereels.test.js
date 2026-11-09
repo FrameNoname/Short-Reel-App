@@ -61,10 +61,12 @@ function fakeClient(answers) {
   };
 }
 
-function idPool(known = { m4FzR2J0iQ: 7 }) {
+function idPool(known = { m4FzR2J0iQ: 7 }, takenDown = []) {
   const table = new Map(Object.entries(known));
   let next = 100;
   return fakePool([
+    [/status = 'taken_down' AND catalog_drama_id IN/, ([ids]) =>
+      ids.filter((id) => takenDown.includes(id)).map((id) => ({ catalog_drama_id: id }))],
     [/^INSERT IGNORE INTO catalog_series/, (params) => {
       for (const s of params) if (!table.has(s)) table.set(s, next++);
       return { affectedRows: params.length };
@@ -168,6 +170,30 @@ test('dramas lists Thai dubs, or searches when q is given', async () => {
   await run(controller.dramas, fakeReq({ pool: idPool(), locals, params: { platformId: '19' }, query: { q: 'รัก' } }));
   assert.equal(client.calls[1].path, freereels.paths.search);
   assert.equal(client.calls[1].query.keyword, 'รัก');
+});
+
+test('dramas leaves out a series the admin took down', async () => {
+  const client = fakeClient({
+    [freereels.paths.thai]: { page: 1, page_size: 20, total: 1, items: [listItem] },
+  });
+  const pool = idPool(undefined, [7]);
+  const list = await run(controller.dramas, fakeReq({ pool, locals: { catalog: client }, params: { platformId: '19' } }));
+  assert.deepEqual(list.items, []);
+});
+
+test('a taken-down series is a 404 for viewers, before the catalog is asked', async () => {
+  const client = fakeClient({});
+  const pool = idPool(undefined, [7]);
+  const user = { id: 2, role: 'viewer' };
+  await assert.rejects(
+    run(controller.drama, fakeReq({ pool, user, locals: { catalog: client }, params: { dramaId: '7' } })),
+    (err) => err.status === 404,
+  );
+  await assert.rejects(
+    run(controller.episodes, fakeReq({ pool, user, locals: { catalog: client }, params: { dramaId: '7' }, query: { ep: '1' } })),
+    (err) => err.status === 404,
+  );
+  assert.equal(client.calls.length, 0);
 });
 
 test('dramas on another platform id is a 404', async () => {

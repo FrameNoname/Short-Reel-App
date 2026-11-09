@@ -35,11 +35,17 @@ class AdminFilm {
     required this.likeCount,
     required this.commentCount,
     required this.coinsSpent,
+    this.catalogDramaId,
   });
 
+  /// 0 for a Series Jeen series nobody bought or took down yet.
   final int id;
   final String title;
   final String? posterUrl;
+
+  /// Set for a Series Jeen series.
+  final int? catalogDramaId;
+  bool get isCatalog => catalogDramaId != null;
   final bool takenDown;
   final int episodeCount;
   final int likeCount;
@@ -55,6 +61,7 @@ class AdminFilm {
     likeCount: _int(json['like_count']),
     commentCount: _int(json['comment_count']),
     coinsSpent: _int(json['coins_spent']),
+    catalogDramaId: (json['catalog_drama_id'] as num?)?.toInt(),
   );
 
   AdminFilm withTakenDown(bool value) => AdminFilm(
@@ -66,7 +73,13 @@ class AdminFilm {
     likeCount: likeCount,
     commentCount: commentCount,
     coinsSpent: coinsSpent,
+    catalogDramaId: catalogDramaId,
   );
+
+  /// Same film, either as a listed row or a search result.
+  bool sameAs(AdminFilm other) => isCatalog
+      ? catalogDramaId == other.catalogDramaId
+      : !other.isCatalog && id == other.id;
 }
 
 class AdminEpisode {

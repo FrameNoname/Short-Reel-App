@@ -338,11 +338,32 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown) async {
+  Future<void> adminSetFilmTakenDown(AdminFilm film, bool takenDown) async {
+    final dramaId = film.catalogDramaId;
     await _api.put(
-      '/admin/films/$filmId/status',
+      dramaId == null
+          ? '/admin/films/${film.id}/status'
+          : '/admin/catalog/$dramaId/status',
       data: {'status': takenDown ? 'taken_down' : 'approved'},
     );
+    // The feed holds catalog series already loaded; drop a hidden one.
+    if (dramaId != null && takenDown) {
+      _catalogFilms = [
+        for (final f in _catalogFilms)
+          if (f.catalogDramaId != dramaId) f,
+      ];
+    }
+  }
+
+  @override
+  Future<List<AdminFilm>> adminSearchCatalog(String query) async {
+    final json =
+        await _api.get('/admin/catalog/search', query: {'q': query})
+            as Map<String, dynamic>;
+    return [
+      for (final f in json['films'] as List)
+        AdminFilm.fromJson(f as Map<String, dynamic>),
+    ];
   }
 
   @override
