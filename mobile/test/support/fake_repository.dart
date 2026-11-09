@@ -155,9 +155,16 @@ class FakeRepository implements AppRepository {
   }
 
   @override
-  Future<void> adminSetFilmTakenDown(int filmId, bool takenDown) async {
-    calls.add('setTakenDown $filmId $takenDown');
+  Future<void> adminSetFilmTakenDown(AdminFilm film, bool takenDown) async {
+    calls.add('setTakenDown ${film.id} $takenDown');
     if (adminError != null) throw adminError!;
+  }
+
+  @override
+  Future<List<AdminFilm>> adminSearchCatalog(String query) async {
+    calls.add('searchCatalog $query');
+    if (adminError != null) throw adminError!;
+    return const [];
   }
 
   @override

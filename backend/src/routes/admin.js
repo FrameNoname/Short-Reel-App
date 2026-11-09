@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { requireAuth } = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 const admin = require('../controllers/admin');
+const catalog = require('../controllers/catalog');
 
 const router = Router();
 
@@ -10,6 +11,8 @@ router.get('/sales', admin.sales);
 
 router.get('/films', admin.listFilms);
 router.put('/films/:id/status', admin.setFilmStatus);
+router.get('/catalog/search', catalog.adminSearch);
+router.put('/catalog/:dramaId/status', catalog.adminSetStatus);
 router.get('/films/:id/episodes', admin.listEpisodes);
 router.put('/episodes/:id', admin.updateEpisode);
 

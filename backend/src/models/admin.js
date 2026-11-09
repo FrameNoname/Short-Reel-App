@@ -46,19 +46,19 @@ exports.sales = async (pool) => {
 
 // ---- content --------------------------------------------------------------
 
-// The app's own films, taken-down ones included. Catalog series are listed by
-// Series Jeen, so taking one down here would not hide it.
+// Series Jeen series someone bought or the admin took down, then the app's own
+// films. Taken-down ones stay listed so the admin can bring them back. The
+// rest of the catalog is too big to list and is found with a search instead.
 exports.listFilms = async (pool) => {
   const [rows] = await pool.query(
-    `SELECT f.id, f.title, f.poster_url, f.status, f.created_at,
+    `SELECT f.id, f.title, f.poster_url, f.status, f.created_at, f.catalog_drama_id,
             (SELECT COUNT(*) FROM episodes e WHERE e.film_id = f.id) AS episode_count,
             (SELECT COUNT(*) FROM likes l WHERE l.film_id = f.id) AS like_count,
             (SELECT COUNT(*) FROM comments c WHERE c.film_id = f.id) AS comment_count,
             (SELECT COALESCE(SUM(ue.coins_spent), 0) FROM unlocked_episodes ue
                JOIN episodes e ON e.id = ue.episode_id WHERE e.film_id = f.id) AS coins_spent
        FROM films f
-      WHERE f.catalog_drama_id IS NULL
-      ORDER BY f.id`,
+      ORDER BY f.catalog_drama_id IS NULL, f.id DESC`,
   );
   return rows.map((r) => ({
     ...r,
