@@ -11,6 +11,7 @@ import 'controllers/profile_controller.dart';
 import 'controllers/settings_controller.dart';
 import 'controllers/wallet_controller.dart';
 import 'data/app_repository.dart';
+import 'data/mock_catalog_service.dart';
 import 'data/mock_repository.dart';
 import 'l10n/app_language.dart';
 import 'services/api_client.dart';
@@ -22,9 +23,15 @@ import 'widgets/loading_view.dart';
 
 void main() {
   // Front-end only: every screen reads the in-memory demo data in
-  // data/mock_data.dart. Nothing connects to the backend, so the Series Jeen
-  // catalog (which goes through the backend) is not shown either.
-  runApp(ShortReelApp(repository: MockRepository()));
+  // data/mock_data.dart and the saved Series Jeen list in
+  // data/mock_catalog_data.dart. Nothing connects to the backend.
+  final repository = MockRepository();
+  runApp(
+    ShortReelApp(
+      repository: repository,
+      catalog: MockCatalogService(repository),
+    ),
+  );
 }
 
 class ShortReelApp extends StatelessWidget {

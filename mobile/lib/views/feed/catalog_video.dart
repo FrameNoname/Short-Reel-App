@@ -155,10 +155,14 @@ class _CatalogVideoState extends State<CatalogVideo> {
   }
 
   Future<void> _openPart(int index, int token) async {
-    final next = VideoPlayerController.networkUrl(
-      Uri.parse(_parts[index].url),
-      closedCaptionFile: _captionFor(_parts[index]),
-    );
+    // `asset:` links point at clips bundled with the app (offline demo).
+    final url = _parts[index].url;
+    final next = url.startsWith('asset:')
+        ? VideoPlayerController.asset(url.substring('asset:'.length))
+        : VideoPlayerController.networkUrl(
+            Uri.parse(url),
+            closedCaptionFile: _captionFor(_parts[index]),
+          );
     await next.initialize();
     if (token != _token) {
       await next.dispose();
