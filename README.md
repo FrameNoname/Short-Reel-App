@@ -158,7 +158,7 @@ cd mobile && flutter test
 | `main` | เวอร์ชันหลัก |
 | `develop` | รวมงานก่อนขึ้น `main` |
 | `Frame-dev` | งานที่กำลังพัฒนา แอปต่อ backend จริง |
-| `frontend-only` | แอปอย่างเดียว ไม่ต่อ backend ใช้ข้อมูลจำลองใน `mobile/lib/data/mock_repository.dart` รันได้ด้วย `flutter run` โดยไม่ต้องเปิด backend หรือ MySQL |
+| `frontend-only` | แอปอย่างเดียว ไม่ต่อ backend ใช้ข้อมูลจำลองใน `mobile/lib/data/mock_repository.dart` รันได้ด้วย `flutter run` โดยไม่ต้องเปิด backend หรือ MySQL แท็บแคตตาล็อกใช้ซีรีส์ Series Jeen 60 เรื่องที่บันทึกไว้ใน `mock_catalog_data.dart` (โปสเตอร์ต้องต่อเน็ต) และเล่นคลิปตัวอย่างในแอปแทนวิดีโอจริง |
 
 ---
 
@@ -318,4 +318,4 @@ Put backend tests in `backend/test/*.test.js` and Flutter tests in `mobile/test/
 | `main` | The main version |
 | `develop` | Collects work before it goes to `main` |
 | `Frame-dev` | Work in progress; the app talks to the real backend |
-| `frontend-only` | The app alone, with no backend. It uses sample data from `mobile/lib/data/mock_repository.dart` and runs with `flutter run`, without the backend or MySQL. |
+| `frontend-only` | The app alone, with no backend. It uses sample data from `mobile/lib/data/mock_repository.dart` and runs with `flutter run`, without the backend or MySQL. The catalog tab uses 60 Series Jeen series saved in `mock_catalog_data.dart` (posters need internet) and plays the bundled sample clips instead of the real videos. |

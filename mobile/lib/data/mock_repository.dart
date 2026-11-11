@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shortreel/models/coin_pack.dart';
 import 'package:shortreel/models/episode.dart';
 import 'package:shortreel/models/catalog.dart';
@@ -6,10 +8,15 @@ import 'package:shortreel/models/transaction.dart';
 import 'package:shortreel/models/user.dart';
 import 'package:shortreel/services/api_client.dart';
 import 'package:shortreel/data/app_repository.dart';
+import 'mock_catalog_data.dart';
 import 'mock_data.dart';
 
 /// Answers every screen from the demo data in mock_data.dart, in memory.
 /// Nothing is sent to the backend; changes last until the app is closed.
+///
+/// The Series Jeen catalog comes from the snapshot in mock_catalog_data.dart
+/// and follows the same rules as the backend: the first episodes are free,
+/// a later one costs coins once, and the admin can take a series down.
 class MockRepository implements AppRepository {
   MockRepository({DateTime? now}) : _now = now ?? DateTime.now() {
     for (final film in _films.values) {
@@ -19,6 +26,11 @@ class MockRepository implements AppRepository {
     }
     _seedUnlocks();
     _seedWallets();
+    // The feed shows the first catalog series after the app's own films.
+    _catalogFeed = [
+      for (final d in _allDramas.where((d) => d.posterUrl != null).take(12))
+        catalogFilm(d).id,
+    ];
   }
 
   static const _episodePrice = 20;
@@ -29,6 +41,68 @@ class MockRepository implements AppRepository {
     'assets/videos/clip_02.mp4',
     'assets/videos/clip_03.mp4',
   ];
+
+  /// The bundled clip that stands in for episode [episodeNo].
+  static String clipFor(int episodeNo) =>
+      _clips[(episodeNo - 1) % _clips.length];
+
+  // ---- Series Jeen catalog ------------------------------------------------
+
+  final List<CatalogDrama> _allDramas = [
+    for (final d in jsonDecode(mockCatalogJson) as List)
+      CatalogDrama.fromJson(d as Map<String, dynamic>),
+  ];
+
+  /// Drama ids the admin took down.
+  final Set<int> _takenDown = {};
+
+  /// Catalog episodes each viewer paid for: (user, drama, episode number).
+  final Set<(int, int, int)> _catalogUnlocked = {};
+
+  /// Film ids of the catalog series in the feed, in order.
+  List<int> _catalogFeed = const [];
+
+  /// The series viewers can see; taken-down ones are left out.
+  List<CatalogDrama> get catalogDramas => [
+    for (final d in _allDramas)
+      if (!_takenDown.contains(d.id)) d,
+  ];
+
+  bool _isCatalog(int filmId) => filmId >= catalogFilmIdBase;
+
+  /// Catalog episode ids are film id * 1000 + episode number, as in the app.
+  int _filmOf(int episodeId) => episodeId >= catalogFilmIdBase * 1000
+      ? episodeId ~/ 1000
+      : _episodes[episodeId]!.filmId;
+
+  bool _catalogOpen(int? userId, int dramaId, int episodeNo) =>
+      episodeNo <= _settings.catalogFreeEpisodes ||
+      _isAdmin(userId) ||
+      (userId != null &&
+          _catalogUnlocked.contains((userId, dramaId, episodeNo)));
+
+  List<Episode> _catalogEpisodes(int filmId) {
+    final film = _films[filmId];
+    final dramaId = filmId - catalogFilmIdBase;
+    final free = _settings.catalogFreeEpisodes;
+    return [
+      for (var n = 1; n <= (film?.episodeCount ?? 0); n++)
+        Episode(
+          id: filmId * 1000 + n,
+          filmId: filmId,
+          episodeNo: n,
+          title: 'Episode $n',
+          durationSec: 0,
+          isFree: n <= free,
+          priceCoins: n <= free ? 0 : _settings.catalogPriceCoins,
+          access: n <= free
+              ? EpisodeAccess.free
+              : _catalogOpen(_currentUserId, dramaId, n)
+              ? EpisodeAccess.unlocked
+              : EpisodeAccess.locked,
+        ),
+    ];
+  }
 
   final DateTime _now;
   final Map<int, User> _users = {for (final u in mockUsers) u.id: u};
@@ -96,9 +170,7 @@ class MockRepository implements AppRepository {
   @override
   Film catalogFilm(CatalogDrama drama) {
     final id = catalogFilmIdBase + drama.id;
-    final existing = _films[id];
-    if (existing != null) return existing;
-    final film = Film(
+    return _films[id] ??= Film(
       id: id,
       title: drama.title,
       synopsis: drama.description,
@@ -106,18 +178,14 @@ class MockRepository implements AppRepository {
       genreId: 0,
       aiToolId: 0,
       promptCredit: null,
+      // Nothing confirms how these were made, so they carry no AI label.
       isAiGenerated: false,
-      status: 'approved',
+      status: _takenDown.contains(drama.id) ? 'taken_down' : 'approved',
       genreName: drama.genres.isEmpty ? '' : drama.genres.first,
       genreTags: drama.genres,
       episodeCount: drama.episodeCount,
       catalogDramaId: drama.id,
     );
-    _films[id] = film;
-    for (var n = 1; n <= film.episodeCount; n++) {
-      _addEpisode(id, n, price: 0, durationSec: 0);
-    }
-    return film;
   }
 
   @override
@@ -279,12 +347,18 @@ class MockRepository implements AppRepository {
   Iterable<Film> get _approved =>
       _films.values.where((f) => f.status == 'approved');
 
+  /// The app's own films, then the catalog series in the feed, as on the API.
   @override
-  Future<List<Film>> films([String query = '']) async =>
-      _approved.where((f) => _matches(f, query)).toList();
+  Future<List<Film>> films([String query = '']) async => [
+    ..._approved.where((f) => !_isCatalog(f.id) && _matches(f, query)),
+    for (final id in _catalogFeed)
+      if (_films[id]!.status == 'approved' && _matches(_films[id]!, query))
+        _films[id]!,
+  ];
 
   @override
   Future<List<Episode>> episodes(int filmId) async {
+    if (_isCatalog(filmId)) return _catalogEpisodes(filmId);
     final list = _episodes.values.where((e) => e.filmId == filmId).toList();
     list.sort((a, b) => a.episodeNo.compareTo(b.episodeNo));
     return list;
@@ -296,6 +370,7 @@ class MockRepository implements AppRepository {
   /// The admin runs the catalogue and may watch every episode.
   @override
   EpisodeAccess accessOf(int? userId, Episode episode) {
+    if (episode.access != null) return episode.access!;
     if (episode.isFree) return EpisodeAccess.free;
     if (userId == null) return EpisodeAccess.locked;
     if (_isAdmin(userId)) return EpisodeAccess.unlocked;
@@ -309,6 +384,13 @@ class MockRepository implements AppRepository {
 
   @override
   Future<void> addComment(int userId, int filmId, String body) async {
+    if (_isCatalog(filmId)) {
+      throw _error(
+        'NOT_SUPPORTED',
+        'Comments are not available for catalog series.',
+        400,
+      );
+    }
     final text = body.trim();
     if (text.isEmpty) {
       throw _error('VALIDATION_ERROR', 'Write a comment first.', 400);
@@ -361,6 +443,9 @@ class MockRepository implements AppRepository {
 
   @override
   Future<User> unlock(int userId, int episodeId) async {
+    if (episodeId >= catalogFilmIdBase * 1000) {
+      return _unlockCatalog(userId, episodeId);
+    }
     final user = _user(userId);
     final episode = _episodes[episodeId]!;
     // Same rule as UNIQUE(user_id, episode_id): a repeat never charges twice.
@@ -380,6 +465,31 @@ class MockRepository implements AppRepository {
       -episode.priceCoins,
       updated.coinBalance,
       '${film.title}, Episode ${episode.episodeNo}',
+    );
+    return updated;
+  }
+
+  /// A paid catalog episode, charged once at the catalog price.
+  Future<User> _unlockCatalog(int userId, int episodeId) async {
+    final user = _user(userId);
+    final filmId = episodeId ~/ 1000;
+    final episodeNo = episodeId % 1000;
+    final dramaId = filmId - catalogFilmIdBase;
+    if (_catalogOpen(userId, dramaId, episodeNo)) return user;
+    final price = _settings.catalogPriceCoins;
+    if (user.coinBalance < price) {
+      throw _error('INSUFFICIENT_COINS', 'Not enough coins', 402);
+    }
+    final updated = user.copyWith(coinBalance: user.coinBalance - price);
+    _users[userId] = updated;
+    _catalogUnlocked.add((userId, dramaId, episodeNo));
+    _unlocks.add(_Unlock(userId, episodeId, price));
+    _record(
+      userId,
+      'unlock',
+      -price,
+      updated.coinBalance,
+      '${_films[filmId]!.title}, Episode $episodeNo',
     );
     return updated;
   }
@@ -467,9 +577,7 @@ class MockRepository implements AppRepository {
     final allowed = accessOf(_currentUserId, episode) != EpisodeAccess.locked;
     return Playback(
       episode: episode,
-      streamUrl: allowed
-          ? 'asset:${_clips[(episode.episodeNo - 1) % _clips.length]}'
-          : null,
+      streamUrl: allowed ? 'asset:${clipFor(episode.episodeNo)}' : null,
     );
   }
 
@@ -481,20 +589,22 @@ class MockRepository implements AppRepository {
   List<Film> unlockedFilmsOf(int userId) {
     final filmIds = _unlocks
         .where((u) => u.userId == userId)
-        .map((u) => _episodes[u.episodeId]!.filmId)
+        .map((u) => _filmOf(u.episodeId))
         .toSet();
     return filmIds.map((id) => _films[id]!).toList();
   }
 
-  /// This build has no Series Jeen catalog, so nothing there is locked.
   @override
-  bool catalogEpisodeLocked(Film film, int episodeNo) => false;
+  bool catalogEpisodeLocked(Film film, int episodeNo) {
+    final dramaId = film.catalogDramaId;
+    return dramaId != null && !_catalogOpen(_currentUserId, dramaId, episodeNo);
+  }
 
   @override
   Future<AdminSales> adminSales() async {
     final perFilm = <int, (int, int)>{};
     for (final u in _unlocks) {
-      final filmId = _episodes[u.episodeId]!.filmId;
+      final filmId = _filmOf(u.episodeId);
       final (count, coins) = perFilm[filmId] ?? (0, 0);
       perFilm[filmId] = (count + 1, coins + u.coinsSpent);
     }
@@ -517,44 +627,87 @@ class MockRepository implements AppRepository {
 
   // ---- admin: films, comments, settings and coin packs ----------------------
 
-  /// The app's own films, taken-down ones included; catalog series are not
-  /// listed, as on the server.
+  /// A catalog series gets an admin row once someone bought an episode or
+  /// the admin took it down, as on the server.
+  bool _hasAdminRow(Film film) {
+    final dramaId = film.catalogDramaId;
+    if (dramaId == null) return true;
+    return _takenDown.contains(dramaId) ||
+        _unlocks.any((u) => _filmOf(u.episodeId) == film.id);
+  }
+
+  AdminFilm _adminFilm(Film f, {bool listed = true}) => AdminFilm(
+    id: listed ? f.id : 0,
+    title: f.title,
+    posterUrl: f.posterUrl,
+    takenDown: f.status == 'taken_down',
+    episodeCount: _isCatalog(f.id)
+        ? f.episodeCount
+        : _episodes.values.where((e) => e.filmId == f.id).length,
+    likeCount: f.likeCount,
+    commentCount: f.commentCount,
+    coinsSpent: _unlocks
+        .where((u) => _filmOf(u.episodeId) == f.id)
+        .fold(0, (sum, u) => sum + u.coinsSpent),
+    catalogDramaId: f.catalogDramaId,
+  );
+
+  /// Series Jeen series first, then the app's own films, newest first.
   @override
   Future<List<AdminFilm>> adminFilms() async {
-    final own = _films.values.where((f) => f.catalogDramaId == null).toList()
-      ..sort((a, b) => a.id.compareTo(b.id));
-    return [
-      for (final f in own)
-        AdminFilm(
-          id: f.id,
-          title: f.title,
-          posterUrl: f.posterUrl,
-          takenDown: f.status == 'taken_down',
-          episodeCount: _episodes.values.where((e) => e.filmId == f.id).length,
-          likeCount: f.likeCount,
-          commentCount: f.commentCount,
-          coinsSpent: _unlocks
-              .where((u) => _episodes[u.episodeId]!.filmId == f.id)
-              .fold(0, (sum, u) => sum + u.coinsSpent),
-        ),
-    ];
+    final rows = _films.values.where(_hasAdminRow).toList()
+      ..sort((a, b) {
+        final kind = (a.catalogDramaId == null ? 1 : 0).compareTo(
+          b.catalogDramaId == null ? 1 : 0,
+        );
+        return kind != 0 ? kind : b.id.compareTo(a.id);
+      });
+    return [for (final f in rows) _adminFilm(f)];
   }
 
   @override
   Future<void> adminSetFilmTakenDown(AdminFilm admin, bool takenDown) async {
-    final filmId = admin.id;
-    final film = _films[filmId];
-    if (film == null || film.catalogDramaId != null) {
-      throw _error('NOT_FOUND', 'Film not found', 404);
+    final dramaId = admin.catalogDramaId;
+    if (dramaId != null) {
+      final drama = _allDramas.where((d) => d.id == dramaId).firstOrNull;
+      if (drama == null) throw _error('NOT_FOUND', 'Series not found', 404);
+      takenDown ? _takenDown.add(dramaId) : _takenDown.remove(dramaId);
+      final film = catalogFilm(drama);
+      _films[film.id] = film.copyWith(
+        status: takenDown ? 'taken_down' : 'approved',
+      );
+      return;
     }
-    _films[filmId] = film.copyWith(
+    final film = _films[admin.id];
+    if (film == null) throw _error('NOT_FOUND', 'Film not found', 404);
+    _films[admin.id] = film.copyWith(
       status: takenDown ? 'taken_down' : 'approved',
     );
   }
 
-  // There is no Series Jeen catalog without the backend.
+  /// Up to 30 series whose title matches, taken-down ones included.
   @override
-  Future<List<AdminFilm>> adminSearchCatalog(String query) async => const [];
+  Future<List<AdminFilm>> adminSearchCatalog(String query) async {
+    final text = query.trim().toLowerCase();
+    if (text.isEmpty) return const [];
+    return [
+      for (final d
+          in _allDramas
+              .where((d) => d.title.toLowerCase().contains(text))
+              .take(30))
+        _adminSearchRow(d),
+    ];
+  }
+
+  AdminFilm _adminSearchRow(CatalogDrama drama) {
+    final id = catalogFilmIdBase + drama.id;
+    final known = _films[id];
+    final film = known ?? catalogFilm(drama);
+    final row = _adminFilm(film, listed: _hasAdminRow(film));
+    // Looking a series up does not add it to the app.
+    if (known == null) _films.remove(id);
+    return row;
+  }
 
   @override
   Future<List<AdminEpisode>> adminEpisodes(int filmId) async => [
