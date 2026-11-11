@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:shortreel/data/app_repository.dart';
+import 'package:shortreel/models/catalog.dart';
 import 'package:shortreel/models/coin_pack.dart';
+import 'package:shortreel/models/episode.dart';
 import 'package:shortreel/models/film.dart';
 import 'package:shortreel/models/transaction.dart';
 import 'package:shortreel/models/user.dart';
@@ -166,6 +168,65 @@ class FakeRepository implements AppRepository {
     if (libraryError != null) throw libraryError!;
   }
 
+  // ---- reads the feed passes straight through ----
+  @override
+  bool get playsVideo => true;
+
+  @override
+  bool isLiked(int userId, int filmId) => filmId == 1;
+
+  @override
+  bool isSaved(int userId, int filmId) => filmId == 2;
+
+  @override
+  Future<List<Episode>> episodes(int filmId) async => [
+    Episode(
+      id: filmId * 10 + 1,
+      filmId: filmId,
+      episodeNo: 1,
+      title: null,
+      durationSec: 60,
+      isFree: true,
+      priceCoins: 0,
+    ),
+  ];
+
+  @override
+  EpisodeAccess accessOf(int? userId, Episode episode) =>
+      userId == null ? EpisodeAccess.locked : EpisodeAccess.free;
+
+  @override
+  bool catalogEpisodeLocked(Film film, int episodeNo) => episodeNo > 5;
+
+  @override
+  Future<Playback> playback(int episodeId) async => Playback(
+    episode: (await episodes(episodeId ~/ 10)).single,
+    streamUrl: '/videos/$episodeId.mp4',
+  );
+
+  @override
+  Film catalogFilm(CatalogDrama drama) => latest[drama.id] ??= Film(
+    id: drama.id,
+    title: drama.title,
+    synopsis: drama.description,
+    posterUrl: drama.posterUrl,
+    genreId: 0,
+    aiToolId: 0,
+    promptCredit: null,
+    isAiGenerated: false,
+    status: 'approved',
+    catalogDramaId: drama.id,
+  );
+
+  @override
+  Future<void> loadComments(int filmId) async =>
+      calls.add('loadComments $filmId');
+
+  @override
+  List<FilmComment> commentsOf(int filmId) => [
+    FilmComment(id: 1, userId: 2, username: 'viewer01', body: 'film $filmId'),
+  ];
+
   @override
   List<Film> watchlistOf(int userId) => watchlist;
 
@@ -202,7 +263,31 @@ class FakeRepository implements AppRepository {
   Future<List<AdminFilm>> adminSearchCatalog(String query) async {
     calls.add('searchCatalog $query');
     if (adminError != null) throw adminError!;
+    final gate = searchGates[query];
+    if (gate != null) return gate.future;
+    return searchResults;
+  }
+
+  List<AdminFilm> searchResults = const [];
+  final Map<String, Completer<List<AdminFilm>>> searchGates = {};
+
+  @override
+  Future<List<AdminEpisode>> adminEpisodes(int filmId) async {
+    calls.add('adminEpisodes $filmId');
     return const [];
+  }
+
+  @override
+  Future<AdminEpisode> adminUpdateEpisode(
+    AdminEpisode episode, {
+    required bool isFree,
+    required int priceCoins,
+  }) async {
+    calls.add('adminUpdateEpisode ${episode.id}');
+    return episode.copyWith(
+      isFree: isFree,
+      priceCoins: isFree ? 0 : priceCoins,
+    );
   }
 
   @override
