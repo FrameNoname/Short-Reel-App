@@ -141,4 +141,32 @@ void main() {
       expect(wallet.balance, 0);
     });
   });
+
+  test('CoinPack reads a price sent as text or a number', () {
+    final pack = CoinPack.fromJson({
+      'id': 2,
+      'name': 'Popular',
+      'coins': 330,
+      'price_usd': '4.99',
+    });
+    expect(pack.priceUsd, 4.99);
+    expect(
+      CoinPack.fromJson({
+        'id': 1,
+        'name': 'Starter',
+        'coins': 60,
+        'price_usd': 1,
+      }).priceUsd,
+      1.0,
+    );
+  });
+
+  test('WalletController shows the prices the repository sets', () async {
+    final auth = AuthController(repo);
+    final wallet = WalletController(repo, auth);
+    expect(wallet.balance, 0);
+    expect(wallet.episodePrice, 20);
+    expect(wallet.demoTopUpCoins, 100);
+    wallet.dispose();
+  });
 }
