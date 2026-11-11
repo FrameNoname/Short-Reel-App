@@ -133,4 +133,87 @@ void main() {
       expect(auth.user!.coinBalance, 5);
     });
   });
+
+  group('AuthController, more', () {
+    test('register signs the new viewer in', () async {
+      final auth = AuthController(repo);
+      await auth.register('newbie', 'pw');
+      expect(auth.user?.displayName, 'newbie');
+      expect(repo.calls, ['register newbie']);
+    });
+
+    test('a broken stored token leaves the person signed out', () async {
+      final auth = _ThrowingRestore();
+      final controller = AuthController(auth);
+      await controller.restoreSession();
+      expect(controller.isLoggedIn, isFalse);
+      expect(controller.isRestoring, isFalse);
+    });
+
+    test('a login during restore wins over the stored token', () async {
+      final gate = Completer<User?>();
+      final slow = _SlowRestore(gate);
+      final auth = AuthController(slow);
+      final restoring = auth.restoreSession();
+      expect(auth.isRestoring, isTrue);
+      await auth.login('viewer01', 'pw');
+      gate.complete(slow.viewer.copyWith(displayName: 'Old'));
+      await restoring;
+      expect(auth.user?.displayName, 'Viewer');
+      expect(auth.isRestoring, isFalse);
+    });
+
+    test('logout signs out even when the server cannot be reached', () async {
+      repo.logoutFails = true;
+      final auth = AuthController(repo);
+      var dropped = 0;
+      auth.addLogoutListener(() => dropped++);
+      await auth.login('viewer01', 'pw');
+      auth.continueAsGuest();
+
+      await auth.logout();
+
+      expect(auth.isLoggedIn, isFalse);
+      expect(auth.hasEntered, isFalse);
+      expect(dropped, 1);
+    });
+
+    test('an expired session clears the token and signs out', () async {
+      final auth = AuthController(repo);
+      var dropped = 0;
+      auth.addLogoutListener(() => dropped++);
+      await auth.login('viewer01', 'pw');
+
+      auth.sessionExpired();
+
+      expect(repo.calls, contains('clearSession'));
+      expect(auth.user, isNull);
+      expect(dropped, 1);
+    });
+
+    test('updateProfile changes the signed-in person only', () async {
+      final auth = AuthController(repo);
+      await auth.updateProfile(displayName: 'Nobody', bio: '');
+      expect(repo.calls, isEmpty);
+
+      await auth.login('viewer01', 'pw');
+      await auth.updateProfile(displayName: 'Mira', bio: 'Hi');
+      expect(auth.user?.displayName, 'Mira');
+      expect(auth.user?.bio, 'Hi');
+    });
+  });
+}
+
+class _ThrowingRestore extends FakeRepository {
+  @override
+  Future<User?> restoreSession() async => throw serverDown;
+}
+
+class _SlowRestore extends FakeRepository {
+  _SlowRestore(this.gate);
+
+  final Completer<User?> gate;
+
+  @override
+  Future<User?> restoreSession() => gate.future;
 }

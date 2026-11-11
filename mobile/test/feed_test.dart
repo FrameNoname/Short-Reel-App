@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/feed_controller.dart';
+import 'package:shortreel/models/catalog.dart';
 import 'package:shortreel/models/episode.dart';
 import 'package:shortreel/models/film.dart';
 import 'package:shortreel/services/api_client.dart';
@@ -181,5 +182,53 @@ void main() {
         );
       },
     );
+  });
+
+  group('FeedController reads for the views', () {
+    test('pass through to the repository', () async {
+      final feed = FeedController(repo);
+      expect(feed.playsVideo, isTrue);
+      expect(feed.isLiked(2, 1), isTrue);
+      expect(feed.isSaved(2, 1), isFalse);
+
+      final episode = (await feed.episodes(3)).single;
+      expect(feed.accessOf(null, episode), EpisodeAccess.locked);
+      expect(feed.accessOf(2, episode), EpisodeAccess.free);
+      expect((await feed.playback(31)).streamUrl, '/videos/31.mp4');
+
+      final film = testFilm(1, 'A');
+      expect(feed.catalogEpisodeLocked(film, 5), isFalse);
+      expect(feed.catalogEpisodeLocked(film, 6), isTrue);
+
+      await feed.loadComments(3);
+      expect(feed.commentsOf(3).single.body, 'film 3');
+      expect(repo.calls, contains('loadComments 3'));
+    });
+
+    test('a catalog series becomes one feed film, reused', () {
+      final feed = FeedController(repo);
+      const drama = CatalogDrama(
+        id: 21,
+        title: 'Desert',
+        description: null,
+        episodeCount: 60,
+        genres: [],
+        posterUrl: null,
+        thaiDub: true,
+        thaiSub: false,
+      );
+      final film = feed.catalogFilm(drama);
+      expect(film.catalogDramaId, 21);
+      expect(identical(feed.catalogFilm(drama), film), isTrue);
+    });
+
+    test('saving notifies so the heart and lists redraw', () async {
+      final feed = FeedController(repo);
+      var notified = 0;
+      feed.addListener(() => notified++);
+      await feed.toggleSave(2, 4);
+      expect(notified, 1);
+      expect(repo.calls, contains('toggleSave 4'));
+    });
   });
 }

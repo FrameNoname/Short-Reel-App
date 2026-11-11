@@ -209,4 +209,14 @@ void main() {
       expect(catalog.isLoading, isFalse);
     });
   });
+
+  test('choosing another platform lists it from page 1', () async {
+    final catalog = CatalogController(service);
+    await catalog.load();
+    await catalog.loadMore();
+    await catalog.selectPlatform(_closed);
+    expect(catalog.platform?.id, 3);
+    expect(service.calls.last, 'dramas 3 [] 1');
+    expect(catalog.dramas.map((d) => d.id), [11, 12]);
+  });
 }
