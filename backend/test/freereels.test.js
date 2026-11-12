@@ -61,10 +61,11 @@ function fakeClient(answers) {
   };
 }
 
-function idPool(known = { m4FzR2J0iQ: 7 }, takenDown = []) {
+function idPool(known = { m4FzR2J0iQ: 7 }, takenDown = [], extra = []) {
   const table = new Map(Object.entries(known));
   let next = 100;
   return fakePool([
+    ...extra,
     [/status = 'taken_down' AND catalog_drama_id IN/, ([ids]) =>
       ids.filter((id) => takenDown.includes(id)).map((id) => ({ catalog_drama_id: id }))],
     [/^INSERT IGNORE INTO catalog_series/, (params) => {
@@ -248,4 +249,89 @@ test('the client turns a { success: false } not-found reply into a 404', async (
   });
   const client = createCatalogClient({ apiKey: 'k', fetchImpl });
   await assert.rejects(client.get('/x'), (err) => err.status === 404);
+});
+
+// ---- admin: Series Jeen take-down ----
+
+const adminUser = { id: 1, role: 'admin' };
+
+test('adminSearch marks the series the admin already took down', async () => {
+  const client = fakeClient({
+    [freereels.paths.search]: {
+      items: [listItem, { ...listItem, series_id: 'newOne', title: 'ใหม่' }, { title: 'no id' }],
+    },
+  });
+  const pool = idPool(undefined, [], [
+    [/SELECT id, catalog_drama_id, status FROM films/, [{ id: 40, catalog_drama_id: 7, status: 'taken_down' }]],
+  ]);
+  const body = await run(controller.adminSearch, fakeReq({
+    pool, user: adminUser, locals: { catalog: client }, query: { q: '  รัก ' },
+  }));
+  assert.equal(client.calls[0].query.keyword, 'รัก');
+  assert.equal(body.films.length, 2);
+  assert.deepEqual(
+    body.films.map((f) => [f.id, f.catalog_drama_id, f.status]),
+    [[40, 7, 'taken_down'], [0, 100, 'approved']],
+  );
+});
+
+test('adminSearch needs a q of 1 to 100 characters', async () => {
+  const locals = { catalog: fakeClient({}) };
+  for (const q of [undefined, '   ', 'x'.repeat(101)]) {
+    await assert.rejects(
+      run(controller.adminSearch, fakeReq({ pool: idPool(), user: adminUser, locals, query: { q } })),
+      (err) => err.status === 400,
+    );
+  }
+});
+
+test('adminSetStatus saves the status with the title and poster from the catalog', async () => {
+  const client = fakeClient({ [freereels.paths.drama('m4FzR2J0iQ')]: detailBody });
+  const pool = idPool(undefined, [], [[/^INSERT INTO films/, { affectedRows: 1 }]]);
+  const body = await run(controller.adminSetStatus, fakeReq({
+    pool, user: adminUser, locals: { catalog: client }, params: { dramaId: '7' }, body: { status: 'taken_down' },
+  }));
+  assert.deepEqual(body, { catalog_drama_id: 7, status: 'taken_down' });
+  assert.deepEqual(pool.callsMatching(/^INSERT INTO films/)[0].params,
+    ['รักเป็นเหยื่อล่อ', 'https://img/cover.jpg', 7, 'taken_down']);
+});
+
+test('adminSetStatus can bring back a series that is down', async () => {
+  const client = fakeClient({ [freereels.paths.drama('m4FzR2J0iQ')]: detailBody });
+  const pool = idPool(undefined, [7], [[/^INSERT INTO films/, { affectedRows: 2 }]]);
+  const body = await run(controller.adminSetStatus, fakeReq({
+    pool, user: adminUser, locals: { catalog: client }, params: { dramaId: '7' }, body: { status: 'approved' },
+  }));
+  assert.equal(body.status, 'approved');
+});
+
+test('adminSetStatus refuses a bad status or an unknown series', async () => {
+  const locals = { catalog: fakeClient({}) };
+  await assert.rejects(
+    run(controller.adminSetStatus, fakeReq({
+      pool: idPool(), user: adminUser, locals, params: { dramaId: '7' }, body: { status: 'deleted' },
+    })),
+    (err) => err.status === 400,
+  );
+  await assert.rejects(
+    run(controller.adminSetStatus, fakeReq({
+      pool: idPool(), user: adminUser, locals, params: { dramaId: '999' }, body: { status: 'approved' },
+    })),
+    (err) => err.status === 404,
+  );
+});
+
+test('setStatus leaves out a poster link too long for the column', async () => {
+  const pool = fakePool([[/^INSERT INTO films/, { affectedRows: 1 }]]);
+  await catalogModel.setStatus(pool, { dramaId: 7, title: 'x'.repeat(150), poster: `https://${'a'.repeat(300)}`, status: 'approved' });
+  const [title, poster] = pool.calls[0].params;
+  assert.equal(title.length, 100);
+  assert.equal(poster, null);
+});
+
+test('the admin catalog routes answer 503 when the catalog is not set up', async () => {
+  await assert.rejects(
+    run(controller.adminSearch, fakeReq({ pool: idPool(), user: adminUser, query: { q: 'a' } })),
+    (err) => err.status === 503,
+  );
 });

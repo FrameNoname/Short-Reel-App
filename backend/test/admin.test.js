@@ -171,3 +171,75 @@ test('listComments pages and can filter by film', async () => {
   assert.equal(pool.calls[0].params[0], 5);
   assert.match(pool.calls[0].sql, /WHERE c\.film_id = \?/);
 });
+
+// ---- content and coin pack lists ----
+
+async function call(handler, req) {
+  const res = fakeRes();
+  await handler(req, res);
+  return res;
+}
+
+test('listFilms turns the counts into numbers', async () => {
+  const pool = fakePool([['FROM films f', [{
+    id: 1, title: 'A', status: 'approved', catalog_drama_id: null,
+    episode_count: '8', like_count: '3', comment_count: '2', coins_spent: '40',
+  }]]]);
+  const res = await call(controller.listFilms, fakeReq({ pool, user: adminUser }));
+  const [film] = res.body.films;
+  assert.deepEqual(
+    [film.episode_count, film.like_count, film.comment_count, film.coins_spent],
+    [8, 3, 2, 40],
+  );
+});
+
+test('listEpisodes lists the episodes of the app own film only', async () => {
+  const pool = fakePool([
+    ['catalog_drama_id IS NULL', (params) => (params[0] === 1 ? [{ id: 1 }] : [])],
+    ['FROM episodes e WHERE e.film_id', [{ id: 3, episode_no: 1, is_free: 1, price_coins: 0, unlock_count: '0' },
+      { id: 4, episode_no: 2, is_free: 0, price_coins: 20, unlock_count: '5' }]],
+  ]);
+  const res = await call(controller.listEpisodes, fakeReq({ pool, user: adminUser, params: { id: '1' } }));
+  assert.deepEqual(res.body.episodes.map((e) => [e.is_free, e.unlock_count]), [[true, 0], [false, 5]]);
+  await assert.rejects(
+    call(controller.listEpisodes, fakeReq({ pool, user: adminUser, params: { id: '99' } })),
+    isStatus(404),
+  );
+});
+
+test('listCoinPacks gives the price and sold count as numbers', async () => {
+  const pool = fakePool([['FROM coin_packs p', [{ id: 1, name: 'S', coins: 100, price_usd: '0.99', sold_count: '7' }]]]);
+  const res = await call(controller.listCoinPacks, fakeReq({ pool, user: adminUser }));
+  assert.deepEqual(res.body.coin_packs, [{ id: 1, name: 'S', coins: 100, price_usd: 0.99, sold_count: 7 }]);
+});
+
+test('updateCoinPack saves the checked body and rounds the price to cents', async () => {
+  const pool = fakePool([['UPDATE coin_packs', (params) => ({ affectedRows: params[3] === 2 ? 1 : 0 })]]);
+  const res = await call(controller.updateCoinPack, fakeReq({
+    pool, user: adminUser, params: { id: '2' }, body: { name: ' Big ', coins: 500, price_usd: 4.999 },
+  }));
+  assert.deepEqual(res.body, { id: 2 });
+  assert.deepEqual(pool.calls[0].params, ['Big', 500, 5, 2]);
+  await assert.rejects(
+    call(controller.updateCoinPack, fakeReq({
+      pool, user: adminUser, params: { id: '9' }, body: { name: 'X', coins: 1, price_usd: 1 },
+    })),
+    isStatus(404),
+  );
+});
+
+test('updateCoinPack refuses a bad price or coin count before touching the table', async () => {
+  const pool = fakePool();
+  for (const body of [
+    { name: 'X', coins: 10, price_usd: 0 },
+    { name: 'X', coins: 10, price_usd: 'free' },
+    { name: 'X', coins: 0, price_usd: 1 },
+    { coins: 10, price_usd: 1 },
+  ]) {
+    await assert.rejects(
+      call(controller.updateCoinPack, fakeReq({ pool, user: adminUser, params: { id: '2' }, body })),
+      isStatus(400),
+    );
+  }
+  assert.equal(pool.calls.length, 0);
+});
