@@ -125,3 +125,50 @@ test('typicalEpisodePrice falls back to the catalog price with nothing for sale'
   ]);
   assert.equal(await wallet.typicalEpisodePrice(pool), 12);
 });
+
+// ---- wallet reads ----
+
+async function call(handler, req) {
+  const res = fakeRes();
+  await handler(req, res);
+  return res;
+}
+
+test('getWallet shows the balance and the demo top-up amount as a number', async () => {
+  const pool = fakePool([
+    ['SELECT coin_balance FROM users', [{ coin_balance: 142 }]],
+    ['FROM settings', [{ value: '150' }]],
+  ]);
+  const res = await call(controller.getWallet, fakeReq({ pool, user: viewer }));
+  assert.equal(res.body.coin_balance, 142);
+  assert.equal(res.body.demo_topup_coins, 150);
+  assert.equal(res.body.simulated_payment, true);
+  assert.deepEqual(pool.calls[0].params, [2]);
+});
+
+test('getWallet falls back to 100 demo coins without the setting', async () => {
+  const pool = fakePool([
+    ['SELECT coin_balance FROM users', [{ coin_balance: 0 }]],
+    ['FROM settings', []],
+  ]);
+  assert.equal((await call(controller.getWallet, fakeReq({ pool, user: viewer }))).body.demo_topup_coins, 100);
+});
+
+test('listUnlocked returns only the caller own unlocks', async () => {
+  const rows = [{ episode_id: 9, coins_spent: 20, episode_no: 3, film_id: 1, film_title: 'A', catalog_drama_id: null }];
+  const pool = fakePool([['FROM unlocked_episodes ue', rows]]);
+  const res = await call(controller.listUnlocked, fakeReq({ pool, user: viewer }));
+  assert.deepEqual(res.body, { unlocked: rows });
+  assert.deepEqual(pool.calls[0].params, [2]);
+});
+
+test('listCoinPacks gives the packs with numeric prices and the typical episode price', async () => {
+  const pool = fakePool([
+    ['FROM settings', (params) => (params[0] === 'demo_topup_coins' ? [{ value: '100' }] : [{ value: '10' }])],
+    ['GROUP BY e.price_coins', [{ price_coins: 20 }]],
+    ['FROM coin_packs', [{ id: 1, name: 'S', coins: 100, price_usd: '0.99' }]],
+  ]);
+  const res = await call(controller.listCoinPacks, fakeReq({ pool }));
+  assert.equal(res.body.episode_price_coins, 20);
+  assert.deepEqual(res.body.coin_packs, [{ id: 1, name: 'S', coins: 100, price_usd: 0.99 }]);
+});

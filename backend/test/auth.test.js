@@ -98,3 +98,17 @@ test('updateMe saves the display name and bio', async () => {
     isStatus(400),
   );
 });
+
+test('me returns the logged-in user without the password hash', async () => {
+  const pool = fakePool([['FROM users WHERE id = ?', [{ ...storedUser({ coin_balance: 142 }), password: 'hash' }]]]);
+  const res = fakeRes();
+  await controller.me(fakeReq({ pool, user: { id: 7, role: 'viewer' } }), res);
+  assert.deepEqual(res.body, { user: storedUser({ coin_balance: 142 }) });
+  assert.deepEqual(pool.calls[0].params, [7]);
+});
+
+test('logout answers ok, since the token lives on the client', () => {
+  const res = fakeRes();
+  controller.logout(fakeReq(), res);
+  assert.deepEqual(res.body, { status: 'ok' });
+});
