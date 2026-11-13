@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/services/api_client.dart';
 import 'package:shortreel/services/errors.dart';
 
-import 'support/fake_dio.dart';
+import '../support/fake_dio.dart';
 
 void main() {
   late List<RequestOptions> sent;

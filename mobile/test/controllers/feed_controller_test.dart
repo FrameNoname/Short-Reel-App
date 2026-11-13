@@ -1,4 +1,4 @@
-// Person 2: the feed, its player and their models.
+// Person 2: FeedController (feed, player state, likes, comments).
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -8,8 +8,8 @@ import 'package:shortreel/models/episode.dart';
 import 'package:shortreel/models/film.dart';
 import 'package:shortreel/services/api_client.dart';
 
-import 'support/fake_repository.dart';
-import 'support/helpers.dart';
+import '../support/fake_repository.dart';
+import '../support/helpers.dart';
 
 Episode _episode(int filmId, int no) => Episode.fromJson({
   'id': filmId * 100 + no,
@@ -24,60 +24,6 @@ void main() {
   late FakeRepository repo;
 
   setUp(() => repo = FakeRepository());
-
-  group('Episode', () {
-    test('maps every API access value', () {
-      Episode withAccess(String? access) => Episode.fromJson({
-        'id': 1,
-        'film_id': 1,
-        'episode_no': 1,
-        'title': null,
-        'duration_sec': 60,
-        'is_free': false,
-        'price_coins': 20,
-        'access': access,
-      });
-      expect(withAccess('free').access, EpisodeAccess.free);
-      expect(withAccess('owner').access, EpisodeAccess.unlocked);
-      expect(withAccess('unlocked').access, EpisodeAccess.unlocked);
-      expect(withAccess('locked').access, EpisodeAccess.locked);
-      expect(withAccess('login_required').access, EpisodeAccess.locked);
-      expect(withAccess(null).access, isNull);
-    });
-
-    test('reads is_free as a bool or 0/1 and withPrice(0) makes it free', () {
-      final e = Episode.fromJson({
-        'id': 1,
-        'film_id': 1,
-        'episode_no': 2,
-        'duration_sec': 60,
-        'is_free': 1,
-        'price_coins': 0,
-      });
-      expect(e.isFree, isTrue);
-      expect(e.withPrice(15).isFree, isFalse);
-      expect(e.withPrice(15).priceCoins, 15);
-      expect(e.withPrice(0).isFree, isTrue);
-    });
-  });
-
-  test('Film reads counts with defaults and copyWith keeps the rest', () {
-    final film = Film.fromJson({
-      'id': 3,
-      'title': 'Salt & Signal',
-      'genre_id': 1,
-      'ai_tool_id': 2,
-      'is_ai_generated': true,
-      'status': 'approved',
-      'like_count': 4,
-    });
-    expect(film.likeCount, 4);
-    expect(film.commentCount, 0);
-    expect(film.genreName, '');
-    final liked = film.copyWith(likeCount: 5);
-    expect(liked.likeCount, 5);
-    expect(liked.title, 'Salt & Signal');
-  });
 
   group('FeedController', () {
     test('load lists the films and stops loading', () async {
