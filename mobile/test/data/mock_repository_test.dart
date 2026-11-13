@@ -2,6 +2,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/data/app_repository.dart';
 import 'package:shortreel/data/mock_repository.dart';
+import 'package:shortreel/models/user.dart';
+import 'package:shortreel/services/api_client.dart';
 
 /// The front-end-only build answers from [MockRepository]; these tests make
 /// sure it follows the same rules as the server.
@@ -139,5 +141,31 @@ void main() {
         expect(repo.catalogDramas.map((d) => d.id), contains(drama));
       },
     );
+  });
+
+  group('Login as a viewer', () {
+    test('viewer01 with password 6666 is the demo viewer', () async {
+      final user = await repo.login('viewer01', '6666');
+      expect(user.username, 'viewer01');
+      expect(user.displayName, 'Demo Viewer');
+      expect(user.role, UserRole.viewer);
+      expect(user.coinBalance, 80);
+    });
+
+    test('spaces around the username are ignored', () async {
+      final user = await repo.login('  viewer01 ', '6666');
+      expect(user.username, 'viewer01');
+    });
+
+    test('a wrong password is refused with 401', () async {
+      await expectLater(
+        repo.login('viewer01', '1111'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having((e) => e.code, 'code', 'UNAUTHENTICATED'),
+        ),
+      );
+    });
   });
 }
