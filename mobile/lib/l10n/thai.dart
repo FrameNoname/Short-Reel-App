@@ -246,6 +246,11 @@ const _exact = {
   'It will be removed for everyone. This cannot be undone.':
       'ความคิดเห็นจะถูกลบสำหรับทุกคน และกู้คืนไม่ได้',
   'Comment deleted.': 'ลบความคิดเห็นแล้ว',
+  'Search by film title': 'ค้นหาชื่อเรื่อง',
+  'Show all films': 'แสดงทุกเรื่อง',
+  'Load more': 'โหลดเพิ่ม',
+  'No comments match your search.': 'ไม่มีความคิดเห็นที่ตรงกับคำค้นหา',
+  'No comments on this film yet': 'เรื่องนี้ยังไม่มีความคิดเห็น',
   'Series Jeen': 'Series Jeen',
   'Free episodes per series': 'จำนวนตอนฟรีต่อซีรีส์',
   'Price of each later episode (coins)': 'ราคาตอนถัดไปแต่ละตอน (เหรียญ)',
@@ -277,6 +282,11 @@ const _exact = {
 final _rules = <(RegExp, String Function(Match))>[
   (RegExp(r'^Episode (\d+)$'), (m) => 'ตอนที่ ${m[1]}'),
   (RegExp(r'^(\d+) comments?$'), (m) => '${m[1]} ความคิดเห็น'),
+  (
+    RegExp(r'^(\d+) found in (\d+) loaded$'),
+    (m) => 'พบ ${m[1]} จาก ${m[2]} รายการที่โหลดแล้ว',
+  ),
+  (RegExp(r'^(\d+) found$'), (m) => 'พบ ${m[1]} รายการ'),
   (RegExp(r'^(\d+) unlocks?$'), (m) => 'ปลดล็อก ${m[1]} ครั้ง'),
   (RegExp(r'^sold (\d+)$'), (m) => 'ขายแล้ว ${m[1]}'),
   (RegExp(r'^Episode (\d+) is yours$'), (m) => 'ตอนที่ ${m[1]} เป็นของคุณแล้ว'),
