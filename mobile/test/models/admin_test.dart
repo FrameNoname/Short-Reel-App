@@ -77,11 +77,46 @@ void main() {
         'id': 4,
         'body': 'Nice',
         'username': 'mira.lens',
+        'film_id': 2,
         'film_title': 'Paper Moons',
         'created_at': '2026-11-08T10:00:00Z',
       });
+      expect(comment.filmId, 2);
       expect(comment.filmTitle, 'Paper Moons');
       expect(comment.createdAt.toUtc(), DateTime.utc(2026, 11, 8, 10));
+    });
+
+    test('AdminComment search looks at the film title only', () {
+      final comment = AdminComment(
+        id: 1,
+        body: 'Great ENDING',
+        username: 'mira.lens',
+        filmTitle: 'Paper Moons',
+        createdAt: DateTime(2026),
+      );
+      expect(comment.matches(' MOONS '), isTrue);
+      expect(comment.matches('paper'), isTrue);
+      expect(comment.matches(''), isTrue);
+      expect(comment.matches('ending'), isFalse);
+      expect(comment.matches('mira'), isFalse);
+    });
+
+    test('AdminCommentPage reads has_more', () {
+      final page = AdminCommentPage.fromJson({
+        'comments': [
+          {
+            'id': 1,
+            'body': 'x',
+            'username': 'u',
+            'film_id': 3,
+            'film_title': 'F',
+            'created_at': '2026-11-08T10:00:00Z',
+          },
+        ],
+        'has_more': true,
+      });
+      expect(page.comments.single.filmId, 3);
+      expect(page.hasMore, isTrue);
     });
 
     test('sameAs matches a series by drama id and a film by id', () {

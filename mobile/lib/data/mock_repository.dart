@@ -741,16 +741,33 @@ class MockRepository implements AppRepository {
   }
 
   @override
-  Future<List<AdminComment>> adminComments() async => [
-    for (final c in _comments)
-      AdminComment(
-        id: c.id,
-        body: c.body,
-        username: c.username,
-        filmTitle: _films[_commentFilm[c.id]]?.title ?? '',
-        createdAt: _commentTime[c.id] ?? _now,
-      ),
-  ];
+  Future<AdminCommentPage> adminComments({
+    int? filmId,
+    int offset = 0,
+    int limit = 20,
+  }) async {
+    final all =
+        [
+          for (final c in _comments)
+            if (filmId == null || _commentFilm[c.id] == filmId)
+              AdminComment(
+                id: c.id,
+                body: c.body,
+                username: c.username,
+                filmId: _commentFilm[c.id] ?? 0,
+                filmTitle: _films[_commentFilm[c.id]]?.title ?? '',
+                createdAt: _commentTime[c.id] ?? _now,
+              ),
+        ]..sort((a, b) {
+          // Newest first; the demo comments' ids do not follow their times.
+          final byTime = b.createdAt.compareTo(a.createdAt);
+          return byTime != 0 ? byTime : b.id.compareTo(a.id);
+        });
+    return AdminCommentPage(
+      comments: all.skip(offset).take(limit).toList(),
+      hasMore: all.length > offset + limit,
+    );
+  }
 
   @override
   Future<void> adminDeleteComment(int commentId) => removeComment(commentId);

@@ -291,9 +291,21 @@ class FakeRepository implements AppRepository {
   }
 
   @override
-  Future<List<AdminComment>> adminComments() async {
+  Future<AdminCommentPage> adminComments({
+    int? filmId,
+    int offset = 0,
+    int limit = 20,
+  }) async {
+    calls.add('adminComments film=$filmId offset=$offset limit=$limit');
     if (adminError != null) throw adminError!;
-    return commentList;
+    final all = [
+      for (final c in commentList)
+        if (filmId == null || c.filmId == filmId) c,
+    ];
+    return AdminCommentPage(
+      comments: all.skip(offset).take(limit).toList(),
+      hasMore: all.length > offset + limit,
+    );
   }
 
   @override

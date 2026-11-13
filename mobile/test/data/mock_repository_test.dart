@@ -46,11 +46,24 @@ void main() {
   });
 
   test('deleting a comment from the admin removes it from the film', () async {
-    final comment = (await repo.adminComments()).first;
+    final comment = (await repo.adminComments()).comments.first;
     final before = repo.commentsOf(1).length + repo.commentsOf(2).length;
     await repo.adminDeleteComment(comment.id);
-    expect(await repo.adminComments(), hasLength(1));
+    expect((await repo.adminComments()).comments, hasLength(1));
     expect(repo.commentsOf(1).length + repo.commentsOf(2).length, before - 1);
+  });
+
+  test('admin comments come a page at a time and by film', () async {
+    final first = await repo.adminComments(limit: 1);
+    expect(first.comments, hasLength(1));
+    expect(first.hasMore, isTrue);
+    final second = await repo.adminComments(offset: 1, limit: 1);
+    expect(second.hasMore, isFalse);
+    expect(second.comments.single.id, isNot(first.comments.single.id));
+
+    final onFilm1 = await repo.adminComments(filmId: 1);
+    expect(onFilm1.comments.map((c) => c.filmId), everyElement(1));
+    expect(onFilm1.comments, hasLength(1));
   });
 
   test('the demo top-up follows the setting', () async {
