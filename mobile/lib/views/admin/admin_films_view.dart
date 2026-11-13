@@ -131,8 +131,7 @@ class _AdminFilmsViewState extends State<AdminFilmsView> {
                 for (final film in admin.searchResults) _row(context, film),
               ] else ...[
                 const _Heading('Series Jeen'),
-                if (!admin.filmsLoading &&
-                    !admin.films.any((f) => f.isCatalog))
+                if (!admin.filmsLoading && !admin.films.any((f) => f.isCatalog))
                   const _Note(
                     'No Series Jeen series sold yet. Search to take one down.',
                   ),
@@ -216,10 +215,7 @@ class _FilmRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Switch(
-                value: !film.takenDown,
-                onChanged: (_) => onToggle(),
-              ),
+              Switch(value: !film.takenDown, onChanged: (_) => onToggle()),
             ],
           ),
         ),
