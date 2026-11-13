@@ -212,7 +212,10 @@ class _AdminSettingsViewState extends State<AdminSettingsView> {
                   subtitle: Text(
                     '${p.coins} coins · \$${p.priceUsd.toStringAsFixed(2)} · '
                     'sold ${p.soldCount}',
-                    style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                    style: const TextStyle(
+                      color: AppColors.muted,
+                      fontSize: 12,
+                    ),
                   ),
                   onTap: () => _editPack(p),
                   trailing: IconButton(
