@@ -61,9 +61,7 @@ class _AdminEpisodesViewState extends State<AdminEpisodesView> {
         priceCoins: price,
       );
       setState(() {
-        _episodes = [
-          for (final e in _episodes) e.id == saved.id ? saved : e,
-        ];
+        _episodes = [for (final e in _episodes) e.id == saved.id ? saved : e];
       });
       messenger.showSnackBar(const SnackBar(content: Text('Changes saved.')));
     } on Object catch (e) {
