@@ -144,7 +144,14 @@ abstract class AppRepository {
     required bool isFree,
     required int priceCoins,
   });
-  Future<List<AdminComment>> adminComments();
+
+  /// Comments newest first, [limit] at a time from [offset]; only the ones
+  /// on [filmId] when it is given.
+  Future<AdminCommentPage> adminComments({
+    int? filmId,
+    int offset = 0,
+    int limit = 20,
+  });
   Future<void> adminDeleteComment(int commentId);
   Future<AdminSettings> adminSettings();
   Future<AdminSettings> adminSaveSettings(AdminSettings settings);

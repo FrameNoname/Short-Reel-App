@@ -395,14 +395,18 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  Future<List<AdminComment>> adminComments() async {
+  Future<AdminCommentPage> adminComments({
+    int? filmId,
+    int offset = 0,
+    int limit = 20,
+  }) async {
     final json =
-        await _api.get('/admin/comments', query: {'limit': 200})
+        await _api.get(
+              '/admin/comments',
+              query: {'limit': limit, 'offset': offset, 'film_id': ?filmId},
+            )
             as Map<String, dynamic>;
-    return [
-      for (final c in json['comments'] as List)
-        AdminComment.fromJson(c as Map<String, dynamic>),
-    ];
+    return AdminCommentPage.fromJson(json);
   }
 
   @override
