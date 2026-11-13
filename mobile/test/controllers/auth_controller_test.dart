@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/auth_controller.dart';
 import 'package:shortreel/models/user.dart';
+import 'package:shortreel/services/api_client.dart';
 
 import '../support/fake_repository.dart';
 import '../support/helpers.dart';
@@ -12,6 +13,58 @@ void main() {
   late FakeRepository repo;
 
   setUp(() => repo = FakeRepository());
+
+  group('Login as a viewer', () {
+    test('viewer01 signs in as a viewer with their own coins', () async {
+      final auth = AuthController(repo);
+
+      await auth.login('viewer01', '6666');
+
+      expect(repo.calls, ['login viewer01']);
+      expect(auth.isLoggedIn, isTrue);
+      expect(auth.user?.username, 'viewer01');
+      expect(auth.role, UserRole.viewer);
+      expect(auth.user?.coinBalance, 80);
+    });
+
+    test('a viewer is not an admin and gets no verified badge', () async {
+      final auth = AuthController(repo);
+      await auth.login('viewer01', '6666');
+      expect(auth.role, isNot(UserRole.admin));
+      expect(auth.user?.isVerified, isFalse);
+    });
+
+    test('a wrong password keeps the viewer out and says why', () async {
+      repo.loginError = const ApiException(
+        code: 'UNAUTHENTICATED',
+        message: 'Username or password is incorrect. Please try again.',
+        statusCode: 401,
+      );
+      final auth = AuthController(repo);
+
+      await expectLater(
+        auth.login('viewer01', 'wrong'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having((e) => e.code, 'code', 'UNAUTHENTICATED'),
+        ),
+      );
+      expect(auth.isLoggedIn, isFalse);
+      expect(auth.role, UserRole.guest);
+      expect(auth.hasEntered, isFalse);
+    });
+
+    test('after logout the viewer is a guest again', () async {
+      final auth = AuthController(repo);
+      await auth.login('viewer01', '6666');
+
+      await auth.logout();
+
+      expect(auth.isLoggedIn, isFalse);
+      expect(auth.role, UserRole.guest);
+    });
+  });
 
   group('AuthController', () {
     test('login signs the person in and notifies', () async {
