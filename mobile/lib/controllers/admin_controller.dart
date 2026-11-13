@@ -25,9 +25,31 @@ class AdminController extends ChangeNotifier {
   String? searchError;
   int _searchTurn = 0;
 
+  /// How many comments one page asks the server for.
+  static const commentsPageSize = 20;
+
+  /// Every comment loaded so far, newest first.
   List<AdminComment> comments = const [];
   bool commentsLoading = false;
+  bool commentsLoadingMore = false;
+  bool commentsHasMore = false;
   String? commentsError;
+
+  /// Set when the list shows the comments on one film only.
+  int? commentsFilmId;
+  String? commentsFilmTitle;
+
+  /// Text typed in the search box; it filters the comments already loaded.
+  String commentsQuery = '';
+  int _commentsTurn = 0;
+
+  /// The loaded comments that match [commentsQuery].
+  List<AdminComment> get visibleComments => commentsQuery.isEmpty
+      ? comments
+      : [
+          for (final c in comments)
+            if (c.matches(commentsQuery)) c,
+        ];
 
   AdminSettings settings = const AdminSettings();
   List<AdminCoinPack> coinPacks = const [];
@@ -119,16 +141,74 @@ class AdminController extends ChangeNotifier {
 
   // ---- comments ----
 
+  /// Loads the first page again, keeping the film filter.
   Future<void> loadComments() async {
+    final turn = ++_commentsTurn;
     commentsLoading = true;
+    commentsLoadingMore = false;
     commentsError = null;
     notifyListeners();
     try {
-      comments = await _repository.adminComments();
+      final page = await _repository.adminComments(
+        filmId: commentsFilmId,
+        limit: commentsPageSize,
+      );
+      if (turn != _commentsTurn) return;
+      comments = page.comments;
+      commentsHasMore = page.hasMore;
     } on Object catch (e) {
+      if (turn != _commentsTurn) return;
       commentsError = errorMessage(e);
     }
     commentsLoading = false;
+    notifyListeners();
+  }
+
+  /// Adds the next, older page under the comments already shown.
+  Future<void> loadMoreComments() async {
+    if (commentsLoading || commentsLoadingMore || !commentsHasMore) return;
+    final turn = _commentsTurn;
+    commentsLoadingMore = true;
+    commentsError = null;
+    notifyListeners();
+    try {
+      // Deleted comments are gone from the server too, so the count of
+      // comments held here is where the next page starts.
+      final page = await _repository.adminComments(
+        filmId: commentsFilmId,
+        offset: comments.length,
+        limit: commentsPageSize,
+      );
+      if (turn != _commentsTurn) return;
+      // A comment posted meanwhile pushes older ones down a place, so the
+      // new page can repeat the last one already held.
+      final held = {for (final c in comments) c.id};
+      comments = [
+        ...comments,
+        for (final c in page.comments)
+          if (!held.contains(c.id)) c,
+      ];
+      commentsHasMore = page.hasMore;
+    } on Object catch (e) {
+      if (turn != _commentsTurn) return;
+      commentsError = errorMessage(e);
+    }
+    commentsLoadingMore = false;
+    notifyListeners();
+  }
+
+  /// Shows only the comments on [filmId], or every film when it is null.
+  Future<void> filterCommentsByFilm(int? filmId, {String? title}) async {
+    if (filmId == commentsFilmId) return;
+    commentsFilmId = filmId;
+    commentsFilmTitle = filmId == null ? null : title;
+    comments = const [];
+    commentsHasMore = false;
+    await loadComments();
+  }
+
+  void searchComments(String query) {
+    commentsQuery = query.trim();
     notifyListeners();
   }
 
@@ -199,8 +279,15 @@ class AdminController extends ChangeNotifier {
     searchQuery = '';
     searchResults = const [];
     searchError = null;
+    _commentsTurn++;
     comments = const [];
+    commentsLoading = false;
+    commentsLoadingMore = false;
+    commentsHasMore = false;
     commentsError = null;
+    commentsFilmId = null;
+    commentsFilmTitle = null;
+    commentsQuery = '';
     settings = const AdminSettings();
     coinPacks = const [];
     settingsError = null;

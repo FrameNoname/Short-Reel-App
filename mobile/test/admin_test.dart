@@ -135,6 +135,127 @@ void main() {
       expect(admin.comments.map((c) => c.id), [2]);
     });
 
+    group('comments', () {
+      List<AdminComment> make(int count, {int filmId = 1}) => [
+        for (var i = count; i >= 1; i--)
+          AdminComment(
+            id: i,
+            body: 'comment $i',
+            username: i.isEven ? 'even' : 'odd',
+            filmId: i % 3 == 0 ? 9 : filmId,
+            filmTitle: i % 3 == 0 ? 'Nine' : 'One',
+            createdAt: DateTime(2026, 11, 8),
+          ),
+      ];
+
+      test('load more adds the next page until there is none', () async {
+        repo.commentList = make(45);
+        final admin = AdminController(repo);
+        await admin.loadComments();
+        expect(admin.comments, hasLength(AdminController.commentsPageSize));
+        expect(admin.commentsHasMore, isTrue);
+
+        await admin.loadMoreComments();
+        expect(admin.comments, hasLength(40));
+        await admin.loadMoreComments();
+        expect(admin.comments, hasLength(45));
+        expect(admin.commentsHasMore, isFalse);
+        expect(admin.comments.map((c) => c.id).toSet(), hasLength(45));
+
+        final asked = repo.calls.length;
+        await admin.loadMoreComments();
+        expect(repo.calls, hasLength(asked));
+      });
+
+      test('a deleted comment does not make load more skip one', () async {
+        repo.commentList = make(25);
+        final admin = AdminController(repo);
+        await admin.loadComments();
+        final gone = admin.comments.first;
+        await admin.deleteComment(gone);
+        repo.commentList = [
+          for (final c in repo.commentList)
+            if (c.id != gone.id) c,
+        ];
+        await admin.loadMoreComments();
+        expect(admin.comments, hasLength(24));
+        expect(admin.commentsHasMore, isFalse);
+      });
+
+      test('a page that repeats a held comment is not shown twice', () async {
+        repo.commentList = make(25);
+        final admin = AdminController(repo);
+        await admin.loadComments();
+        // A new comment arrives, pushing the oldest held one onto page two.
+        repo.commentList = [
+          AdminComment(
+            id: 26,
+            body: 'new',
+            username: 'u',
+            filmTitle: 'One',
+            createdAt: DateTime(2026, 11, 9),
+          ),
+          ...repo.commentList,
+        ];
+        await admin.loadMoreComments();
+        expect(admin.comments.map((c) => c.id).toSet(), hasLength(25));
+        expect(admin.comments, hasLength(25));
+      });
+
+      test('filtering by film asks the server for that film only', () async {
+        repo.commentList = make(12);
+        final admin = AdminController(repo);
+        await admin.loadComments();
+        await admin.filterCommentsByFilm(9, title: 'Nine');
+        expect(admin.commentsFilmId, 9);
+        expect(admin.commentsFilmTitle, 'Nine');
+        expect(repo.calls.last, contains('film=9 offset=0'));
+        expect(admin.comments.map((c) => c.filmId), everyElement(9));
+        expect(admin.comments, hasLength(4));
+
+        await admin.filterCommentsByFilm(null);
+        expect(admin.commentsFilmTitle, isNull);
+        expect(admin.comments, hasLength(12));
+      });
+
+      test('search filters the loaded comments without asking', () async {
+        repo.commentList = make(6);
+        final admin = AdminController(repo);
+        await admin.loadComments();
+        final asked = repo.calls.length;
+        admin.searchComments('  NINE ');
+        expect(admin.visibleComments.map((c) => c.id), [6, 3]);
+        // The author's name is not searched.
+        admin.searchComments('even');
+        expect(admin.visibleComments, isEmpty);
+        admin.searchComments('');
+        expect(admin.visibleComments, hasLength(6));
+        expect(repo.calls, hasLength(asked));
+      });
+
+      test('a failed load more keeps what is shown', () async {
+        repo.commentList = make(25);
+        final admin = AdminController(repo);
+        await admin.loadComments();
+        repo.adminError = serverDown;
+        await admin.loadMoreComments();
+        expect(admin.comments, hasLength(20));
+        expect(admin.commentsError, isNotNull);
+        expect(admin.commentsLoadingMore, isFalse);
+      });
+
+      test('reset clears the film filter and search', () async {
+        repo.commentList = make(6);
+        final admin = AdminController(repo);
+        await admin.filterCommentsByFilm(9, title: 'Nine');
+        admin.searchComments('x');
+        admin.reset();
+        expect(admin.commentsFilmId, isNull);
+        expect(admin.commentsQuery, isEmpty);
+        expect(admin.comments, isEmpty);
+      });
+    });
+
     test('settings and coin packs load together and save', () async {
       repo.adminPacks = const [
         AdminCoinPack(
@@ -193,11 +314,46 @@ void main() {
         'id': 4,
         'body': 'Nice',
         'username': 'mira.lens',
+        'film_id': 2,
         'film_title': 'Paper Moons',
         'created_at': '2026-11-08T10:00:00Z',
       });
+      expect(comment.filmId, 2);
       expect(comment.filmTitle, 'Paper Moons');
       expect(comment.createdAt.toUtc(), DateTime.utc(2026, 11, 8, 10));
+    });
+
+    test('AdminComment search looks at the film title only', () {
+      final comment = AdminComment(
+        id: 1,
+        body: 'Great ENDING',
+        username: 'mira.lens',
+        filmTitle: 'Paper Moons',
+        createdAt: DateTime(2026),
+      );
+      expect(comment.matches(' MOONS '), isTrue);
+      expect(comment.matches('paper'), isTrue);
+      expect(comment.matches(''), isTrue);
+      expect(comment.matches('ending'), isFalse);
+      expect(comment.matches('mira'), isFalse);
+    });
+
+    test('AdminCommentPage reads has_more', () {
+      final page = AdminCommentPage.fromJson({
+        'comments': [
+          {
+            'id': 1,
+            'body': 'x',
+            'username': 'u',
+            'film_id': 3,
+            'film_title': 'F',
+            'created_at': '2026-11-08T10:00:00Z',
+          },
+        ],
+        'has_more': true,
+      });
+      expect(page.comments.single.filmId, 3);
+      expect(page.hasMore, isTrue);
     });
 
     test('sameAs matches a series by drama id and a film by id', () {

@@ -126,11 +126,13 @@ class AdminComment {
     required this.username,
     required this.filmTitle,
     required this.createdAt,
+    this.filmId = 0,
   });
 
   final int id;
   final String body;
   final String username;
+  final int filmId;
   final String filmTitle;
   final DateTime createdAt;
 
@@ -138,9 +140,35 @@ class AdminComment {
     id: _int(json['id']),
     body: json['body'] as String,
     username: json['username'] as String,
+    filmId: _int(json['film_id']),
     filmTitle: json['film_title'] as String,
     createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
   );
+
+  /// True when [query] appears in the title of the film it was left on.
+  bool matches(String query) {
+    final q = query.trim().toLowerCase();
+    return q.isEmpty || filmTitle.toLowerCase().contains(q);
+  }
+}
+
+/// One page of `/api/admin/comments`, newest first.
+class AdminCommentPage {
+  const AdminCommentPage({required this.comments, required this.hasMore});
+
+  final List<AdminComment> comments;
+
+  /// Older comments are waiting after this page.
+  final bool hasMore;
+
+  factory AdminCommentPage.fromJson(Map<String, dynamic> json) =>
+      AdminCommentPage(
+        comments: [
+          for (final c in json['comments'] as List)
+            AdminComment.fromJson(c as Map<String, dynamic>),
+        ],
+        hasMore: json['has_more'] == true,
+      );
 }
 
 class AdminCoinPack {
