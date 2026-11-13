@@ -1,12 +1,12 @@
-// Person 3: search.
+// Person 3: FilmSearchController (search, trending, recent words).
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/film_search_controller.dart';
 import 'package:shortreel/models/film.dart';
 
-import 'support/fake_repository.dart';
-import 'support/helpers.dart';
+import '../support/fake_repository.dart';
+import '../support/helpers.dart';
 
 void main() {
   late FakeRepository repo;
