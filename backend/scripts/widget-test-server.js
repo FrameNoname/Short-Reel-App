@@ -9,6 +9,11 @@
 //
 // POST /__test/reset rebuilds the database from the seed, so every widget test
 // starts from the same accounts, films and balances.
+//
+// `flutter test` runs several test files at once, and they share this one
+// database, so a file takes POST /__test/lock?owner=<id> before its first test
+// and gives it back with POST /__test/unlock?owner=<id> after its last. The lock
+// is freed on its own after LOCK_LIMIT_MS, in case a test run was killed.
 require('dotenv').config({ quiet: true, path: require('node:path').join(__dirname, '..', '.env') });
 const crypto = require('node:crypto');
 const fs = require('node:fs');
@@ -107,6 +112,31 @@ async function main() {
   });
 
   const outer = express();
+
+  const LOCK_LIMIT_MS = 10 * 60 * 1000;
+  let holder = null;
+  let heldSince = 0;
+  const waiting = [];
+  const grant = (owner, res) => {
+    holder = owner;
+    heldSince = Date.now();
+    res.json({ status: 'locked', owner });
+  };
+  const release = () => {
+    holder = null;
+    const next = waiting.shift();
+    if (next) grant(next.owner, next.res);
+  };
+  outer.post('/__test/lock', (req, res) => {
+    const owner = String(req.query.owner ?? '');
+    if (holder !== null && Date.now() - heldSince > LOCK_LIMIT_MS) release();
+    if (holder === null) grant(owner, res);
+    else waiting.push({ owner, res });
+  });
+  outer.post('/__test/unlock', (req, res) => {
+    if (holder === String(req.query.owner ?? '')) release();
+    res.json({ status: 'unlocked' });
+  });
   outer.post('/__test/reset', async (req, res) => {
     try {
       await resetDatabase();

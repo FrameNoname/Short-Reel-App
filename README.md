@@ -151,7 +151,7 @@ cd mobile && flutter test
 
 ไฟล์ test ของ backend วางที่ `backend/test/*.test.js` ส่วนของ Flutter วางที่ `mobile/test/*_test.dart` ถ้า test ต้องใช้ฐานข้อมูล ให้ใช้ฐานที่ชื่อลงท้ายด้วย `_test` ห้ามใช้ `shortreel`
 
-Widget test ของทั้งแอป (`mobile/test/app_test.dart`) คุยกับ API จริง ต้องเปิด MariaDB แล้วรัน API สำหรับ test ไว้ก่อน `flutter test` สคริปต์นี้สร้างฐาน `shortreel_widget_test` จาก `backend/db/shortreel.sql` (ไม่แตะ `shortreel`) ฟังที่ `http://127.0.0.1:3100` และล้างฐานกลับเป็นข้อมูลตั้งต้นก่อนทุก test ส่วน Series Jeen ใช้ตัวตอบปลอมในสคริปต์ จึงไม่กินโควตาของผู้ให้บริการ
+Widget test ของทั้งแอป (`mobile/test/widget_test/` แบ่งไฟล์ตามคน ดู `mobile/test/widget_test/README.md`) คุยกับ API จริง ต้องเปิด MariaDB แล้วรัน API สำหรับ test ไว้ก่อน `flutter test` สคริปต์นี้สร้างฐาน `shortreel_widget_test` จาก `backend/db/shortreel.sql` (ไม่แตะ `shortreel`) ฟังที่ `http://127.0.0.1:3100` และล้างฐานกลับเป็นข้อมูลตั้งต้นก่อนทุก test ส่วน Series Jeen ใช้ตัวตอบปลอมในสคริปต์ จึงไม่กินโควตาของผู้ให้บริการ
 
 ```bash
 node backend/scripts/widget-test-server.js
@@ -317,7 +317,7 @@ cd mobile && flutter test
 
 Put backend tests in `backend/test/*.test.js` and Flutter tests in `mobile/test/*_test.dart`. Tests that need a database must use one whose name ends in `_test`, never `shortreel`.
 
-The full-app widget tests (`mobile/test/app_test.dart`) talk to the real API. Start MariaDB and the test API before `flutter test`. The script builds `shortreel_widget_test` from `backend/db/shortreel.sql` (it never touches `shortreel`), listens on `http://127.0.0.1:3100`, and resets the database to the seed before every test. Series Jeen is answered by a stub inside the script, so no provider quota is spent.
+The full-app widget tests (`mobile/test/widget_test/`, one file per team member; see `mobile/test/widget_test/README.md`) talk to the real API. Start MariaDB and the test API before `flutter test`. The script builds `shortreel_widget_test` from `backend/db/shortreel.sql` (it never touches `shortreel`), listens on `http://127.0.0.1:3100`, and resets the database to the seed before every test. Series Jeen is answered by a stub inside the script, so no provider quota is spent.
 
 ```bash
 node backend/scripts/widget-test-server.js
