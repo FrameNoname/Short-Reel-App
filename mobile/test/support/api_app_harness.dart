@@ -46,15 +46,15 @@ String th(String english) => thaiOf(english);
 
 Finder text(String english) => find.text(th(english));
 
-/// Rebuilds the test database from the seed.
-Future<void> resetServer() async {
+/// Sends a POST to one of the test server's own routes.
+Future<void> _testServerPost(String route) async {
   final client = HttpClient();
   try {
-    final request = await client.postUrl(Uri.parse('$testServer/__test/reset'));
+    final request = await client.postUrl(Uri.parse('$testServer$route'));
     final response = await request.close();
     final body = await response.transform(utf8.decoder).join();
     if (response.statusCode != 200) {
-      throw StateError('Resetting the test database failed: $body');
+      throw StateError('POST $route on the widget test API failed: $body');
     }
   } on SocketException {
     throw StateError(
@@ -65,6 +65,36 @@ Future<void> resetServer() async {
     client.close();
   }
 }
+
+/// Rebuilds the test database from the seed.
+Future<void> resetServer() => _testServerPost('/__test/reset');
+
+/// The fake video player of the running test, set up by [useApiApp].
+late FakeVideoPlatform video;
+
+/// The first film of the seeded feed (the newest).
+const firstFilm = 'ShortReel Intro';
+
+/// Sets up a widget test file that runs the app against the test API.
+///
+/// Each file runs in its own process, and `flutter test` runs several files at
+/// once, but they all share one test database. So a file waits for the
+/// server's lock before its first test and frees it after its last, and every
+/// test starts from the seed data.
+void useApiApp() {
+  ApiTestBinding.ensureInitialized();
+  setUpAll(() => _testServerPost('/__test/lock?owner=$pid'));
+  tearDownAll(() => _testServerPost('/__test/unlock?owner=$pid'));
+  setUp(() async {
+    await resetServer();
+    video = FakeVideoPlatform();
+    VideoPlayerPlatform.instance = video;
+  });
+}
+
+/// What [path] answers on the test API, as JSON text.
+Future<String> serverText(String path, {String? username}) async =>
+    jsonEncode(await serverGet(path, username: username));
 
 /// Reads [path] from the test API, as [username] when given, so a test can
 /// check what the server stored and not only what the screen shows.
@@ -305,4 +335,38 @@ Future<void> closeApp(WidgetTester tester) async {
   await settle(tester);
   await tester.pumpWidget(const SizedBox());
   await tester.pump(const Duration(milliseconds: 300));
+}
+
+/// Opens the sign-up screen and sends the form.
+Future<void> register(
+  WidgetTester tester,
+  String username,
+  String password, {
+  String? confirm,
+  bool allowTestFontOverflow = false,
+}) async {
+  await pumpApp(tester, allowTestFontOverflow: allowTestFontOverflow);
+  await tester.tap(text('Create account'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('register-username')), username);
+  await tester.enterText(find.byKey(const Key('register-password')), password);
+  await tester.enterText(
+    find.byKey(const Key('register-confirm')),
+    confirm ?? password,
+  );
+  final submit = find.widgetWithText(FilledButton, th('Create account'));
+  await tester.ensureVisible(submit);
+  await tester.pumpAndSettle();
+  await tester.tap(submit);
+  await settle(tester);
+}
+
+/// Opens the first feed film's episode list and picks episode [no].
+Future<void> openEpisode(WidgetTester tester, int no) async {
+  await waitFor(tester, find.text(firstFilm));
+  await tester.tap(find.byIcon(Icons.playlist_play_rounded).first);
+  await waitFor(tester, find.byKey(Key('episode-$no')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(Key('episode-$no')));
+  await settle(tester);
 }
