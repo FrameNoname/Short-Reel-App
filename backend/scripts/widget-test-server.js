@@ -1,4 +1,4 @@
-// Runs the real API for the Flutter widget tests (mobile/test/app_test.dart).
+// Runs the real API for the Flutter widget tests (mobile/test/widget_test/).
 //
 //   node scripts/widget-test-server.js
 //

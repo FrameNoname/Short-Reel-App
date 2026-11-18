@@ -122,9 +122,6 @@ class FeedController extends ChangeNotifier {
 
   // ---- reads the views need; they never touch the repository -------------
 
-  /// Whether this build streams real video rather than placeholders.
-  bool get playsVideo => _repository.playsVideo;
-
   bool isLiked(int userId, int filmId) => _repository.isLiked(userId, filmId);
 
   bool isSaved(int userId, int filmId) => _repository.isSaved(userId, filmId);
