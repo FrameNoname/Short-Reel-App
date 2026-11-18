@@ -82,10 +82,6 @@ abstract class AppRepository {
   /// server, for when it has already refused the token.
   Future<void> clearSession();
 
-  /// True when episodes play real video from the backend; the offline mock
-  /// only shows a placeholder.
-  bool get playsVideo;
-
   /// Asks the backend whether [episodeId] may be watched and for its link.
   Future<Playback> playback(int episodeId);
 

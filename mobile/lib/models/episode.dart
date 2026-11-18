@@ -20,8 +20,8 @@ class Episode {
   final bool isFree;
   final int priceCoins;
 
-  /// What the backend says this viewer may do; null for the offline mock,
-  /// which works it out from its own records.
+  /// What the backend says this viewer may do; null when the answer did not
+  /// say, and the price decides instead.
   final EpisodeAccess? access;
 
   /// The same episode at a new price; 0 coins makes it free.
