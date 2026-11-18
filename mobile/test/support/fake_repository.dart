@@ -170,9 +170,6 @@ class FakeRepository implements AppRepository {
 
   // ---- reads the feed passes straight through ----
   @override
-  bool get playsVideo => true;
-
-  @override
   bool isLiked(int userId, int filmId) => filmId == 1;
 
   @override
