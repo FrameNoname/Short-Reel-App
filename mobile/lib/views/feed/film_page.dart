@@ -21,8 +21,8 @@ import 'speed_sheet.dart';
 
 const _textShadow = [Shadow(blurRadius: 6, color: Color(0xAA000000))];
 
-/// One full-screen film in the vertical feed. Video playback comes later, so
-/// the picture area shows the same placeholder as the design.
+/// One full-screen film in the vertical feed, playing the episode the backend
+/// streams.
 ///
 /// Gestures follow the short-video convention: tap to pause or resume, double
 /// tap anywhere to like.
@@ -62,8 +62,6 @@ class _FilmPageState extends State<FilmPage> {
   int _burstId = 0;
 
   Film get film => widget.film;
-
-  bool get playsVideo => context.read<FeedController>().playsVideo;
 
   void _whenLoggedIn(BuildContext context, void Function(int userId) action) {
     final userId = context.read<AuthController>().user?.id;
@@ -137,22 +135,9 @@ class _FilmPageState extends State<FilmPage> {
                     },
                     onLongPressEnd: (_) => setState(() => _boosting = false),
                     onLongPressCancel: () => setState(() => _boosting = false),
-                    child: film.catalogDramaId != null || playsVideo
-                        ? const SizedBox.expand()
-                        : Center(
-                            child: Text(
-                              'VIDEO · ${film.title.toUpperCase()} · EP $episode',
-                              style: const TextStyle(
-                                color: AppColors.muted,
-                                fontSize: 12,
-                                letterSpacing: 2,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                    child: const SizedBox.expand(),
                   ),
                 );
-                if (film.catalogDramaId == null && !playsVideo) return gestures;
                 void next() {
                   final after = feed.episodeAfter(
                     film.id,

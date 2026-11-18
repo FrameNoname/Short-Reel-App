@@ -216,9 +216,6 @@ class ApiRepository implements AppRepository {
   }
 
   @override
-  bool get playsVideo => true;
-
-  @override
   Future<Playback> playback(int episodeId) async {
     final json = await _api.get('/episodes/$episodeId') as Map<String, dynamic>;
     final url = json['stream_url'] as String?;

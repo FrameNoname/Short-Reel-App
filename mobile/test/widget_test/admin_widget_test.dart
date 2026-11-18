@@ -63,12 +63,12 @@ void main() {
       await tester.tap(text('Comments'));
       await waitFor(tester, find.text('Love the paper-cut style.'));
 
-      final card = find.ancestor(
+      final rows = find.ancestor(
         of: find.text('Love the paper-cut style.'),
         matching: find.byType(Row),
       );
       await tester.tap(
-        find.descendant(of: card.first, matching: find.byTooltip('Delete')),
+        find.descendant(of: rows, matching: find.byTooltip(th('Delete'))).first,
       );
       await settle(tester);
       await tester.tap(find.widgetWithText(FilledButton, th('Delete')));

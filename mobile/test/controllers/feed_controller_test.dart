@@ -133,7 +133,6 @@ void main() {
   group('FeedController reads for the views', () {
     test('pass through to the repository', () async {
       final feed = FeedController(repo);
-      expect(feed.playsVideo, isTrue);
       expect(feed.isLiked(2, 1), isTrue);
       expect(feed.isSaved(2, 1), isFalse);
 
