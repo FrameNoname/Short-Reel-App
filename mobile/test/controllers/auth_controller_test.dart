@@ -1,55 +1,68 @@
-// Person 1: login, profile and the User model.
+// Person 1: AuthController (login, register, logout, session).
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/controllers/auth_controller.dart';
 import 'package:shortreel/models/user.dart';
+import 'package:shortreel/services/api_client.dart';
 
-import 'support/fake_repository.dart';
-import 'support/helpers.dart';
+import '../support/fake_repository.dart';
+import '../support/helpers.dart';
 
 void main() {
   late FakeRepository repo;
 
   setUp(() => repo = FakeRepository());
 
-  group('User', () {
-    test('reads the API shape and marks only admins as verified', () {
-      final user = User.fromJson({
-        'id': 1,
-        'username': 'admin',
-        'display_name': null,
-        'role': 'admin',
-        'coin_balance': 0,
-      });
-      expect(user.role, UserRole.admin);
-      expect(user.isVerified, isTrue);
-      expect(user.copyWith(coinBalance: 5).isVerified, isTrue);
+  group('Login as a viewer', () {
+    test('viewer01 signs in as a viewer with their own coins', () async {
+      final auth = AuthController(repo);
 
-      final viewer = User.fromJson({
-        'id': 2,
-        'username': 'v',
-        'role': 'viewer',
-        'coin_balance': 80,
-        'bio': 'hi',
-      });
-      expect(viewer.isVerified, isFalse);
-      expect(viewer.bio, 'hi');
+      await auth.login('viewer01', '6666');
+
+      expect(repo.calls, ['login viewer01']);
+      expect(auth.isLoggedIn, isTrue);
+      expect(auth.user?.username, 'viewer01');
+      expect(auth.role, UserRole.viewer);
+      expect(auth.user?.coinBalance, 80);
     });
 
-    test('copyWith keeps what it is not given', () {
-      const user = User(
-        id: 1,
-        username: 'a',
-        displayName: 'A',
-        role: UserRole.viewer,
-        coinBalance: 10,
-        bio: 'b',
+    test('a viewer is not an admin and gets no verified badge', () async {
+      final auth = AuthController(repo);
+      await auth.login('viewer01', '6666');
+      expect(auth.role, isNot(UserRole.admin));
+      expect(auth.user?.isVerified, isFalse);
+    });
+
+    test('a wrong password keeps the viewer out and says why', () async {
+      repo.loginError = const ApiException(
+        code: 'UNAUTHENTICATED',
+        message: 'Username or password is incorrect. Please try again.',
+        statusCode: 401,
       );
-      final updated = user.copyWith(coinBalance: 30);
-      expect(updated.coinBalance, 30);
-      expect(updated.displayName, 'A');
-      expect(updated.bio, 'b');
+      final auth = AuthController(repo);
+
+      await expectLater(
+        auth.login('viewer01', 'wrong'),
+        throwsA(
+          isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)
+              .having((e) => e.code, 'code', 'UNAUTHENTICATED'),
+        ),
+      );
+      expect(auth.isLoggedIn, isFalse);
+      expect(auth.role, UserRole.guest);
+      expect(auth.hasEntered, isFalse);
+    });
+
+    test('after logout the viewer is a guest again', () async {
+      final auth = AuthController(repo);
+      await auth.login('viewer01', '6666');
+
+      await auth.logout();
+
+      expect(auth.isLoggedIn, isFalse);
+      expect(auth.role, UserRole.guest);
     });
   });
 
