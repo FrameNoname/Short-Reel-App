@@ -43,10 +43,14 @@ mobile/             แอป Flutter แบบ MVC
   lib/data/         repository ที่เรียก API
   lib/services/     HTTP client, token และ Series Jeen
   lib/l10n/         คำแปลภาษาไทย
-  test/             unit test ของ model และ controller
+  test/models/      unit test ของ model
+  test/controllers/ unit test ของ controller (ใช้ FakeRepository ไม่ต่อ API)
+  test/services/    unit test ของ HTTP client และ Series Jeen
+  test/support/     ของปลอมสำหรับ unit test และตัวช่วยของ widget test
+  test/widget_test/ widget test ของทั้งแอป ต่อ API จริง แบ่งไฟล์ตามคน
 ```
 
-หน้าจอคุยกับ controller เท่านั้น controller เก็บ repository เป็นตัวแปร private หน้าจอจึงเรียก API หรือ repository เองไม่ได้
+หน้าจอคุยกับ controller เท่านั้น controller เก็บ repository เป็นตัวแปร private หน้าจอจึงเรียก API หรือ repository เองไม่ได้ แอปมี repository ตัวเดียวคือ `ApiRepository` ที่เรียก backend จริง ไม่มีข้อมูลจำลองในแอปแล้ว ของปลอมมีเฉพาะใน unit test
 
 ### ความปลอดภัย
 
@@ -146,15 +150,18 @@ flutter run -d edge --web-port 8080 --dart-define=API_BASE_URL=http://localhost:
 ```bash
 cd mobile && flutter analyze
 npm test --prefix backend
-cd mobile && flutter test
+cd mobile && flutter test test/models test/controllers test/services
 ```
 
-ไฟล์ test ของ backend วางที่ `backend/test/*.test.js` ส่วนของ Flutter วางที่ `mobile/test/*_test.dart` ถ้า test ต้องใช้ฐานข้อมูล ให้ใช้ฐานที่ชื่อลงท้ายด้วย `_test` ห้ามใช้ `shortreel`
+คำสั่งสุดท้ายรันเฉพาะ unit test ของแอป ซึ่งไม่ต้องเปิด backend ถ้ารัน `flutter test` เฉยๆ จะรวม widget test ด้วย ซึ่งต้องเปิด API สำหรับ test ก่อน (ดูด้านล่าง)
+
+ไฟล์ test ของ backend วางที่ `backend/test/*.test.js` ส่วนของ Flutter วางในโฟลเดอร์ตามชนิด: `mobile/test/models/`, `controllers/`, `services/` หรือ `widget_test/` ชื่อไฟล์ลงท้ายด้วย `_test.dart` ถ้า test ต้องใช้ฐานข้อมูล ให้ใช้ฐานที่ชื่อลงท้ายด้วย `_test` ห้ามใช้ `shortreel`
 
 Widget test ของทั้งแอป (`mobile/test/widget_test/` แบ่งไฟล์ตามคน ดู `mobile/test/widget_test/README.md`) คุยกับ API จริง ต้องเปิด MariaDB แล้วรัน API สำหรับ test ไว้ก่อน `flutter test` สคริปต์นี้สร้างฐาน `shortreel_widget_test` จาก `backend/db/shortreel.sql` (ไม่แตะ `shortreel`) ฟังที่ `http://127.0.0.1:3100` และล้างฐานกลับเป็นข้อมูลตั้งต้นก่อนทุก test ส่วน Series Jeen ใช้ตัวตอบปลอมในสคริปต์ จึงไม่กินโควตาของผู้ให้บริการ
 
 ```bash
 node backend/scripts/widget-test-server.js
+cd mobile && flutter test test/widget_test
 ```
 
 ### Branch
@@ -163,7 +170,7 @@ node backend/scripts/widget-test-server.js
 |---|---|
 | `main` | เวอร์ชันหลัก |
 | `develop` | รวมงานก่อนขึ้น `main` |
-| `Frame-dev` | งานที่กำลังพัฒนา แอปต่อ backend จริง |
+| `Frame-dev` | งานที่กำลังพัฒนา แอปต่อ backend จริง เปิด PR เข้า `develop` และ `main` |
 | `frontend-only` | แอปอย่างเดียว ไม่ต่อ backend ใช้ข้อมูลจำลองใน `mobile/lib/data/mock_repository.dart` รันได้ด้วย `flutter run` โดยไม่ต้องเปิด backend หรือ MySQL |
 
 ---
@@ -207,10 +214,14 @@ mobile/             Flutter app (MVC)
   lib/data/         repository that calls the API
   lib/services/     HTTP client, token storage and Series Jeen
   lib/l10n/         Thai translations
-  test/             model and controller unit tests
+  test/models/      model unit tests
+  test/controllers/ controller unit tests (FakeRepository, no API)
+  test/services/    HTTP client and Series Jeen unit tests
+  test/support/     unit test fakes and widget test helpers
+  test/widget_test/ full-app widget tests against the real API, one file per person
 ```
 
-Screens talk to controllers only. Each controller keeps its repository private, so a screen cannot call the API or the repository itself.
+Screens talk to controllers only. Each controller keeps its repository private, so a screen cannot call the API or the repository itself. The app has one repository, `ApiRepository`, which calls the real backend; there is no mock data in the app. Fakes live only in the unit tests.
 
 ### Security
 
@@ -312,15 +323,18 @@ All routes start with `/api`.
 ```bash
 cd mobile && flutter analyze
 npm test --prefix backend
-cd mobile && flutter test
+cd mobile && flutter test test/models test/controllers test/services
 ```
 
-Put backend tests in `backend/test/*.test.js` and Flutter tests in `mobile/test/*_test.dart`. Tests that need a database must use one whose name ends in `_test`, never `shortreel`.
+The last command runs only the app's unit tests, which need no backend. A plain `flutter test` also runs the widget tests, which need the test API running first (see below).
+
+Put backend tests in `backend/test/*.test.js`. Put Flutter tests in the folder for their kind: `mobile/test/models/`, `controllers/`, `services/` or `widget_test/`, with names ending in `_test.dart`. Tests that need a database must use one whose name ends in `_test`, never `shortreel`.
 
 The full-app widget tests (`mobile/test/widget_test/`, one file per team member; see `mobile/test/widget_test/README.md`) talk to the real API. Start MariaDB and the test API before `flutter test`. The script builds `shortreel_widget_test` from `backend/db/shortreel.sql` (it never touches `shortreel`), listens on `http://127.0.0.1:3100`, and resets the database to the seed before every test. Series Jeen is answered by a stub inside the script, so no provider quota is spent.
 
 ```bash
 node backend/scripts/widget-test-server.js
+cd mobile && flutter test test/widget_test
 ```
 
 ### Branches
@@ -329,5 +343,5 @@ node backend/scripts/widget-test-server.js
 |---|---|
 | `main` | The main version |
 | `develop` | Collects work before it goes to `main` |
-| `Frame-dev` | Work in progress; the app talks to the real backend |
+| `Frame-dev` | Work in progress; the app talks to the real backend. Opens PRs into `develop` and `main` |
 | `frontend-only` | The app alone, with no backend. It uses sample data from `mobile/lib/data/mock_repository.dart` and runs with `flutter run`, without the backend or MySQL. |
