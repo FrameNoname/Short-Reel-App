@@ -39,6 +39,9 @@ class CatalogController extends ChangeNotifier {
 
   Future<void> search(String value) async {
     query = value.trim();
+    // The platforms never loaded (the server was down): load them first,
+    // which also runs this search.
+    if (platform == null) return load();
     await _run(() => _fetch(reset: true));
   }
 
