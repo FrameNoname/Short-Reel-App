@@ -10,10 +10,10 @@
 | Person 2 | `feed_widget_test.dart` | ฟีด, ตัวเล่น, like/save/comment, ความเร็ว, รายการตอน, ท่าทาง (แตะหยุด, แตะสองครั้งไลก์, กดค้าง 2x, ปัดเรื่องถัดไป), จบตอนแล้วเล่นตอนถัดไป, server ล่ม | 13 |
 | Person 3 | `search_widget_test.dart` | หน้าค้นหา, ค้นไม่เจอ, server ล่ม | 4 |
 | Person 4 | `wallet_widget_test.dart` | กระเป๋าเงิน, ซื้อแพ็กเหรียญ, ปลดล็อกตอน, server ล่ม | 6 |
-| Person 5 | `catalog_widget_test.dart` | แคตตาล็อก Series Jeen: รายการ, ค้นหา, เปิดเล่น, ปลดล็อกตอน 10 เหรียญ, server ล่ม (ตอนเปิดและตอนค้นหา) | 5 |
+| Person 5 | `catalog_widget_test.dart` | แคตตาล็อก Series Jeen: รายการ (ไม่มีช่องค้นหา), เปิดเล่น, ปลดล็อกตอน 10 เหรียญ, server ล่ม | 4 |
 | Person 6 | `admin_widget_test.dart` | dashboard, ถอดเรื่องและเอากลับ, ราคาตอนและตอนฟรี, ลบคอมเมนต์, ราคาและแพ็กเหรียญ, server ล่ม | 8 |
 
-รวม 49 test
+รวม 48 test
 
 ตัวช่วยที่ทุกไฟล์ใช้ร่วมกันอยู่ใน `test/support/api_app_harness.dart` (`useApiApp`, `logIn`, `register`, `openTab`, `openEpisode`, `waitFor`, `serverText`, `serverDown`, `video.finish` ฯลฯ) ถ้าจะแก้ไฟล์นี้ บอกทีมก่อน เพราะกระทบทุกคน
 
