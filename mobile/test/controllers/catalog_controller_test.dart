@@ -1,4 +1,4 @@
-// Person 5: CatalogController (Series Jeen list, paging, search).
+// Person 5: CatalogController (Series Jeen list, paging, platforms).
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -38,7 +38,9 @@ class _FakeCatalog implements CatalogService {
   int totalPages = 2;
   Object? error;
   final List<String> calls = [];
-  final Map<String, Completer<CatalogPage>> gates = {};
+
+  /// Holds the answer for a platform id until the test completes it.
+  final Map<int, Completer<CatalogPage>> gates = {};
 
   @override
   Future<List<CatalogPlatform>> platforms() async {
@@ -56,7 +58,7 @@ class _FakeCatalog implements CatalogService {
     final word = query ?? '';
     calls.add('dramas $platformId [$word] $page');
     if (error != null) throw error!;
-    final gate = gates[word];
+    final gate = gates[platformId];
     if (gate != null) return gate.future;
     return CatalogPage(
       items: [_drama(page * 10 + 1), _drama(page * 10 + 2)],
@@ -113,29 +115,19 @@ void main() {
       expect(service.calls.last, 'dramas 19 [] 2');
     });
 
-    test('search starts again from page 1 with the trimmed word', () async {
-      final catalog = CatalogController(service);
-      await catalog.load();
-      await catalog.loadMore();
-      await catalog.search('  love ');
-      expect(catalog.query, 'love');
-      expect(service.calls.last, 'dramas 19 [love] 1');
-      expect(catalog.dramas.map((d) => d.id), [11, 12]);
-    });
-
     test(
-      'a slow answer for an old word does not replace the newer one',
+      'a slow answer for the platform left behind does not replace the new one',
       () async {
         final catalog = CatalogController(service);
         await catalog.load();
-        service.gates['old'] = Completer<CatalogPage>();
-        final old = catalog.search('old');
-        await catalog.search('new');
-        service.gates['old']!.complete(
+        service.gates[19] = Completer<CatalogPage>();
+        final old = catalog.selectPlatform(_open);
+        await catalog.selectPlatform(_closed);
+        service.gates[19]!.complete(
           CatalogPage(items: [_drama(99)], page: 1, totalPages: 1),
         );
         await old;
-        expect(catalog.query, 'new');
+        expect(catalog.platform?.id, 3);
         expect(catalog.dramas.map((d) => d.id), [11, 12]);
       },
     );
@@ -148,21 +140,21 @@ void main() {
       expect(catalog.isLoading, isFalse);
     });
 
-    test('a failed search drops the old list and shows why', () async {
+    test('a failed platform switch drops the old list and shows why', () async {
       final catalog = CatalogController(service);
       await catalog.load();
       expect(catalog.dramas, isNotEmpty);
 
       service.error = serverDown;
-      await catalog.search('storm');
+      await catalog.selectPlatform(_closed);
       expect(catalog.dramas, isEmpty);
       expect(catalog.error, 'Cannot reach the server');
 
-      // Try again repeats the same search.
+      // Try again reads the chosen platform from page 1.
       service.error = null;
-      await catalog.search(catalog.query);
+      await catalog.retry();
       expect(catalog.dramas, isNotEmpty);
-      expect(service.calls.last, 'dramas 19 [storm] 1');
+      expect(service.calls.last, 'dramas 3 [] 1');
     });
 
     test('a failed next page keeps what is listed', () async {
@@ -184,7 +176,7 @@ void main() {
         await catalog.load();
 
         service.error = null;
-        await catalog.search(catalog.query);
+        await catalog.retry();
         expect(catalog.error, isNull);
         expect(catalog.platform, isNotNull);
         expect(catalog.dramas, isNotEmpty);
