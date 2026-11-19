@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/catalog_controller.dart';
 import '../../controllers/feed_controller.dart';
-import '../../l10n/app_language.dart';
 import '../../models/catalog.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_view.dart';
@@ -20,8 +19,6 @@ class CatalogView extends StatefulWidget {
 }
 
 class _CatalogViewState extends State<CatalogView> {
-  final _query = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -31,30 +28,13 @@ class _CatalogViewState extends State<CatalogView> {
   }
 
   @override
-  void dispose() {
-    _query.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final catalog = context.watch<CatalogController>();
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _query,
-              textInputAction: TextInputAction.search,
-              onSubmitted: catalog.search,
-              decoration: InputDecoration(
-                hintText: context.tr('Search series'),
-                prefixIcon: const Icon(Icons.search),
-              ),
-            ),
-          ),
+          const SizedBox(height: 12),
           if (catalog.platforms.length > 1)
             SizedBox(
               height: 44,
@@ -85,10 +65,7 @@ class _CatalogViewState extends State<CatalogView> {
       if (catalog.isLoading) return const LoadingView();
       final error = catalog.error;
       if (error != null) {
-        return ErrorView(
-          message: error,
-          onRetry: () => catalog.search(catalog.query),
-        );
+        return ErrorView(message: error, onRetry: catalog.retry);
       }
       return const EmptyView(message: 'No series found');
     }
