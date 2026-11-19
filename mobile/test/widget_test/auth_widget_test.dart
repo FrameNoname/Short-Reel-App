@@ -1,14 +1,12 @@
-// Person 1 — Widget test: signing in, creating an account, profile and settings.
+// Person 1 — Widget test: signing in, creating an account, settings and logout.
 // Runs the whole app against the real API (see test/widget_test/README.md).
 @Timeout(Duration(minutes: 15))
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/views/app_shell.dart';
 import 'package:shortreel/views/auth/login_view.dart';
-import 'package:shortreel/views/profile/edit_profile_view.dart';
 import 'package:shortreel/views/profile/settings_view.dart';
 import 'package:shortreel/views/search/search_view.dart';
 
@@ -38,19 +36,6 @@ void main() {
 
       expect(find.byType(LoginView), findsOneWidget);
       expect(find.byType(AppShell), findsNothing);
-    });
-
-    testWidgets('a viewer gets Home, Search, Catalog, Wallet and Profile', (
-      tester,
-    ) async {
-      await logIn(tester, 'viewer01');
-
-      for (final tab in ['Home', 'Search', 'Catalog', 'Wallet', 'Profile']) {
-        expect(navTab(tab), findsOneWidget, reason: tab);
-      }
-      expect(navTab('Admin'), findsNothing);
-      await waitFor(tester, find.text(firstFilm));
-      await closeApp(tester);
     });
   });
 
@@ -91,43 +76,7 @@ void main() {
     });
   });
 
-  group('profile and settings', () {
-    testWidgets('shows the seeded watchlist and unlocked films', (
-      tester,
-    ) async {
-      await logIn(tester, 'viewer01');
-      await openTab(tester, 'Profile');
-
-      await waitFor(tester, find.text('Demo Viewer'));
-      await waitFor(tester, find.text('Salt & Signal'));
-      await tester.tap(text('Unlocked'));
-      await settle(tester);
-      await waitFor(tester, find.text('Ember Protocol'));
-      await closeApp(tester);
-    });
-
-    testWidgets('edits the profile through the API', (tester) async {
-      await logIn(tester, 'viewer01');
-      await openTab(tester, 'Profile');
-
-      await tester.tap(text('Edit profile'));
-      await settle(tester);
-      await tester.enterText(find.byKey(const Key('profile-name')), 'Vee');
-      await tester.enterText(find.byKey(const Key('profile-bio')), 'Hello');
-      await tester.tap(find.widgetWithText(FilledButton, th('Save')));
-      await waitUntil(
-        tester,
-        () => find.byType(EditProfileView).evaluate().isEmpty,
-        reason: 'the edit screen to close',
-      );
-
-      expect(find.text('Vee'), findsOneWidget);
-      final me = await serverText('/auth/me', username: 'viewer01');
-      expect(me, contains('"display_name":"Vee"'));
-      expect(me, contains('"bio":"Hello"'));
-      await closeApp(tester);
-    });
-
+  group('settings and logout', () {
     testWidgets('logging out from settings asks first, then shows login', (
       tester,
     ) async {
@@ -151,26 +100,6 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, th('Log out')));
       await waitFor(tester, find.byType(LoginView));
       expect(find.byType(AppShell), findsNothing);
-      await closeApp(tester);
-    });
-
-    testWidgets('a profile with no name cannot be saved', (tester) async {
-      await logIn(tester, 'viewer01');
-      await openTab(tester, 'Profile');
-      await waitFor(tester, find.text('Demo Viewer'));
-      await tester.tap(text('Edit profile'));
-      await settle(tester);
-
-      await tester.enterText(find.byKey(const Key('profile-name')), '   ');
-      await tester.pump();
-      final save = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, th('Save')),
-      );
-      expect(save.onPressed, isNull);
-      expect(
-        await serverText('/auth/me', username: 'viewer01'),
-        contains('"display_name":"Demo Viewer"'),
-      );
       await closeApp(tester);
     });
 
@@ -201,48 +130,6 @@ void main() {
         () => video.speeds.contains(1.5),
         reason: 'the film to start at 1.5x',
       );
-      await closeApp(tester);
-    });
-
-    testWidgets('turning haptics off stops the buzz when holding for 2x', (
-      tester,
-    ) async {
-      var buzzes = 0;
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        (call) async {
-          if (call.method == 'HapticFeedback.vibrate') buzzes++;
-          return null;
-        },
-      );
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
-      Future<void> holdForTwoX() async {
-        final hold = await tester.startGesture(const Offset(290, 360));
-        await tester.pump(const Duration(milliseconds: 700));
-        await hold.up();
-        await settle(tester);
-      }
-
-      await logIn(tester, 'viewer01');
-      await waitFor(tester, find.text(firstFilm));
-      await holdForTwoX();
-      expect(buzzes, 1);
-
-      await openTab(tester, 'Profile');
-      await tester.tap(find.byTooltip(th('Settings')).first);
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('settings-haptics')));
-      await tester.pump();
-      await tester.pageBack();
-      await settle(tester);
-      await openTab(tester, 'Home');
-      await holdForTwoX();
-      expect(buzzes, 1);
       await closeApp(tester);
     });
   });

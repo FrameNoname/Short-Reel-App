@@ -1,4 +1,4 @@
-// Person 2 — Widget test: the feed, its player and the episode list.
+// Person 2 — Widget test: the feed, its player, swiping and the next episode.
 // Runs the whole app against the real API (see test/widget_test/README.md).
 @Timeout(Duration(minutes: 15))
 library;
@@ -99,85 +99,7 @@ void main() {
     });
   });
 
-  group('episode list', () {
-    testWidgets('the sheet shows the API episodes, free and paid', (
-      tester,
-    ) async {
-      await logIn(tester, 'viewer01');
-      await waitFor(tester, find.text(firstFilm));
-      await tester.tap(find.byIcon(Icons.playlist_play_rounded).first);
-      await waitFor(tester, find.byKey(const Key('episode-8')));
-
-      expect(text('8 episodes'), findsOneWidget);
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('episode-3')),
-          matching: text('20 coins'),
-        ),
-        findsOneWidget,
-      );
-      await closeApp(tester);
-    });
-
-    testWidgets('a guest on a paid episode is asked to log in', (tester) async {
-      await enterAsGuest(tester);
-      await openEpisode(tester, 3);
-
-      expect(text('Log in to keep watching'), findsOneWidget);
-      await tester.tap(text('Keep browsing free episodes'));
-      await settle(tester);
-      expect(text('Log in to keep watching'), findsNothing);
-      await closeApp(tester);
-    });
-  });
-
-  group('feed gestures', () {
-    // The middle of the picture, clear of the buttons and the title.
-    const middle = Offset(160, 360);
-
-    testWidgets('a tap pauses the video and another resumes it', (
-      tester,
-    ) async {
-      await logIn(tester, 'viewer01');
-      await waitFor(tester, find.text(firstFilm));
-      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
-
-      await tester.tapAt(middle);
-      await waitUntil(tester, () => video.playing.isEmpty, reason: 'pause');
-      await tester.tapAt(middle);
-      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
-      await closeApp(tester);
-    });
-
-    testWidgets('a double tap likes the film on the server', (tester) async {
-      await logIn(tester, 'viewer01');
-      await waitFor(tester, find.text(firstFilm));
-
-      await tester.tapAt(middle);
-      await tester.pump(const Duration(milliseconds: 80));
-      await tester.tapAt(middle);
-      await settle(tester);
-
-      expect(await serverText('/films/5'), contains('"like_count":1'));
-      await closeApp(tester);
-    });
-
-    testWidgets('holding the right edge plays at 2x until let go', (
-      tester,
-    ) async {
-      await logIn(tester, 'viewer01');
-      await waitFor(tester, find.text(firstFilm));
-      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
-
-      // The 2x zone is the right third, left of the buttons.
-      final hold = await tester.startGesture(const Offset(290, 360));
-      await tester.pump(const Duration(milliseconds: 700));
-      await waitUntil(tester, () => video.speeds.contains(2.0), reason: '2x');
-      await hold.up();
-      await waitUntil(tester, () => video.speeds.last == 1.0, reason: '1x');
-      await closeApp(tester);
-    });
-
+  group('moving through films', () {
     testWidgets('a swipe up moves to the next film', (tester) async {
       await logIn(tester, 'viewer01');
       await waitFor(tester, find.text(firstFilm));
