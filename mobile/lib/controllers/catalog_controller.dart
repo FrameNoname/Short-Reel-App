@@ -12,13 +12,12 @@ class CatalogController extends ChangeNotifier {
   List<CatalogPlatform> platforms = const [];
   CatalogPlatform? platform;
   List<CatalogDrama> dramas = const [];
-  String query = '';
   bool isLoading = false;
   bool hasMore = false;
   String? error;
 
   int _page = 0;
-  // A slow reply for an old search must not replace a newer one.
+  // A slow reply for the platform left behind must not replace the new one.
   int _request = 0;
 
   Future<void> load() async {
@@ -37,10 +36,9 @@ class CatalogController extends ChangeNotifier {
     await _run(() => _fetch(reset: true));
   }
 
-  Future<void> search(String value) async {
-    query = value.trim();
-    // The platforms never loaded (the server was down): load them first,
-    // which also runs this search.
+  /// Try again after a failed load: the platforms when they never came,
+  /// else the first page of the platform shown.
+  Future<void> retry() async {
     if (platform == null) return load();
     await _run(() => _fetch(reset: true));
   }
@@ -56,13 +54,9 @@ class CatalogController extends ChangeNotifier {
     final id = ++_request;
     final CatalogPage page;
     try {
-      page = await service.dramas(
-        current.id,
-        query: query,
-        page: reset ? 1 : _page + 1,
-      );
+      page = await service.dramas(current.id, page: reset ? 1 : _page + 1);
     } on ApiException {
-      // The old list does not answer a new search, so it goes and the screen
+      // The old list belongs to another platform, so it goes and the screen
       // shows the error with Try again. A failed next page keeps what is
       // listed.
       if (reset && id == _request) {
