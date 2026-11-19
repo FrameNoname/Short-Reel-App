@@ -10,6 +10,10 @@
 // POST /__test/reset rebuilds the database from the seed, so every widget test
 // starts from the same accounts, films and balances.
 //
+// POST /__test/outage?on=1 makes the API drop every connection, as a server
+// that is down would, until POST /__test/outage?on=0 or the next reset. Tests
+// use it to check the screens that offer Try again.
+//
 // `flutter test` runs several test files at once, and they share this one
 // database, so a file takes POST /__test/lock?owner=<id> before its first test
 // and gives it back with POST /__test/unlock?owner=<id> after its last. The lock
@@ -113,6 +117,12 @@ async function main() {
 
   const outer = express();
 
+  let outage = false;
+  outer.post('/__test/outage', (req, res) => {
+    outage = req.query.on === '1';
+    res.json({ outage });
+  });
+
   const LOCK_LIMIT_MS = 10 * 60 * 1000;
   let holder = null;
   let heldSince = 0;
@@ -138,6 +148,7 @@ async function main() {
     res.json({ status: 'unlocked' });
   });
   outer.post('/__test/reset', async (req, res) => {
+    outage = false;
     try {
       await resetDatabase();
       res.json({ status: 'reset', database: DB_NAME });
@@ -145,6 +156,7 @@ async function main() {
       res.status(500).json({ error: err.message });
     }
   });
+  outer.use((req, res, next) => (outage ? req.socket.destroy() : next()));
   outer.use(app);
 
   await listen(outer, PORT, '127.0.0.1');
