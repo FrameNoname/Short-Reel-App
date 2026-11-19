@@ -6,14 +6,16 @@
 
 | คน | ไฟล์ | ดูแลอะไร | test ตอนนี้ |
 |---|---|---|---|
-| Person 1 | `auth_widget_test.dart` | login, สมัครสมาชิก, โปรไฟล์, settings, logout | 9 |
-| Person 2 | `feed_widget_test.dart` | ฟีด, ตัวเล่น, like/save/comment, ความเร็ว, รายการตอน | 7 |
-| Person 3 | `search_widget_test.dart` | หน้าค้นหา | 2 |
-| Person 4 | `wallet_widget_test.dart` | กระเป๋าเงิน, ซื้อแพ็กเหรียญ, ปลดล็อกตอน | 5 |
-| Person 5 | `catalog_widget_test.dart` | แคตตาล็อก Series Jeen | 1 |
-| Person 6 | `admin_widget_test.dart` | หน้าแอดมินทั้งหมด | 5 |
+| Person 1 | `auth_widget_test.dart` | login, สมัครสมาชิก (รหัสอ่อน, รหัสไม่ตรงกัน, ชื่อซ้ำ), โปรไฟล์, settings (ความเร็วเริ่มต้น, การสั่น), logout | 13 |
+| Person 2 | `feed_widget_test.dart` | ฟีด, ตัวเล่น, like/save/comment, ความเร็ว, รายการตอน, ท่าทาง (แตะหยุด, แตะสองครั้งไลก์, กดค้าง 2x, ปัดเรื่องถัดไป), จบตอนแล้วเล่นตอนถัดไป, server ล่ม | 13 |
+| Person 3 | `search_widget_test.dart` | หน้าค้นหา, ค้นไม่เจอ, server ล่ม | 4 |
+| Person 4 | `wallet_widget_test.dart` | กระเป๋าเงิน, ซื้อแพ็กเหรียญ, ปลดล็อกตอน, server ล่ม | 6 |
+| Person 5 | `catalog_widget_test.dart` | แคตตาล็อก Series Jeen: รายการ, ค้นหา, เปิดเล่น, ปลดล็อกตอน 10 เหรียญ, server ล่ม | 4 |
+| Person 6 | `admin_widget_test.dart` | dashboard, ถอดเรื่องและเอากลับ, ราคาตอนและตอนฟรี, ลบคอมเมนต์, ราคาและแพ็กเหรียญ, server ล่ม | 8 |
 
-ตัวช่วยที่ทุกไฟล์ใช้ร่วมกันอยู่ใน `test/support/api_app_harness.dart` (`useApiApp`, `logIn`, `register`, `openTab`, `openEpisode`, `waitFor`, `serverText` ฯลฯ) ถ้าจะแก้ไฟล์นี้ บอกทีมก่อน เพราะกระทบทุกคน
+รวม 48 test
+
+ตัวช่วยที่ทุกไฟล์ใช้ร่วมกันอยู่ใน `test/support/api_app_harness.dart` (`useApiApp`, `logIn`, `register`, `openTab`, `openEpisode`, `waitFor`, `serverText`, `serverDown`, `video.finish` ฯลฯ) ถ้าจะแก้ไฟล์นี้ บอกทีมก่อน เพราะกระทบทุกคน
 
 ## วิธีรัน
 
@@ -42,5 +44,7 @@ flutter test test/widget_test/feed_widget_test.dart
 - แอปแสดงภาษาไทยอย่างเดียว ใช้ `text('English')` หรือ `th('English')` หาข้อความตามภาษาอังกฤษในโค้ด
 - รอคำตอบจาก server ด้วย `waitFor` / `waitUntil` ไม่ใช่ `pumpAndSettle` อย่างเดียว
 - เช็กสิ่งที่ server เก็บด้วย `serverText(path, username: ...)` ไม่ใช่แค่หน้าจอ
+- จำลอง server ล่มด้วย `await serverDown(true);` แล้วเปิดกลับด้วย `serverDown(false)` (test ถัดไปเริ่มแบบ server ปกติเสมอ)
+- จำลองว่าตอนจบด้วย `video.finish(video.playing.single);`
 - ปิดท้ายด้วย `await closeApp(tester);` ทุกครั้งที่ login หรือเข้าแอปแล้ว
 - บัญชีใน seed: `viewer01 / 6666` (80 เหรียญ), `mira.lens / 4444`, `admin / 1111`
