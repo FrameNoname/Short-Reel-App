@@ -148,6 +148,21 @@ void main() {
       expect(catalog.isLoading, isFalse);
     });
 
+    test(
+      'trying again after a failed first load loads the platforms',
+      () async {
+        service.error = serverDown;
+        final catalog = CatalogController(service);
+        await catalog.load();
+
+        service.error = null;
+        await catalog.search(catalog.query);
+        expect(catalog.error, isNull);
+        expect(catalog.platform, isNotNull);
+        expect(catalog.dramas, isNotEmpty);
+      },
+    );
+
     test('choosing another platform lists it from page 1', () async {
       final catalog = CatalogController(service);
       await catalog.load();
