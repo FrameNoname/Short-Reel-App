@@ -4,11 +4,13 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/views/app_shell.dart';
 import 'package:shortreel/views/auth/login_view.dart';
 import 'package:shortreel/views/profile/edit_profile_view.dart';
 import 'package:shortreel/views/profile/settings_view.dart';
+import 'package:shortreel/views/search/search_view.dart';
 
 import '../support/api_app_harness.dart';
 
@@ -59,6 +61,16 @@ void main() {
       expect(find.byType(AppShell), findsNothing);
       expect(find.byType(LoginView), findsNothing, reason: 'still registering');
       expect(await serverLogIn('newbie', 'short'), isFalse);
+    });
+
+    testWidgets('passwords that do not match never reach the API', (
+      tester,
+    ) async {
+      await register(tester, 'newbie', 'abc12345', confirm: 'abc12346');
+
+      expect(text("Passwords don't match."), findsOneWidget);
+      expect(find.byType(AppShell), findsNothing);
+      expect(await serverLogIn('newbie', 'abc12345'), isFalse);
     });
 
     testWidgets('a new account is created and signed in', (tester) async {
@@ -139,6 +151,98 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, th('Log out')));
       await waitFor(tester, find.byType(LoginView));
       expect(find.byType(AppShell), findsNothing);
+      await closeApp(tester);
+    });
+
+    testWidgets('a profile with no name cannot be saved', (tester) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Profile');
+      await waitFor(tester, find.text('Demo Viewer'));
+      await tester.tap(text('Edit profile'));
+      await settle(tester);
+
+      await tester.enterText(find.byKey(const Key('profile-name')), '   ');
+      await tester.pump();
+      final save = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, th('Save')),
+      );
+      expect(save.onPressed, isNull);
+      expect(
+        await serverText('/auth/me', username: 'viewer01'),
+        contains('"display_name":"Demo Viewer"'),
+      );
+      await closeApp(tester);
+    });
+
+    testWidgets('the default speed in settings is used by the next film', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Profile');
+      await tester.tap(find.byTooltip(th('Settings')).first);
+      await settle(tester);
+
+      await tester.tap(find.text('1.5x'));
+      await tester.pump();
+      await tester.pageBack();
+      await settle(tester);
+      await openTab(tester, 'Search');
+      await tester.enterText(find.byType(TextField), 'paper');
+      await waitUntil(
+        tester,
+        () => find.byType(FilmCard).evaluate().length == 1,
+        reason: 'one search result',
+      );
+      await tester.tap(find.byType(FilmCard));
+      await settle(tester);
+
+      await waitUntil(
+        tester,
+        () => video.speeds.contains(1.5),
+        reason: 'the film to start at 1.5x',
+      );
+      await closeApp(tester);
+    });
+
+    testWidgets('turning haptics off stops the buzz when holding for 2x', (
+      tester,
+    ) async {
+      var buzzes = 0;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'HapticFeedback.vibrate') buzzes++;
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      Future<void> holdForTwoX() async {
+        final hold = await tester.startGesture(const Offset(290, 360));
+        await tester.pump(const Duration(milliseconds: 700));
+        await hold.up();
+        await settle(tester);
+      }
+
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await holdForTwoX();
+      expect(buzzes, 1);
+
+      await openTab(tester, 'Profile');
+      await tester.tap(find.byTooltip(th('Settings')).first);
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('settings-haptics')));
+      await tester.pump();
+      await tester.pageBack();
+      await settle(tester);
+      await openTab(tester, 'Home');
+      await holdForTwoX();
+      expect(buzzes, 1);
       await closeApp(tester);
     });
   });

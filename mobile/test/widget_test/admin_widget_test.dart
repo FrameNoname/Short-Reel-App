@@ -94,5 +94,89 @@ void main() {
       await waitFor(tester, text('Changes saved.'));
       await closeApp(tester);
     });
+
+    testWidgets('brings a taken-down film back', (tester) async {
+      await openAdmin(tester);
+      await tester.tap(text('Films and episodes'));
+      await waitFor(tester, find.text('Glass Harbour'));
+
+      Finder toggle() => find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('Glass Harbour'),
+              matching: find.byType(InkWell),
+            )
+            .first,
+        matching: find.byType(Switch),
+      );
+      await tester.ensureVisible(toggle());
+      await tester.pumpAndSettle();
+      await tester.tap(toggle());
+      await settle(tester);
+      await tester.tap(text('Take down'));
+      await waitFor(tester, text('Film taken down.'));
+      expect(await serverText('/films'), isNot(contains('Glass Harbour')));
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.tap(toggle());
+      await waitFor(tester, text('Film is live again.'));
+      expect(await serverText('/films'), contains('Glass Harbour'));
+      await closeApp(tester);
+    });
+
+    testWidgets('changes an episode price and makes one free', (tester) async {
+      await openAdmin(tester);
+      await tester.tap(text('Films and episodes'));
+      await waitFor(tester, find.text('Salt & Signal'));
+      final film = find.text('Salt & Signal').last;
+      await tester.ensureVisible(film);
+      await tester.pumpAndSettle();
+      await tester.tap(film);
+      await waitFor(tester, text('Episode 4'));
+
+      // A price out of range is refused before it reaches the API.
+      await tester.tap(text('Episode 4'));
+      await settle(tester);
+      await tester.enterText(find.byType(TextField), '0');
+      await tester.tap(find.widgetWithText(FilledButton, th('Save')));
+      await tester.pump();
+      expect(text('A price must be 1 to 10000 coins.'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), '35');
+      await tester.tap(find.widgetWithText(FilledButton, th('Save')));
+      await waitFor(tester, text('Changes saved.'));
+
+      await tester.pump(const Duration(seconds: 5));
+      final episode5 = text('Episode 5');
+      await tester.ensureVisible(episode5);
+      await tester.pumpAndSettle();
+      await tester.tap(episode5);
+      await settle(tester);
+      await tester.tap(find.byType(Switch));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, th('Save')));
+      await waitFor(tester, text('Changes saved.'));
+
+      final episodes = (await serverGet('/films/1'))['episodes'] as List;
+      final byNo = {for (final e in episodes) e['episode_no']: e};
+      expect(byNo[4]['price_coins'], 35);
+      expect(byNo[5]['is_free'], isTrue);
+      await closeApp(tester);
+    });
+
+    testWidgets('the dashboard offers Try again while the server is down', (
+      tester,
+    ) async {
+      await logIn(tester, 'admin');
+      await waitFor(tester, find.text(firstFilm));
+      await serverDown(true);
+      await openTab(tester, 'Admin');
+      await waitFor(tester, text('Try again'));
+
+      await serverDown(false);
+      await tester.tap(text('Try again'));
+      await waitFor(tester, find.text(r'$0.99'));
+      await closeApp(tester);
+    });
   });
 }

@@ -104,5 +104,20 @@ void main() {
       await waitFor(tester, find.text('310'));
       await closeApp(tester);
     });
+
+    testWidgets('the wallet offers Try again while the server is down', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await serverDown(true);
+      await openTab(tester, 'Wallet');
+      await waitFor(tester, text('Try again'));
+
+      await serverDown(false);
+      await tester.tap(text('Try again'));
+      await waitFor(tester, find.text('80'));
+      await closeApp(tester);
+    });
   });
 }
