@@ -69,6 +69,11 @@ Future<void> _testServerPost(String route) async {
 /// Rebuilds the test database from the seed.
 Future<void> resetServer() => _testServerPost('/__test/reset');
 
+/// While [down], the API drops every connection, as a server that is down
+/// would. The next test starts with it back up.
+Future<void> serverDown(bool down) =>
+    _testServerPost('/__test/outage?on=${down ? 1 : 0}');
+
 /// The fake video player of the running test, set up by [useApiApp].
 late FakeVideoPlatform video;
 
@@ -154,6 +159,10 @@ class FakeVideoPlatform extends VideoPlayerPlatform {
   final Map<int, StreamController<VideoEvent>> _events = {};
 
   int get live => created - disposed;
+
+  /// Plays player [playerId] to its end, as when an episode finishes.
+  void finish(int playerId) =>
+      _events[playerId]!.add(VideoEvent(eventType: VideoEventType.completed));
 
   @override
   Future<void> init() async {}
