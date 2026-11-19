@@ -55,5 +55,31 @@ void main() {
       expect(text('Discover'), findsOneWidget);
       await closeApp(tester);
     });
+
+    testWidgets('a search with no match says so', (tester) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Search');
+
+      await tester.enterText(find.byType(TextField), 'zzzz');
+      await waitFor(tester, text('No films match your search.'));
+      expect(find.byType(FilmCard), findsNothing);
+      await closeApp(tester);
+    });
+
+    testWidgets('search offers Try again while the server is down', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await openTab(tester, 'Search');
+      await serverDown(true);
+      await tester.enterText(find.byType(TextField), 'paper');
+      await waitFor(tester, text('Try again'));
+
+      await serverDown(false);
+      await tester.tap(text('Try again'));
+      await waitFor(tester, find.byType(FilmCard));
+      await closeApp(tester);
+    });
   });
 }

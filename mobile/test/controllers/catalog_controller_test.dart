@@ -148,6 +148,49 @@ void main() {
       expect(catalog.isLoading, isFalse);
     });
 
+    test('a failed search drops the old list and shows why', () async {
+      final catalog = CatalogController(service);
+      await catalog.load();
+      expect(catalog.dramas, isNotEmpty);
+
+      service.error = serverDown;
+      await catalog.search('storm');
+      expect(catalog.dramas, isEmpty);
+      expect(catalog.error, 'Cannot reach the server');
+
+      // Try again repeats the same search.
+      service.error = null;
+      await catalog.search(catalog.query);
+      expect(catalog.dramas, isNotEmpty);
+      expect(service.calls.last, 'dramas 19 [storm] 1');
+    });
+
+    test('a failed next page keeps what is listed', () async {
+      final catalog = CatalogController(service);
+      await catalog.load();
+      final before = catalog.dramas;
+
+      service.error = serverDown;
+      await catalog.loadMore();
+      expect(catalog.dramas, before);
+      expect(catalog.error, 'Cannot reach the server');
+    });
+
+    test(
+      'trying again after a failed first load loads the platforms',
+      () async {
+        service.error = serverDown;
+        final catalog = CatalogController(service);
+        await catalog.load();
+
+        service.error = null;
+        await catalog.search(catalog.query);
+        expect(catalog.error, isNull);
+        expect(catalog.platform, isNotNull);
+        expect(catalog.dramas, isNotEmpty);
+      },
+    );
+
     test('choosing another platform lists it from page 1', () async {
       final catalog = CatalogController(service);
       await catalog.load();
