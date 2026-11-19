@@ -93,5 +93,27 @@ void main() {
       await waitFor(tester, find.text('Storm Heir'));
       await closeApp(tester);
     });
+
+    testWidgets('a search while the server is down offers Try again', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Catalog');
+      await waitFor(tester, find.text('Moon Bride'));
+
+      await serverDown(true);
+      await tester.enterText(find.byType(TextField), 'storm');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await waitFor(tester, text('Try again'));
+      // The old, unfiltered list is gone rather than passed off as results.
+      expect(find.text('Moon Bride'), findsNothing);
+
+      // Try again repeats the same search.
+      await serverDown(false);
+      await tester.tap(text('Try again'));
+      await waitFor(tester, find.text('Storm Heir'));
+      expect(find.text('Moon Bride'), findsNothing);
+      await closeApp(tester);
+    });
   });
 }
