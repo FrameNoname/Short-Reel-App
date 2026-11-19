@@ -22,7 +22,6 @@ const _exact = {
   'Home': 'หน้าแรก',
   'Search': 'ค้นหา',
   'Catalog': 'แคตตาล็อก',
-  'Search series': 'ค้นหาซีรีส์',
   'No series found': 'ไม่พบซีรีส์',
   'Cannot play this episode': 'เล่นตอนนี้ไม่ได้',
   'Wallet': 'กระเป๋าเงิน',
