@@ -1,4 +1,4 @@
-// Person 4 — Widget test: the wallet, coin packs and unlocking episodes.
+// Person 4 — Widget test: the wallet, coin packs, paid episodes and unlocking.
 // Runs the whole app against the real API (see test/widget_test/README.md).
 @Timeout(Duration(minutes: 15))
 library;
@@ -117,6 +117,38 @@ void main() {
       await serverDown(false);
       await tester.tap(text('Try again'));
       await waitFor(tester, find.text('80'));
+      await closeApp(tester);
+    });
+  });
+
+  group('paid episodes', () {
+    testWidgets('the sheet shows the API episodes, free and paid', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await tester.tap(find.byIcon(Icons.playlist_play_rounded).first);
+      await waitFor(tester, find.byKey(const Key('episode-8')));
+
+      expect(text('8 episodes'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('episode-3')),
+          matching: text('20 coins'),
+        ),
+        findsOneWidget,
+      );
+      await closeApp(tester);
+    });
+
+    testWidgets('a guest on a paid episode is asked to log in', (tester) async {
+      await enterAsGuest(tester);
+      await openEpisode(tester, 3);
+
+      expect(text('Log in to keep watching'), findsOneWidget);
+      await tester.tap(text('Keep browsing free episodes'));
+      await settle(tester);
+      expect(text('Log in to keep watching'), findsNothing);
       await closeApp(tester);
     });
   });
