@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../controllers/feed_controller.dart';
 import '../../l10n/app_language.dart';
 import '../../models/film.dart';
+import '../../widgets/login_prompt.dart';
+import '../auth/login_view.dart';
 import '../feed/film_page.dart';
 
 class PlayerView extends StatefulWidget {
@@ -76,7 +79,14 @@ class _PlayerViewState extends State<PlayerView> {
           ),
         ),
       ),
-      body: _pagesEpisodes
+      // A series from the Series Jeen API needs an account to watch.
+      body: _pagesEpisodes && !context.watch<AuthController>().isLoggedIn
+          ? LoginPrompt(
+              onLogin: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const LoginView()),
+              ),
+            )
+          : _pagesEpisodes
           ? PageView.builder(
               scrollDirection: Axis.vertical,
               controller: _pages,
