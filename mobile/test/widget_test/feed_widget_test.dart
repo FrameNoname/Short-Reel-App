@@ -130,4 +130,99 @@ void main() {
       await closeApp(tester);
     });
   });
+
+  group('feed gestures', () {
+    // The middle of the picture, clear of the buttons and the title.
+    const middle = Offset(160, 360);
+
+    testWidgets('a tap pauses the video and another resumes it', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
+
+      await tester.tapAt(middle);
+      await waitUntil(tester, () => video.playing.isEmpty, reason: 'pause');
+      await tester.tapAt(middle);
+      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
+      await closeApp(tester);
+    });
+
+    testWidgets('a double tap likes the film on the server', (tester) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+
+      await tester.tapAt(middle);
+      await tester.pump(const Duration(milliseconds: 80));
+      await tester.tapAt(middle);
+      await settle(tester);
+
+      expect(await serverText('/films/5'), contains('"like_count":1'));
+      await closeApp(tester);
+    });
+
+    testWidgets('holding the right edge plays at 2x until let go', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
+
+      // The 2x zone is the right third, left of the buttons.
+      final hold = await tester.startGesture(const Offset(290, 360));
+      await tester.pump(const Duration(milliseconds: 700));
+      await waitUntil(tester, () => video.speeds.contains(2.0), reason: '2x');
+      await hold.up();
+      await waitUntil(tester, () => video.speeds.last == 1.0, reason: '1x');
+      await closeApp(tester);
+    });
+
+    testWidgets('a swipe up moves to the next film', (tester) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
+
+      await tester.fling(find.text(firstFilm), const Offset(0, -500), 1500);
+      await waitFor(tester, find.text('Glass Harbour'));
+      await waitUntil(
+        tester,
+        () => video.playing.length == 1 && video.created >= 2,
+        reason: 'the next film to play',
+      );
+      await closeApp(tester);
+    });
+
+    testWidgets('the next episode plays when one ends', (tester) async {
+      await logIn(tester, 'viewer01');
+      await waitFor(tester, find.text(firstFilm));
+      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
+
+      final episodes = (await serverGet('/films/5'))['episodes'] as List;
+      final second = episodes.firstWhere((e) => e['episode_no'] == 2);
+
+      video.finish(video.playing.single);
+      await waitUntil(
+        tester,
+        () => video.urls.last.contains('/episodes/${second['id']}/'),
+        reason: 'episode 2 to load',
+      );
+      await waitUntil(tester, () => video.playing.length == 1, reason: 'play');
+      await closeApp(tester);
+    });
+
+    testWidgets('the feed offers Try again while the server is down', (
+      tester,
+    ) async {
+      await serverDown(true);
+      await enterAsGuest(tester);
+      await waitFor(tester, text('Try again'));
+      expect(find.text(firstFilm), findsNothing);
+
+      await serverDown(false);
+      await tester.tap(text('Try again'));
+      await waitFor(tester, find.text(firstFilm));
+      await closeApp(tester);
+    });
+  });
 }
