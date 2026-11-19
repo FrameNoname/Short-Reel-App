@@ -1,4 +1,4 @@
-// Person 3 — Widget test: searching for films.
+// Person 3 — Widget test: searching for films, the tabs and the profile.
 // Runs the whole app against the real API (see test/widget_test/README.md).
 @Timeout(Duration(minutes: 15))
 library;
@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shortreel/views/feed/feed_view.dart';
 import 'package:shortreel/views/player/player_view.dart';
 import 'package:shortreel/views/search/search_view.dart';
+import 'package:shortreel/views/profile/edit_profile_view.dart';
 
 import '../support/api_app_harness.dart';
 
@@ -79,6 +80,77 @@ void main() {
       await serverDown(false);
       await tester.tap(text('Try again'));
       await waitFor(tester, find.byType(FilmCard));
+      await closeApp(tester);
+    });
+  });
+
+  group('tabs and profile', () {
+    testWidgets('a viewer gets Home, Search, Catalog, Wallet and Profile', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+
+      for (final tab in ['Home', 'Search', 'Catalog', 'Wallet', 'Profile']) {
+        expect(navTab(tab), findsOneWidget, reason: tab);
+      }
+      expect(navTab('Admin'), findsNothing);
+      await waitFor(tester, find.text(firstFilm));
+      await closeApp(tester);
+    });
+
+    testWidgets('shows the seeded watchlist and unlocked films', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Profile');
+
+      await waitFor(tester, find.text('Demo Viewer'));
+      await waitFor(tester, find.text('Salt & Signal'));
+      await tester.tap(text('Unlocked'));
+      await settle(tester);
+      await waitFor(tester, find.text('Ember Protocol'));
+      await closeApp(tester);
+    });
+
+    testWidgets('edits the profile through the API', (tester) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Profile');
+
+      await tester.tap(text('Edit profile'));
+      await settle(tester);
+      await tester.enterText(find.byKey(const Key('profile-name')), 'Vee');
+      await tester.enterText(find.byKey(const Key('profile-bio')), 'Hello');
+      await tester.tap(find.widgetWithText(FilledButton, th('Save')));
+      await waitUntil(
+        tester,
+        () => find.byType(EditProfileView).evaluate().isEmpty,
+        reason: 'the edit screen to close',
+      );
+
+      expect(find.text('Vee'), findsOneWidget);
+      final me = await serverText('/auth/me', username: 'viewer01');
+      expect(me, contains('"display_name":"Vee"'));
+      expect(me, contains('"bio":"Hello"'));
+      await closeApp(tester);
+    });
+
+    testWidgets('a profile with no name cannot be saved', (tester) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Profile');
+      await waitFor(tester, find.text('Demo Viewer'));
+      await tester.tap(text('Edit profile'));
+      await settle(tester);
+
+      await tester.enterText(find.byKey(const Key('profile-name')), '   ');
+      await tester.pump();
+      final save = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, th('Save')),
+      );
+      expect(save.onPressed, isNull);
+      expect(
+        await serverText('/auth/me', username: 'viewer01'),
+        contains('"display_name":"Demo Viewer"'),
+      );
       await closeApp(tester);
     });
   });
