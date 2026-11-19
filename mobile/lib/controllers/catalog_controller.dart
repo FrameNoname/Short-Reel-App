@@ -54,11 +54,23 @@ class CatalogController extends ChangeNotifier {
     final current = platform;
     if (current == null) return;
     final id = ++_request;
-    final page = await service.dramas(
-      current.id,
-      query: query,
-      page: reset ? 1 : _page + 1,
-    );
+    final CatalogPage page;
+    try {
+      page = await service.dramas(
+        current.id,
+        query: query,
+        page: reset ? 1 : _page + 1,
+      );
+    } on ApiException {
+      // The old list does not answer a new search, so it goes and the screen
+      // shows the error with Try again. A failed next page keeps what is
+      // listed.
+      if (reset && id == _request) {
+        dramas = const [];
+        hasMore = false;
+      }
+      rethrow;
+    }
     if (id != _request) return;
     _page = page.page;
     hasMore = page.hasMore;
