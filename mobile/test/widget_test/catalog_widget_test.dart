@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:shortreel/views/player/player_view.dart';
+import 'package:shortreel/widgets/login_prompt.dart';
 import 'package:flutter/services.dart';
 
 import '../support/api_app_harness.dart';
@@ -67,6 +68,19 @@ void main() {
         await serverText('/wallet', username: 'viewer01'),
         contains('"coin_balance":70'),
       );
+      await closeApp(tester);
+    });
+
+    testWidgets('a guest who opens a series sees the login prompt', (
+      tester,
+    ) async {
+      await enterAsGuest(tester);
+      await openTab(tester, 'Catalog');
+      await waitFor(tester, find.text('Storm Heir'));
+
+      await tester.tap(find.text('Storm Heir').first);
+      await waitFor(tester, find.byType(LoginPrompt));
+      expect(video.playing, isEmpty);
       await closeApp(tester);
     });
 
