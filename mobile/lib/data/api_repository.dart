@@ -507,11 +507,15 @@ class ApiRepository implements AppRepository {
   @override
   List<FilmComment> commentsOf(int filmId) => _comments[filmId] ?? const [];
 
+  // A Series Jeen title keeps its comments under its drama number.
+  String _commentsPath(int filmId) => _isCatalog(filmId)
+      ? '/catalog/dramas/${filmId - catalogFilmIdBase}/comments'
+      : '/films/$filmId/comments';
+
   @override
   Future<void> loadComments(int filmId) async {
-    if (_isCatalog(filmId)) return;
     final json =
-        await _api.get('/films/$filmId/comments') as Map<String, dynamic>;
+        await _api.get(_commentsPath(filmId)) as Map<String, dynamic>;
     _comments[filmId] = [
       for (final c in json['comments'] as List)
         FilmComment(
@@ -525,13 +529,7 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<void> addComment(int userId, int filmId, String body) async {
-    if (_isCatalog(filmId)) {
-      throw const ApiException(
-        code: 'NOT_SUPPORTED',
-        message: 'Comments are not available for catalog series.',
-      );
-    }
-    await _api.post('/films/$filmId/comments', data: {'body': body});
+    await _api.post(_commentsPath(filmId), data: {'body': body});
     await loadComments(filmId);
     final film = _films[filmId];
     if (film != null) {
