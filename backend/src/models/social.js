@@ -19,13 +19,18 @@ exports.setWatchlist = (pool, userId, filmId, on) =>
     [userId, filmId],
   );
 
+// The app's own films by film id; Series Jeen series by drama number, which is
+// how the app knows them.
 exports.listWatchlist = async (pool, userId) => {
   const [rows] = await pool.query(
-    `SELECT film_id FROM watchlist w JOIN films f ON f.id = w.film_id
+    `SELECT w.film_id, f.catalog_drama_id FROM watchlist w JOIN films f ON f.id = w.film_id
       WHERE w.user_id = ? AND f.status = 'approved'`,
     [userId],
   );
-  return rows.map((r) => r.film_id);
+  return {
+    filmIds: rows.filter((r) => r.catalog_drama_id == null).map((r) => r.film_id),
+    catalogDramaIds: rows.filter((r) => r.catalog_drama_id != null).map((r) => r.catalog_drama_id),
+  };
 };
 
 exports.listComments = async (pool, filmId) => {
