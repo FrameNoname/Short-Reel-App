@@ -61,7 +61,11 @@ class _FilmPageState extends State<FilmPage> {
   final List<_Burst> _bursts = [];
   int _burstId = 0;
 
-  Film get film => widget.film;
+  // The film handed in is a snapshot; the repository's copy follows likes and
+  // comments, so the counts on the rail move when they change. build watches
+  // FeedController, so a change rebuilds this page.
+  Film get film =>
+      context.read<FeedController>().filmById(widget.film.id) ?? widget.film;
 
   void _whenLoggedIn(BuildContext context, void Function(int userId) action) {
     final userId = context.read<AuthController>().user?.id;

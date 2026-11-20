@@ -46,6 +46,25 @@ void main() {
       await closeApp(tester);
     });
 
+    // The count comes back from the backend, so it shows the like was stored.
+    testWidgets('liking a series in the player raises its like count', (
+      tester,
+    ) async {
+      Finder likeButton(int count) => find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.label == 'Like, $count likes',
+      );
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Catalog');
+      await waitFor(tester, find.text('Storm Heir'));
+      await tester.tap(find.text('Storm Heir').first);
+      await waitFor(tester, find.byType(PlayerView));
+      await waitFor(tester, likeButton(0));
+
+      await tester.tap(likeButton(0).first);
+      await waitFor(tester, likeButton(1));
+      await closeApp(tester);
+    });
+
     testWidgets('a paid series episode is unlocked for 10 coins', (
       tester,
     ) async {

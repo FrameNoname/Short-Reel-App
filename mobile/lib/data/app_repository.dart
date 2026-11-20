@@ -123,6 +123,10 @@ abstract class AppRepository {
   Future<void> toggleLike(int userId, int filmId);
   Future<void> toggleSave(int userId, int filmId);
 
+  /// Brings [filmById]'s like and comment counts (and this viewer's like and
+  /// save) up to date for [filmId].
+  Future<void> refreshCounts(int filmId);
+
   /// Loads what [watchlistOf] and [unlockedFilmsOf] answer from.
   Future<void> refreshLibrary(int userId);
   List<Film> watchlistOf(int userId);

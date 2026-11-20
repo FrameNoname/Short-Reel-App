@@ -33,6 +33,8 @@ class _PlayerViewState extends State<PlayerView> {
   void initState() {
     super.initState();
     _feed.addListener(_followFeed);
+    // A title opened from the catalog or a list may carry old counts.
+    _feed.refreshCounts(widget.film.id);
   }
 
   @override
