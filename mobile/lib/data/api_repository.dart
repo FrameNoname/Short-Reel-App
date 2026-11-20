@@ -42,6 +42,8 @@ class ApiRepository implements AppRepository {
 
   List<Film> _catalogFilms = const [];
   Future<void>? _catalogLoading;
+  CatalogService? _catalogService;
+  List<int> _catalogPlatformIds = const [];
 
   // Catalog prices and the catalog episodes this viewer paid for, as
   // (drama id, episode number). The backend decides; this only mirrors it.
@@ -179,12 +181,33 @@ class ApiRepository implements AppRepository {
 
   static const _maxPages = 20;
 
+  /// With no words, the catalog series already shown in the feed. With words,
+  /// the catalog itself is searched, so series past the few the feed loaded
+  /// are found too. If that search fails, the loaded ones are filtered.
   Future<List<Film>> _matchingCatalogFilms(String query) async {
     await _catalogLoading;
-    final text = query.toLowerCase();
+    final words = query.trim();
+    if (words.isEmpty) return _catalogFilms;
+    final service = _catalogService;
+    if (service != null && _catalogPlatformIds.isNotEmpty) {
+      try {
+        final found = <int, Film>{};
+        for (final platformId in _catalogPlatformIds) {
+          final page = await service.dramas(platformId, query: words);
+          for (final drama in page.items) {
+            final film = catalogFilm(drama);
+            found[film.id] = film;
+          }
+        }
+        return found.values.toList();
+      } on Object {
+        // Falls through to the series already loaded.
+      }
+    }
+    final text = words.toLowerCase();
     return [
       for (final film in _catalogFilms)
-        if (text.isEmpty || film.title.toLowerCase().contains(text)) film,
+        if (film.title.toLowerCase().contains(text)) film,
     ];
   }
 
@@ -609,6 +632,7 @@ class ApiRepository implements AppRepository {
   /// Loads a few catalog series for the feed after the app's own films. If the
   /// catalog is off, has no key or is down, nothing here changes.
   void useCatalog(CatalogService service) {
+    _catalogService = service;
     _catalogLoading = _loadCatalog(service).catchError((Object _) {});
   }
 
@@ -664,6 +688,7 @@ class ApiRepository implements AppRepository {
     final platforms = (await service.platforms())
         .where((p) => p.hasAccess)
         .take(_catalogPlatforms);
+    _catalogPlatformIds = [for (final p in platforms) p.id];
     final lists = <List<CatalogDrama>>[];
     for (final platform in platforms) {
       final page = await service.dramas(platform.id);
