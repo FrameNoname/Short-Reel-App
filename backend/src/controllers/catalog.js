@@ -187,6 +187,56 @@ exports.addComment = relay(async (client, req) => {
   return { id: commentId };
 });
 
+// ---- likes, saves and counts ----
+
+// The series' films row, made on first use (titled from the catalog).
+async function filmForWrite(client, req) {
+  const dramaId = Number(id(req.params.dramaId));
+  const { drama } = await readDrama(client, req, dramaId);
+  return catalogModel.ensureFilm(req.app.locals.pool, { dramaId, title: drama.title, poster: drama.poster });
+}
+
+// Undoing needs no row: a series without one has nothing to undo.
+async function filmForUndo(req) {
+  const dramaId = Number(id(req.params.dramaId));
+  return catalogModel.filmIdOf(req.app.locals.pool, dramaId);
+}
+
+exports.like = relay(async (client, req) => {
+  const filmId = await filmForWrite(client, req);
+  return { liked: true, like_count: await social.setLike(req.app.locals.pool, req.user.id, filmId, true) };
+});
+
+exports.unlike = async (req, res) => {
+  const filmId = await filmForUndo(req);
+  const likeCount = filmId ? await social.setLike(req.app.locals.pool, req.user.id, filmId, false) : 0;
+  res.json({ liked: false, like_count: likeCount });
+};
+
+exports.save = relay(async (client, req) => {
+  const filmId = await filmForWrite(client, req);
+  await social.setWatchlist(req.app.locals.pool, req.user.id, filmId, true);
+  return { saved: true };
+});
+
+exports.unsave = async (req, res) => {
+  const filmId = await filmForUndo(req);
+  if (filmId) await social.setWatchlist(req.app.locals.pool, req.user.id, filmId, false);
+  res.json({ saved: false });
+};
+
+// Like and comment counts for many series at once, plus whether this viewer
+// liked or saved each. ?ids=1,2,3 (drama numbers, at most 100).
+exports.stats = async (req, res) => {
+  const raw = typeof req.query.ids === 'string' ? req.query.ids : '';
+  const ids = raw === '' ? [] : raw.split(',');
+  if (ids.length > 100 || ids.some((v) => !/^\d{1,9}$/.test(v))) {
+    throw new ApiError(400, 'VALIDATION_ERROR', 'ids is not valid');
+  }
+  const stats = await catalogModel.stats(req.app.locals.pool, [...new Set(ids.map(Number))], req.user?.id);
+  res.json({ stats });
+};
+
 // ---- admin ----
 
 // Series Jeen search for the admin, each with its take-down status.

@@ -155,6 +155,10 @@ class FakeRepository implements AppRepository {
       calls.add('toggleSave $filmId');
 
   @override
+  Future<void> refreshCounts(int filmId) async =>
+      calls.add('refreshCounts $filmId');
+
+  @override
   Future<void> addComment(int userId, int filmId, String body) async =>
       calls.add('addComment $filmId $body');
 
