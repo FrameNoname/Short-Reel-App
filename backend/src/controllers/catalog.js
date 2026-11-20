@@ -2,6 +2,8 @@ const ApiError = require('../utils/ApiError');
 const catalogModel = require('../models/catalog');
 const wallet = require('../models/wallet');
 const freereels = require('../services/freereels');
+const social = require('../models/social');
+const { text } = require('../utils/validate');
 const { isAdmin } = require('../models/access');
 
 const SORTS = new Set(['latest', 'title', 'episodes']);
@@ -158,6 +160,31 @@ exports.unlock = relay(async (client, req) => {
     priceCoins: price,
   });
   return wallet.unlock(pool, req.user, episodeId);
+});
+
+// ---- comments ----
+
+// A series has no films row until someone unlocks or comments on it, so one
+// without a row simply has no comments yet. Reading needs no upstream call.
+exports.listComments = async (req, res) => {
+  const pool = req.app.locals.pool;
+  const dramaId = Number(id(req.params.dramaId));
+  await notTakenDown(req, dramaId);
+  await seriesIdFor(req, dramaId);
+  const filmId = await catalogModel.filmIdOf(pool, dramaId);
+  res.json({ comments: filmId ? await social.listComments(pool, filmId) : [] });
+};
+
+// The first comment makes the series' films row, titled from the catalog.
+exports.addComment = relay(async (client, req) => {
+  const pool = req.app.locals.pool;
+  const dramaId = Number(id(req.params.dramaId));
+  const body = text(req.body, 'body', { max: 500 });
+  const { drama } = await readDrama(client, req, dramaId);
+  const filmId = await catalogModel.ensureFilm(pool, { dramaId, title: drama.title, poster: drama.poster });
+  const commentId = await social.addComment(pool, req.user.id, filmId, body);
+  req.res.status(201);
+  return { id: commentId };
 });
 
 // ---- admin ----

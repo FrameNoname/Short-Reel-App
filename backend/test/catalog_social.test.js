@@ -77,3 +77,19 @@ test('flags tells which films the viewer liked and saved', async () => {
   const none = await social.flags(fakePool(), 2, []);
   assert.equal(none.liked.size, 0);
 });
+
+test('filmIdOf: a series nobody bought or commented on has no films row', async () => {
+  assert.equal(await catalog.filmIdOf(fakePool([['FROM films', []]]), 77), null);
+  assert.equal(await catalog.filmIdOf(fakePool([['FROM films', [{ id: 12 }]]]), 77), 12);
+});
+
+test('ensureFilm makes the series films row once and returns its id', async () => {
+  const pool = fakePool([
+    ['INSERT INTO films', { affectedRows: 1 }],
+    ['SELECT id FROM films', [{ id: 12 }]],
+  ]);
+  assert.equal(await catalog.ensureFilm(pool, { dramaId: 77, title: 'Drama', poster: null }), 12);
+  const [insert] = pool.callsMatching('INSERT INTO films');
+  assert.match(insert.sql, /ON DUPLICATE KEY UPDATE/);
+  assert.deepEqual(insert.params, ['Drama', null, 77]);
+});

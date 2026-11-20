@@ -13,6 +13,8 @@ const viewerOnly = (req, res, next) =>
 
 router.get('/dramas/:dramaId/episodes', viewerOnly, catalog.episodes);
 router.post('/dramas/:dramaId/episodes/:episodeNo/unlock', requireAuth, catalog.unlock);
+router.get('/dramas/:dramaId/comments', optionalAuth, catalog.listComments);
+router.post('/dramas/:dramaId/comments', requireAuth, catalog.addComment);
 router.get('/access', optionalAuth, catalog.access);
 
 module.exports = router;
