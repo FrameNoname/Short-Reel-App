@@ -120,12 +120,7 @@ exports.unlocksOf = async (db, userId) => {
 // viewers unlocking the same new series at once end up with the same rows. The
 // price follows the current setting, so a change applies to the next unlock.
 exports.ensureEpisode = async (db, { dramaId, title, poster, episodeNo, priceCoins }) => {
-  await db.query(
-    `INSERT INTO films (title, poster_url, is_ai_generated, catalog_drama_id) VALUES (?, ?, 0, ?)
-     ON DUPLICATE KEY UPDATE title = VALUES(title), poster_url = COALESCE(VALUES(poster_url), poster_url)`,
-    [String(title).slice(0, TITLE_MAX), posterOrNull(poster), dramaId],
-  );
-  const [[film]] = await db.query('SELECT id FROM films WHERE catalog_drama_id = ?', [dramaId]);
+  const film = { id: await exports.ensureFilm(db, { dramaId, title, poster }) };
   await db.query(
     `INSERT INTO episodes (film_id, episode_no, title, is_free, price_coins) VALUES (?, ?, ?, 0, ?)
      ON DUPLICATE KEY UPDATE price_coins = VALUES(price_coins)`,
@@ -136,4 +131,21 @@ exports.ensureEpisode = async (db, { dramaId, title, poster, episodeNo, priceCoi
     [film.id, episodeNo],
   );
   return episode.id;
+};
+
+// The films row of a series, or null while nobody bought or commented on it.
+exports.filmIdOf = async (db, dramaId) => {
+  const [[row]] = await db.query('SELECT id FROM films WHERE catalog_drama_id = ?', [dramaId]);
+  return row ? row.id : null;
+};
+
+// The films row of a series, made the first time it is needed (an unlock or a
+// comment). The insert is idempotent, so concurrent calls share one row.
+exports.ensureFilm = async (db, { dramaId, title, poster }) => {
+  await db.query(
+    `INSERT INTO films (title, poster_url, is_ai_generated, catalog_drama_id) VALUES (?, ?, 0, ?)
+     ON DUPLICATE KEY UPDATE title = VALUES(title), poster_url = COALESCE(VALUES(poster_url), poster_url)`,
+    [String(title).slice(0, TITLE_MAX), posterOrNull(poster), dramaId],
+  );
+  return exports.filmIdOf(db, dramaId);
 };
