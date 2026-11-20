@@ -93,3 +93,32 @@ test('ensureFilm makes the series films row once and returns its id', async () =
   assert.match(insert.sql, /ON DUPLICATE KEY UPDATE/);
   assert.deepEqual(insert.params, ['Drama', null, 77]);
 });
+
+test('stats: counts and the viewer flags, as numbers and booleans', async () => {
+  const pool = fakePool([
+    ['FROM films f', [{ drama_id: 77, like_count: '3', comment_count: 2n, liked: 1, saved: 0 }]],
+  ]);
+  assert.deepEqual(await catalog.stats(pool, [77, 78], 2), [
+    { drama_id: 77, like_count: 3, comment_count: 2, liked: true, saved: false },
+  ]);
+  assert.deepEqual(pool.calls[0].params, [2, 2, [77, 78]]);
+});
+
+test('stats: no ids runs no query; a guest matches no likes or saves', async () => {
+  const none = fakePool();
+  assert.deepEqual(await catalog.stats(none, [], 2), []);
+  assert.equal(none.calls.length, 0);
+  const guest = fakePool([['FROM films f', []]]);
+  await catalog.stats(guest, [77], undefined);
+  assert.deepEqual(guest.calls[0].params, [0, 0, [77]]);
+});
+
+test('listWatchlist splits own films from Series Jeen series', async () => {
+  const pool = fakePool([
+    ['FROM watchlist', [
+      { film_id: 5, catalog_drama_id: null },
+      { film_id: 40, catalog_drama_id: 77 },
+    ]],
+  ]);
+  assert.deepEqual(await social.listWatchlist(pool, 2), { filmIds: [5], catalogDramaIds: [77] });
+});

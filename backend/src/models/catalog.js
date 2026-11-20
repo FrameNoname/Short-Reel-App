@@ -149,3 +149,27 @@ exports.ensureFilm = async (db, { dramaId, title, poster }) => {
   );
   return exports.filmIdOf(db, dramaId);
 };
+
+// Like and comment counts of these series, and whether userId liked or saved
+// each. A series with no films row has none of either, so it is left out.
+exports.stats = async (db, dramaIds, userId) => {
+  if (dramaIds.length === 0) return [];
+  const viewer = userId ?? 0;
+  const [rows] = await db.query(
+    `SELECT f.catalog_drama_id AS drama_id,
+            (SELECT COUNT(*) FROM likes l WHERE l.film_id = f.id) AS like_count,
+            (SELECT COUNT(*) FROM comments c WHERE c.film_id = f.id) AS comment_count,
+            EXISTS (SELECT 1 FROM likes l WHERE l.film_id = f.id AND l.user_id = ?) AS liked,
+            EXISTS (SELECT 1 FROM watchlist w WHERE w.film_id = f.id AND w.user_id = ?) AS saved
+       FROM films f
+      WHERE f.catalog_drama_id IN (?) AND f.status = 'approved'`,
+    [viewer, viewer, dramaIds],
+  );
+  return rows.map((r) => ({
+    drama_id: r.drama_id,
+    like_count: Number(r.like_count),
+    comment_count: Number(r.comment_count),
+    liked: Boolean(Number(r.liked)),
+    saved: Boolean(Number(r.saved)),
+  }));
+};

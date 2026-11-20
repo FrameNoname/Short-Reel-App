@@ -122,6 +122,20 @@ class FeedController extends ChangeNotifier {
 
   // ---- reads the views need; they never touch the repository -------------
 
+  /// Asks for a film's current like and comment counts. A failure keeps the
+  /// counts already shown.
+  Future<void> refreshCounts(int filmId) async {
+    try {
+      await _repository.refreshCounts(filmId);
+    } on Object {
+      return;
+    }
+    _showLatest();
+  }
+
+  /// The latest copy of a film (like and comment counts included).
+  Film? filmById(int filmId) => _repository.filmById(filmId);
+
   bool isLiked(int userId, int filmId) => _repository.isLiked(userId, filmId);
 
   bool isSaved(int userId, int filmId) => _repository.isSaved(userId, filmId);

@@ -158,7 +158,9 @@ class ApiRepository implements AppRepository {
     final core = await _allPages('/films', {if (query.isNotEmpty) 'q': query});
     // The catalog is an extra: it follows the app's own films and a failure
     // there never touches them.
-    final extra = await _matchingCatalogFilms(query);
+    final found = await _matchingCatalogFilms(query);
+    await _loadCatalogStats(found.map((f) => f.id));
+    final extra = [for (final f in found) _films[f.id] ?? f];
     return [...core, ...extra];
   }
 
@@ -485,6 +487,50 @@ class ApiRepository implements AppRepository {
 
   bool _isCatalog(int filmId) => filmId >= catalogFilmIdBase;
 
+  // A Series Jeen title keeps its likes, saves and comments under its drama
+  // number; the app's own films under their film id.
+  String _socialBase(int filmId) => _isCatalog(filmId)
+      ? '/catalog/dramas/${filmId - catalogFilmIdBase}'
+      : '/films/$filmId';
+
+  // Own films get their counts with the feed; only catalog titles need this.
+  @override
+  Future<void> refreshCounts(int filmId) => _loadCatalogStats([filmId]);
+
+  /// Reads the like and comment counts of these catalog titles, and whether
+  /// this viewer liked or saved each. The catalog never knows them, so they
+  /// come from the backend. A failure leaves the counts as they were.
+  Future<void> _loadCatalogStats(Iterable<int> filmIds) async {
+    final dramaIds = {
+      for (final id in filmIds)
+        if (_isCatalog(id)) id - catalogFilmIdBase,
+    }.toList();
+    if (dramaIds.isEmpty) return;
+    try {
+      for (var i = 0; i < dramaIds.length; i += 100) {
+        final chunk = dramaIds.skip(i).take(100).join(',');
+        final json =
+            await _api.get('/catalog/stats', query: {'ids': chunk})
+                as Map<String, dynamic>;
+        for (final row in json['stats'] as List) {
+          final s = row as Map<String, dynamic>;
+          final id = catalogFilmIdBase + (s['drama_id'] as int);
+          final film = _films[id];
+          if (film != null) {
+            _films[id] = film.copyWith(
+              likeCount: s['like_count'] as int,
+              commentCount: s['comment_count'] as int,
+            );
+          }
+          s['liked'] == true ? _liked.add(id) : _liked.remove(id);
+          s['saved'] == true ? _saved.add(id) : _saved.remove(id);
+        }
+      }
+    } on Object {
+      // Counts are a nicety; the titles still show without them.
+    }
+  }
+
   @override
   bool isLiked(int userId, int filmId) => _liked.contains(filmId);
 
@@ -493,14 +539,9 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<void> toggleLike(int userId, int filmId) async {
-    if (_isCatalog(filmId)) {
-      _liked.contains(filmId) ? _liked.remove(filmId) : _liked.add(filmId);
-      return;
-    }
     final on = !_liked.contains(filmId);
-    final json = on
-        ? await _api.post('/films/$filmId/like')
-        : await _api.delete('/films/$filmId/like');
+    final path = '${_socialBase(filmId)}/like';
+    final json = on ? await _api.post(path) : await _api.delete(path);
     on ? _liked.add(filmId) : _liked.remove(filmId);
     final film = _films[filmId];
     if (film != null) {
@@ -512,14 +553,9 @@ class ApiRepository implements AppRepository {
 
   @override
   Future<void> toggleSave(int userId, int filmId) async {
-    if (_isCatalog(filmId)) {
-      _saved.contains(filmId) ? _saved.remove(filmId) : _saved.add(filmId);
-      return;
-    }
     final on = !_saved.contains(filmId);
-    on
-        ? await _api.post('/films/$filmId/watchlist')
-        : await _api.delete('/films/$filmId/watchlist');
+    final path = '${_socialBase(filmId)}/watchlist';
+    on ? await _api.post(path) : await _api.delete(path);
     on ? _saved.add(filmId) : _saved.remove(filmId);
     // The saved list on Profile reads this, so it must follow the heart.
     _watchlistIds = on
@@ -582,9 +618,13 @@ class ApiRepository implements AppRepository {
   @override
   Future<void> refreshLibrary(int userId) async {
     final json = await _api.get('/watchlist') as Map<String, dynamic>;
-    _watchlistIds = [for (final id in json['film_ids'] as List) id as int];
+    _watchlistIds = [
+      for (final id in json['film_ids'] as List) id as int,
+      for (final id in json['catalog_drama_ids'] as List? ?? const [])
+        catalogFilmIdBase + (id as int),
+    ];
     _saved
-      ..removeWhere((id) => !_isCatalog(id))
+      ..clear()
       ..addAll(_watchlistIds);
     // Purchases are read from the unlock rows, never guessed from the ledger.
     final unlocked = await _api.get('/wallet/unlocked') as Map<String, dynamic>;
@@ -610,6 +650,7 @@ class ApiRepository implements AppRepository {
         // A film that is gone is simply left out of the list.
       }
     }
+    await _loadCatalogStats({..._watchlistIds, ..._unlockedFilmIds});
   }
 
   @override

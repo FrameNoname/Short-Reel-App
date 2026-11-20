@@ -21,7 +21,8 @@ exports.unlike = async (req, res) => {
 };
 
 exports.listWatchlist = async (req, res) => {
-  res.json({ film_ids: await social.listWatchlist(req.app.locals.pool, req.user.id) });
+  const { filmIds, catalogDramaIds } = await social.listWatchlist(req.app.locals.pool, req.user.id);
+  res.json({ film_ids: filmIds, catalog_drama_ids: catalogDramaIds });
 };
 
 exports.addToWatchlist = async (req, res) => {
