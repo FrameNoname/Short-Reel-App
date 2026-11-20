@@ -42,6 +42,26 @@ void main() {
       await closeApp(tester);
     });
 
+    // The stub series have no cover, so the feed loads none of them; search
+    // still finds one because it asks the catalog, not the feed.
+    testWidgets('search finds a Series Jeen series the feed did not load', (
+      tester,
+    ) async {
+      await logIn(tester, 'viewer01');
+      await openTab(tester, 'Search');
+
+      await tester.enterText(find.byType(TextField), 'storm');
+      await waitFor(
+        tester,
+        find.descendant(
+          of: find.byType(FilmCard),
+          matching: find.text('Storm Heir'),
+        ),
+      );
+      expect(find.text('Moon Bride'), findsNothing);
+      await closeApp(tester);
+    });
+
     testWidgets('the search button on the feed opens the Search tab', (
       tester,
     ) async {
